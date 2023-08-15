@@ -15,6 +15,7 @@
             <option value="Union">Union</option>
             <option value="45 degree elbow">45 degree elbow</option>
             <option value="Shut-off">Shut-off</option>
+            <option value="Reducer">Reducer</option>
         </select>
 
         <label for="od-size">Outer Diameter (OD) Size (inches):</label>
@@ -29,22 +30,25 @@
             <option value="2 1/2">2 1/2</option>
         </select>
 
+        <label for="reducer-size" id="reducer-size-label">Reducer Size (inches):</label>
+        <input type="text" id="reducer-size" style="display: none">
+
         <label for="nipple-size">Nipple Size (inches):</label>
         <select id="nipple-size">
-            <option value="1 1/2">1 1/2</option>
-            <option value="2">2</option>
-            <option value="2 1/2">2 1/2</option>
+            <option value="1 1/2">1 1/2"</option>
+            <option value="2">2"</option>
+            <option value="2 1/2">2 1/2"</option>
             <option value="3">3</option>
-            <option value="3 1/2">3 1/2</option>
-            <option value="4">4</option>
-            <option value="4 1/2">4 1/2</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="8">8</option>
-            <option value="10">10</option>
-            <option value="12">12</option>
+            <option value="3 1/2">3 1/2"</option>
+            <option value="4">4"</option>
+            <option value="4 1/2">4 1/2"</option>
+            <option value="5">5"</option>
+            <option value="6">6"</option>
+            <option value="8">8"</option>
+            <option value="10">10"</option>
+            <option value="12">12"</option>
         </select>
-
+        
         <label for="quantity">Quantity:</label>
         <input type="number" id="quantity" />
 
@@ -53,7 +57,6 @@
         <ul id="items-list"></ul>
     </div>
 
-    
     <button id="exportData">Export Data</button>
     <label for="jobName">Job Name:</label>
     <input type="text" id="jobName">
@@ -61,33 +64,83 @@
     <script>
         const fittingType = document.getElementById('fitting-type');
         const odSize = document.getElementById('od-size');
-        const nippleSize = document.getElementById('nipple-size');
+        const reducerSizeLabel = document.getElementById('reducer-size-label');
+        const reducerSize = document.getElementById('reducer-size');
+        const nippleSizeInput = document.getElementById('nipple-size-input');
         const quantity = document.getElementById('quantity');
         const addButton = document.getElementById('add-button');
         const itemsList = document.getElementById('items-list');
-        const exportDataBtn = document.getElementById('export-button');
+        const exportDataBtn = document.getElementById('exportData');
         const jobName = document.getElementById('jobName');
 
+        fittingType.addEventListener('change', handleFittingTypeChange);
         addButton.addEventListener('click', addItem);
         exportDataBtn.addEventListener('click', exportData);
+
+        const addedItems = [];
+
+        function handleFittingTypeChange() {
+            const selectedFitting = fittingType.value;
+
+            if (selectedFitting === 'Reducer') {
+                reducerSizeLabel.style.display = 'block';
+                reducerSize.style.display = 'block';
+            } else {
+                reducerSizeLabel.style.display = 'none';
+                reducerSize.style.display = 'none';
+            }
+        }
 
         function addItem() {
             const fitting = fittingType.value;
             const od = odSize.value;
             const qty = parseInt(quantity.value, 10);
-            const nipple = fitting === 'Nipple' ? nippleSize.value : '';
+            let nipple = '';
+
+            if (fitting === 'Nipple') {
+                const selectedNippleSize = document.getElementById('nipple-size').value;
+                nipple = `${selectedNippleSize}"`;
+            } else if (fitting === 'Reducer') {
+                const reducerSizeValue = reducerSize.value;
+                nipple = `Reduced to: ${reducerSizeValue}"`;
+            }
 
             const listItem = document.createElement('li');
-            listItem.innerHTML = `${fitting}, ${od}, ${nipple} inch, Quantity: ${qty} <button class="edit-button">Edit</button>`;
-            
+            const deleteButton = document.createElement('button');
+            const editButton = document.createElement('button'); // Add the edit button
+            deleteButton.textContent = 'Delete';
+            editButton.textContent = 'Edit'; // Set text for the edit button
+            deleteButton.className = 'delete-button';
+            editButton.className = 'edit-button'; // Add class for styling
+
+            listItem.innerHTML = `${fitting}, ${od}, ${nipple}, Quantity: ${qty}`;
+            listItem.appendChild(deleteButton);
+            listItem.appendChild(editButton); // Add the edit button to the list item
             itemsList.appendChild(listItem);
 
-            // Clear input fields
-        
+            reducerSize.value = '';
+            nippleSizeInput.value = '';
             quantity.value = '';
+
+            addedItems.push({
+                fittingType: fitting,
+                odSize: od,
+                nippleSize: nipple,
+                quantity: qty,
+            });
         }
 
-        itemsList.addEventListener('click', function(event) {
+
+        itemsList.addEventListener('click', function (event) {
+            if (event.target.classList.contains('delete-button')) {
+                const listItem = event.target.parentElement;
+                const index = Array.from(itemsList.children).indexOf(listItem);
+
+                itemsList.removeChild(listItem);
+                addedItems.splice(index, 1);
+            }
+        });
+        itemsList.addEventListener('click', function (event) {
             if (event.target.classList.contains('edit-button')) {
                 const listItem = event.target.parentElement;
                 const existingValues = listItem.innerText.split(', ');
@@ -95,27 +148,24 @@
                 const editControls = `
                     <input type="text" class="edit-fitting" value="${existingValues[0]}" />
                     <input type="text" class="edit-od" value="${existingValues[1]}" />
-                    <input type="text" class="edit-nipple" value="${existingValues[2].split(' ')[0]}" />
-                    <input type="number" class="edit-quantity" value="${existingValues[3].split(' ')[1]}" />
+                    <input type="text" class="edit-nipple" value="${existingValues[2]}" />
+                    <input type="number" class="edit-quantity" value="${existingValues[3].split(' ')[2]}" />
                     <button class="save-button">Save</button>
                 `;
 
                 listItem.innerHTML = editControls;
 
-                listItem.querySelector('.save-button').addEventListener('click', function() {
+                listItem.querySelector('.save-button').addEventListener('click', function () {
                     const fitting = listItem.querySelector('.edit-fitting').value;
                     const od = listItem.querySelector('.edit-od').value;
                     const nipple = listItem.querySelector('.edit-nipple').value;
                     const quantity = listItem.querySelector('.edit-quantity').value;
 
-                    listItem.innerHTML = `${fitting}, ${od}, ${nipple} inch, Quantity: ${quantity} <button class="edit-button">Edit</button>`;
+                    listItem.innerHTML = `${fitting}, ${od}, ${nipple}, Quantity: ${quantity}
+                    <button class="edit-button">Edit</button>`;
                 });
             }
-
         });
-        
-        exportDataBtn.addEventListener('click', exportData);
-
         function exportData() {
             const data = ['Fitting Type, OD Size, Nipple Size, Quantity'];
             const items = itemsList.querySelectorAll('li');
@@ -139,6 +189,7 @@
             downloadLink.download = filename;
             downloadLink.click();
         }
+
     </script>
-    </body>
-    </html>
+</body>
+</html>
