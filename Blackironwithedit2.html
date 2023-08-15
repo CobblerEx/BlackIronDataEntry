@@ -4,134 +4,65 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Black Iron Gas Fittings Data Entry</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f2f2f2;
-        }
-
-        #entry-frame {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin: 20px auto;
-            max-width: 500px;
-        }
-
-        label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        select,
-        input[type="text"],
-        input[type="number"] {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
-
-        button {
-            padding: 10px 15px;
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-
-        li {
-            padding: 10px;
-            background-color: #f9f9f9;
-            border: 1px solid #ccc;
-            margin-bottom: 10px;
-            position: relative;
-        }
-
-        .delete-button {
-            background-color: #e74c3c;
-        }
-
-        .edit-button {
-            background-color: #3498db;
-        }
-    </style>
 </head>
-    <body>
-        <div id="entry-frame">            
-                <label for="fitting-type">Fitting Type:</label>
-                <select id="fitting-type">
-                    <option value="Nipple">Nipple</option>
-                    <option value="90 degree elbow">90 degree elbow</option>
-                    <option value="Tee">Tee</option>
-                    <option value="Union">Union</option>
-                    <option value="45 degree elbow">45 degree elbow</option>
-                    <option value="Shut-off">Shut-off</option>
-                    <option value="Reducer">Reducer</option>
-                </select>
-        
-                <label for="od-size">Outer Diameter (OD) Size (inches):</label>
-                <select id="od-size">
-                    <option value="3/8">3/8</option>
-                    <option value="1/2">1/2</option>
-                    <option value="3/4">3/4</option>
-                    <option value="1">1</option>
-                    <option value="1 1/4">1 1/4</option>
-                    <option value="1 1/2">1 1/2</option>
-                    <option value="2">2</option>
-                    <option value="2 1/2">2 1/2</option>
-                </select>
-        
-                <label for="reducer-size" id="reducer-size-label">Reducer Size (inches):</label>
-                <input type="text" id="reducer-size" style="display: none">
-        
-                <label for="nipple-size">Nipple Size (inches):</label>
-                <select id="nipple-size">
-                    <option value="1 1/2">1 1/2"</option>
-                    <option value="2">2"</option>
-                    <option value="2 1/2">2 1/2"</option>
-                    <option value="3">3</option>
-                    <option value="3 1/2">3 1/2"</option>
-                    <option value="4">4"</option>
-                    <option value="4 1/2">4 1/2"</option>
-                    <option value="5">5"</option>
-                    <option value="6">6"</option>
-                    <option value="8">8"</option>
-                    <option value="10">10"</option>
-                    <option value="12">12"</option>
-                </select>
-                
-                <label for="quantity">Quantity:</label>
-                <input type="number" id="quantity" />
-        
-                <button id="add-button">Add Item</button>
-                
-                <ul id="items-list"></ul>
-        </div>
+<body>
+    <div id="entry-frame" class="padding-10">
+        <label for="fitting-type">Fitting Type:</label>
+        <select id="fitting-type">
+            <option value="Nipple">Nipple</option>
+            <option value="90 degree elbow">90 degree elbow</option>
+            <option value="Tee">Tee</option>
+            <option value="Union">Union</option>
+            <option value="45 degree elbow">45 degree elbow</option>
+            <option value="Shut-off">Shut-off</option>
+            <option value="Reducer">Reducer</option>
+        </select>
 
-        <button id="exportData">Export Data</button>
-        <label for="jobName">Job Name:</label>
-        <input type="text" id="jobName">
+        <label for="od-size">Outer Diameter (OD) Size (inches):</label>
+        <select id="od-size">
+            <option value="3/8">3/8</option>
+            <option value="1/2">1/2</option>
+            <option value="3/4">3/4</option>
+            <option value="1">1</option>
+            <option value="1 1/4">1 1/4</option>
+            <option value="1 1/2">1 1/2</option>
+            <option value="2">2</option>
+            <option value="2 1/2">2 1/2</option>
+        </select>
 
+        <label for="reducer-size" id="reducer-size-label">Reducer Size (inches):</label>
+        <input type="text" id="reducer-size" style="display: none">
+
+        <label for="nipple-size">Nipple Size (inches):</label>
+        <select id="nipple-size">
+            <option value="1 1/2">1 1/2"</option>
+            <option value="2">2"</option>
+            <option value="2 1/2">2 1/2"</option>
+            <option value="3">3</option>
+            <option value="3 1/2">3 1/2"</option>
+            <option value="4">4"</option>
+            <option value="4 1/2">4 1/2"</option>
+            <option value="5">5"</option>
+            <option value="6">6"</option>
+            <option value="8">8"</option>
+            <option value="10">10"</option>
+            <option value="12">12"</option>
+        </select>
+        
+        <label for="quantity">Quantity:</label>
+        <input type="number" id="quantity" />
+
+        <button id="add-button">Add Item</button>
+        
+        <ul id="items-list"></ul>
+    </div>
+
+    <button id="exportData">Export Data</button>
+    <label for="jobName">Job Name:</label>
+    <input type="text" id="jobName">
+    
     <script>
-     const fittingType = document.getElementById('fitting-type');
+        const fittingType = document.getElementById('fitting-type');
         const odSize = document.getElementById('od-size');
         const reducerSizeLabel = document.getElementById('reducer-size-label');
         const reducerSize = document.getElementById('reducer-size');
@@ -258,6 +189,7 @@
             downloadLink.download = filename;
             downloadLink.click();
         }
+
     </script>
 </body>
 </html>
