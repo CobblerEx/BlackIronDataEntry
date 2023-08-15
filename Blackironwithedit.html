@@ -53,6 +53,8 @@
         }
 
         ul {
+            border: 1px solid #1c3b28;
+            background-color: #96c5c7;
             list-style-type: none;
             padding: 0;
         }
@@ -60,7 +62,7 @@
         li {
             padding: 10px;
             background-color: #f9f9f9;
-            border: 1px solid #ccc;
+            border: 1px solid #cccccc;
             margin-bottom: 10px;
             position: relative;
         }
@@ -99,10 +101,10 @@
                     <option value="2 1/2">2 1/2"</option>
                 </select>
         
-                <label for="reducer-size" id="reducer-size-label">Reducer Size (inches):</label>
-                <input type="text" id="reducer-size" style="display: none">
+                <label for="reducer-size" id="reducer-size-label" style="display: none">Reducer Size (RS) (inches):</label>
+                <input type="text" id="reducer-size-input" style="display: none">
         
-                <label for="nipple-size">Nipple Size (inches):</label>
+                <label for="nipple-size">Nipple Size (NS) (inches):</label>
                 <select id="nipple-size">
                     <option value="1 1/2">1 1/2"</option>
                     <option value="2">2"</option>
@@ -123,7 +125,15 @@
         
                 <button id="add-button">Add Item</button>
                 
-                <ul id="items-list"></ul>
+                <ul id="items-list">
+                    <ul class="list-header">
+                        <span class="list-header-fitting">Fitting Type,   </span>
+                        <span class="list-header-od">OD,</span>
+                        <span class="list-header-nipple">Nipple or Reducer,</span>
+                        <span class="list-header-quantity">Quantity,</span>
+                        <span class="list-header-actions">Actions</span>
+                    </ul>
+                </ul>
         </div>
 
         <button id="exportData">Export Data</button>
@@ -131,9 +141,9 @@
         <input type="text" id="jobName">
 
     <script>
-     const fittingType = document.getElementById('fitting-type');
+        const fittingType = document.getElementById('fitting-type');
         const odSize = document.getElementById('od-size');
-        const reducerSizeLabel = document.getElementById('reducer-size-label');
+        const reducerSizeInput = document.getElementById('reducer-size-input');
         const reducerSize = document.getElementById('reducer-size');
         const nippleSizeInput = document.getElementById('nipple-size');
         const quantity = document.getElementById('quantity');
@@ -141,6 +151,7 @@
         const itemsList = document.getElementById('items-list');
         const exportDataBtn = document.getElementById('exportData');
         const jobName = document.getElementById('jobName');
+        const reducerSizeLabel = document.getElementById('reducer-size-label'); // Add this line
 
         fittingType.addEventListener('change', handleFittingTypeChange);
         addButton.addEventListener('click', addItem);
@@ -153,10 +164,10 @@
 
             if (selectedFitting === 'Reducer') {
                 reducerSizeLabel.style.display = 'block';
-                reducerSize.style.display = 'block';
+                reducerSizeInput.style.display = 'block';
             } else {
                 reducerSizeLabel.style.display = 'none';
-                reducerSize.style.display = 'none';
+                reducerSizeInput.style.display = 'none';
             }
         }
 
@@ -170,7 +181,7 @@
                 const selectedNippleSize = document.getElementById('nipple-size').value;
                 nipple = `${selectedNippleSize}"`;
             } else if (fitting === 'Reducer') {
-                const reducerSizeValue = reducerSize.value;
+                const reducerSizeValue = reducerSizeInput.value;
                 nipple = `Reduced to: ${reducerSizeValue}"`;
             }
 
@@ -182,7 +193,7 @@
             deleteButton.className = 'delete-button';
             editButton.className = 'edit-button'; // Add class for styling
 
-            listItem.innerHTML = `${fitting}, ${od}, ${nipple}, Quantity: ${qty}`;
+            listItem.innerHTML = `${fitting}, ${od}", ${nipple}, Quantity: ${qty}`;
             listItem.appendChild(deleteButton);
             listItem.appendChild(editButton); // Add the edit button to the list item
             itemsList.appendChild(listItem);
@@ -241,10 +252,14 @@
 
             items.forEach(item => {
                 const itemText = item.textContent;
-                const fittingType = itemText.split(',')[0].trim();
-                const odSize = itemText.split(',')[1].trim();
-                const nippleSize = fittingType === 'Nipple' ? itemText.split(',')[2].trim() : '';
-                const quantity = itemText.split('Quantity:')[1].trim();
+
+                // Check if the item contains "DeleteEdit" and remove it if present
+                const cleanedItemText = itemText.replace(/DeleteEdit/g, '').trim();
+
+                const fittingType = cleanedItemText.split(',')[0].trim();
+                const odSize = cleanedItemText.split(',')[1].trim();
+                const nippleSize = fittingType === 'Nipple' ? cleanedItemText.split(',')[2].trim() : '';
+                const quantity = cleanedItemText.split('Quantity:')[1].trim();
 
                 data.push(`${fittingType}, ${odSize}, ${nippleSize}, Quantity: ${quantity}`);
             });
@@ -258,6 +273,7 @@
             downloadLink.download = filename;
             downloadLink.click();
         }
+
     </script>
 </body>
 </html>
