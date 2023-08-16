@@ -252,16 +252,13 @@
 
             items.forEach(item => {
                 const itemText = item.textContent;
+                const values = itemText.split(',').map(value => value.trim());
+                const fittingType = values[0];
+                const odSize = values[1];
+                const nippleSize = fittingType === 'Nipple' ? values[2] : '';
+                const quantity = fittingType === 'Nipple' ? values[3].split(':')[1].trim() : values[3];
 
-                // Check if the item contains "DeleteEdit" and remove it if present
-                const cleanedItemText = itemText.replace(/DeleteEdit/g, '').trim();
-
-                const fittingType = cleanedItemText.split(',')[0].trim();
-                const odSize = cleanedItemText.split(',')[1].trim();
-                const nippleSize = fittingType === 'Nipple' ? cleanedItemText.split(',')[2].trim() : '';
-                const quantity = cleanedItemText.split('Quantity:')[1].trim();
-
-                data.push(`${fittingType}, ${odSize}, ${nippleSize}, Quantity: ${quantity}`);
+                data.push(`${fittingType}, ${odSize}, ${nippleSize}, ${quantity}`);
             });
 
             const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
