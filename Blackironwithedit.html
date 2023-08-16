@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Black Iron Gas Fittings Data Entry</title>
@@ -247,24 +248,25 @@
             }
         });
         function exportData() {
-            const data = ['Fitting Type, OD Size, Nipple Size, Quantity'];
-            const items = itemsList.querySelectorAll('li');
+            const data = [['Fitting Type', 'OD Size', 'Nipple Size', 'Quantity']]; // Initialize with headers as an array of arrays
+            const items = itemsList.querySelectorAll('li:not(.list-header)'); // Exclude the header
 
             items.forEach(item => {
                 const itemText = item.textContent;
-                const values = itemText.split(',').map(value => value.trim());
-                const fittingType = values[0];
-                const odSize = values[1];
-                const nippleSize = fittingType === 'Nipple' ? values[2] : '';
-                const quantity = fittingType === 'Nipple' ? values[3].split(':')[1].trim() : values[3];
+                const fittingType = itemText.split(',')[0].trim();
+                const odSize = itemText.split(',')[1].trim();
+                const nippleSize = fittingType === 'Nipple' ? itemText.split(',')[2].trim() : '';
+                const quantity = itemText.split('Quantity:')[1].trim();
 
-                data.push(`${fittingType}, ${odSize}, ${nippleSize}, ${quantity}`);
+                data.push([fittingType, odSize, nippleSize, quantity]); // Push data as an array
             });
 
             const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
             const filename = `${jobName.value || 'Untitled'}_nipple_data_${timestamp}.csv`;
 
-            const dataBlob = new Blob([data.join('\n')], { type: 'text/csv' });
+            const csv = Papa.unparse(data); // Use PapaParse to generate CSV content
+
+            const dataBlob = new Blob([csv], { type: 'text/csv' });
             const downloadLink = document.createElement('a');
             downloadLink.href = URL.createObjectURL(dataBlob);
             downloadLink.download = filename;
