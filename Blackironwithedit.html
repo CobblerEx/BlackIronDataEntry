@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Black Iron Gas Fittings Data Entry</title>
@@ -54,8 +53,6 @@
         }
 
         ul {
-            border: 1px solid #1c3b28;
-            background-color: #96c5c7;
             list-style-type: none;
             padding: 0;
         }
@@ -63,7 +60,7 @@
         li {
             padding: 10px;
             background-color: #f9f9f9;
-            border: 1px solid #cccccc;
+            border: 1px solid #ccc;
             margin-bottom: 10px;
             position: relative;
         }
@@ -92,20 +89,20 @@
         
                 <label for="od-size">Outer Diameter (OD) Size (inches):</label>
                 <select id="od-size">
-                    <option value="3/8">3/8"</option>
-                    <option value="1/2">1/2"</option>
-                    <option value="3/4">3/4"</option>
-                    <option value="1">1"</option>
-                    <option value="1 1/4">1 1/4"</option>
-                    <option value="1 1/2">1 1/2"</option>
-                    <option value="2">2"</option>
-                    <option value="2 1/2">2 1/2"</option>
+                    <option value="3/8">3/8</option>
+                    <option value="1/2">1/2</option>
+                    <option value="3/4">3/4</option>
+                    <option value="1">1</option>
+                    <option value="1 1/4">1 1/4</option>
+                    <option value="1 1/2">1 1/2</option>
+                    <option value="2">2</option>
+                    <option value="2 1/2">2 1/2</option>
                 </select>
         
-                <label for="reducer-size" id="reducer-size-label" style="display: none">Reducer Size (RS) (inches):</label>
-                <input type="text" id="reducer-size-input" style="display: none">
+                <label id="reducer-size-label" style="display: none" for="reducer-size">Reducer Size (inches):</label>
+                <input type="text" id="reducer-size" style="display: none">
         
-                <label for="nipple-size">Nipple Size (NS) (inches):</label>
+                <label for="nipple-size">Nipple Size (inches):</label>
                 <select id="nipple-size">
                     <option value="1 1/2">1 1/2"</option>
                     <option value="2">2"</option>
@@ -126,15 +123,7 @@
         
                 <button id="add-button">Add Item</button>
                 
-                <ul id="items-list">
-                    <ul class="list-header">
-                        <span class="list-header-fitting">Fitting Type,   </span>
-                        <span class="list-header-od">OD,</span>
-                        <span class="list-header-nipple">Nipple or Reducer,</span>
-                        <span class="list-header-quantity">Quantity,</span>
-                        <span class="list-header-actions">Actions</span>
-                    </ul>
-                </ul>
+                <ul id="items-list"></ul>
         </div>
 
         <button id="exportData">Export Data</button>
@@ -142,17 +131,16 @@
         <input type="text" id="jobName">
 
     <script>
-        const fittingType = document.getElementById('fitting-type');
+     const fittingType = document.getElementById('fitting-type');
         const odSize = document.getElementById('od-size');
-        const reducerSizeInput = document.getElementById('reducer-size-input');
+        const reducerSizeLabel = document.getElementById('reducer-size-label');
         const reducerSize = document.getElementById('reducer-size');
-        const nippleSizeInput = document.getElementById('nipple-size');
+        const nippleSizeInput = document.getElementById('nipple-size-input');
         const quantity = document.getElementById('quantity');
         const addButton = document.getElementById('add-button');
         const itemsList = document.getElementById('items-list');
         const exportDataBtn = document.getElementById('exportData');
         const jobName = document.getElementById('jobName');
-        const reducerSizeLabel = document.getElementById('reducer-size-label'); // Add this line
 
         fittingType.addEventListener('change', handleFittingTypeChange);
         addButton.addEventListener('click', addItem);
@@ -164,13 +152,14 @@
             const selectedFitting = fittingType.value;
 
             if (selectedFitting === 'Reducer') {
-                reducerSizeLabel.style.display = 'block';
-                reducerSizeInput.style.display = 'block';
+                document.getElementById('reducer-size-label').style.display = 'block';
+                reducerSize.style.display = 'block';
             } else {
-                reducerSizeLabel.style.display = 'none';
-                reducerSizeInput.style.display = 'none';
+                document.getElementById('reducer-size-label').style.display = 'none';
+                reducerSize.style.display = 'none';
             }
         }
+
 
         function addItem() {
             const fitting = fittingType.value;
@@ -182,7 +171,7 @@
                 const selectedNippleSize = document.getElementById('nipple-size').value;
                 nipple = `${selectedNippleSize}"`;
             } else if (fitting === 'Reducer') {
-                const reducerSizeValue = reducerSizeInput.value;
+                const reducerSizeValue = reducerSize.value;
                 nipple = `Reduced to: ${reducerSizeValue}"`;
             }
 
@@ -194,13 +183,13 @@
             deleteButton.className = 'delete-button';
             editButton.className = 'edit-button'; // Add class for styling
 
-            listItem.innerHTML = `${fitting}, ${od}", ${nipple}, Quantity: ${qty}`;
+            listItem.innerHTML = `${fitting}, ${od}, ${nipple}, Quantity: ${qty}`;
             listItem.appendChild(deleteButton);
             listItem.appendChild(editButton); // Add the edit button to the list item
             itemsList.appendChild(listItem);
 
             reducerSize.value = '';
-            nippleSizeInput.value = '';
+            document.getElementById('nipple-size').value = '';  
             quantity.value = '';
 
             addedItems.push({
@@ -248,31 +237,48 @@
             }
         });
         function exportData() {
-            const data = [['Fitting Type', 'OD Size', 'Nipple Size', 'Quantity']]; // Initialize with headers as an array of arrays
-            const items = itemsList.querySelectorAll('li:not(.list-header)'); // Exclude the header
+            const data = ['Fitting Type, OD Size, Nipple Size, Quantity'];
+            const items = itemsList.querySelectorAll('li');
 
             items.forEach(item => {
                 const itemText = item.textContent;
-                const fittingType = itemText.split(',')[0].trim();
-                const odSize = itemText.split(',')[1].trim();
-                const nippleSize = fittingType === 'Nipple' ? itemText.split(',')[2].trim() : '';
-                const quantity = itemText.split('Quantity:')[1].trim();
+                const dataParts = itemText.split(',').map(part => part.trim());
 
-                data.push([fittingType, odSize, nippleSize, quantity]); // Push data as an array
+                const fittingType = dataParts[0];
+                const odSize = dataParts[1];
+
+                let quantity = '';
+                if (fittingType.startsWith('Quantity:')) {
+                    quantity = fittingType.replace('Quantity:', '').trim();
+                } else {
+                    const lastPart = dataParts[dataParts.length - 1];
+                    const quantityMatch = lastPart.match(/(\d+)/); // Only match numeric value
+                    quantity = quantityMatch ? quantityMatch[1] : '';
+                    if (lastPart === 'Delete' || lastPart === 'Edit') {
+                        quantity = ''; // Clear quantity for "Delete" and "Edit" cases
+                    }
+                }
+
+                let nippleSize = '';
+                if (fittingType === 'Nipple') {
+                    nippleSize = dataParts[2];
+                } else if (fittingType === 'Reducer') {
+                    const reducerPart = dataParts.find(part => part.startsWith('Reduced to:'));
+                    nippleSize = reducerPart ? reducerPart : 'N/A';
+                }
+
+                data.push(`${fittingType}, ${odSize}, ${nippleSize}, Quantity: ${quantity}`);
             });
 
             const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
             const filename = `${jobName.value || 'Untitled'}_nipple_data_${timestamp}.csv`;
 
-            const csv = Papa.unparse(data); // Use PapaParse to generate CSV content
-
-            const dataBlob = new Blob([csv], { type: 'text/csv' });
+            const dataBlob = new Blob([data.join('\n')], { type: 'text/csv' });
             const downloadLink = document.createElement('a');
             downloadLink.href = URL.createObjectURL(dataBlob);
             downloadLink.download = filename;
             downloadLink.click();
         }
-
     </script>
 </body>
 </html>

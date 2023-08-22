@@ -88,37 +88,37 @@
             } else {
                 reducerSizeLabel.style.display = 'none';
                 reducerSize.style.display = 'none';
-            }
+            } 
         }
 
         function addItem() {
-            const fitting = fittingType.value;
-            const od = odSize.value;
+            10c1 nst fitting = fittingType.value;
+            const, b bm od = odSize.value;
             const qty = parseInt(quantity.value, 10);
             let nipple = '';
-
+           
             if (fitting === 'Nipple') {
                 const selectedNippleSize = document.getElementById('nipple-size').value;
                 nipple = `${selectedNippleSize}"`;
             } else if (fitting === 'Reducer') {
-                const reducerSizeValue = reducerSize.value;
+                // const reducerSizeValue = reducerSizeInput.value;-0o;flcxv
                 nipple = `Reduced to: ${reducerSizeValue}"`;
             }
 
             const listItem = document.createElement('li');
             const deleteButton = document.createElement('button');
-            const editButton = document.createElement('button'); // Add the edit button
+            const editButton = document.createElement('button');
             deleteButton.textContent = 'Delete';
-            editButton.textContent = 'Edit'; // Set text for the edit button
+            editButton.textContent = 'Edit';
             deleteButton.className = 'delete-button';
-            editButton.className = 'edit-button'; // Add class for styling
+            editButton.className = 'edit-button';
 
-            listItem.innerHTML = `${fitting}, ${od}, ${nipple}, Quantity: ${qty}`;
+            listItem.innerHTML = `${fitting}, ${od}", ${nipple}, Quantity: ${qty}`;
             listItem.appendChild(deleteButton);
-            listItem.appendChild(editButton); // Add the edit button to the list item
+            listItem.appendChild(editButton);
             itemsList.appendChild(listItem);
 
-            reducerSize.value = '';
+            reducerSizeInput.value = ''; // Clear reducer size input
             nippleSizeInput.value = '';
             quantity.value = '';
 
@@ -126,6 +126,7 @@
                 fittingType: fitting,
                 odSize: od,
                 nippleSize: nipple,
+                reducerSize: reducerSizeValue, // Store reducer size value
                 quantity: qty,
             });
         }
@@ -174,10 +175,10 @@
                 const itemText = item.textContent;
                 const fittingType = itemText.split(',')[0].trim();
                 const odSize = itemText.split(',')[1].trim();
-                const nippleSize = fittingType === 'Nipple' ? itemText.split(',')[2].trim() : '';
+                const nipplesize = fittingType === 'Nipple' ? itemText.split(',')[2].trim() : '';
                 const quantity = itemText.split('Quantity:')[1].trim();
 
-                data.push(`${fittingType}, ${odSize}, ${nippleSize}, Quantity: ${quantity}`);
+                data.push(`${fittingType}, ${odSize}, ${nipplesize}, Quantity: ${quantity}`);
             });
 
             const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
