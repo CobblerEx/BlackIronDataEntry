@@ -132,9 +132,6 @@
         <label for="jobName">Job Name:</label>
         <input type="text" id="jobName">
         
-        <input type="file" id="csv-upload" accept=".csv">
-
-        <ul id="parsed-data"></ul>
 
     <script>
         const fittingType = document.getElementById('fitting-type');
@@ -244,130 +241,7 @@
             }
         });
 
-        const csvUpload = document.getElementById('csv-upload');
-    
-
-        csvUpload.addEventListener('change', handleCSVUpload);
-
-        function handleCSVUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    const csvContent = event.target.result;
-                    console.log(csvContent); // Log the CSV content
-                    Papa.parse(csvContent, {
-                        complete: handleParsedData,
-                        header: true // Assumes the first row is the header
-                    });
-                };
-                reader.readAsText(file);
-            }
-        }
-
-        function handleParsedData(parsedData) {
-            
-            parsedDataList.innerHTML = ''; // Clear previous data
-
-            const rows = parsedData.data;
-            rows.forEach((row, rowIndex) => {
-                const listItem = document.createElement('li');
-                const rowText = document.createElement('span'); // To display row data
-                listItem.appendChild(rowText);
-
-                const editButton = document.createElement('button');
-                editButton.textContent = 'Edit';
-                editButton.addEventListener('click', () => handleEditRow(listItem, row, rowText));
-
-                const saveButton = document.createElement('button');
-                saveButton.textContent = 'Save';
-                saveButton.style.display = 'none'; // Initially hidden
-                saveButton.addEventListener('click', () => handleSaveRow(listItem, row, rowIndex, rowText));
-
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Delete';
-                deleteButton.addEventListener('click', () => handleDeleteRow(listItem, rowIndex));
-
-                listItem.appendChild(editButton);
-                listItem.appendChild(saveButton);
-                listItem.appendChild(deleteButton);
-
-                parsedDataList.appendChild(listItem);
-                displayRowData(row, rowText);
-            });
-        }
-
-        function handleDeleteRow(listItem, rowIndex) {
-            listItem.remove(); // Remove the list item from the DOM
-        }
-
-        function handleEditRow(listItem, row, rowText) {
-            const editButton = listItem.querySelector('button:nth-child(1)');
-            const saveButton = listItem.querySelector('button:nth-child(2)');
-
-            // Hide the edit button, show the save button
-            editButton.style.display = 'none';
-            saveButton.style.display = 'inline';
-
-            // Hide the current row text
-            rowText.style.display = 'none';
-            // Create and populate input fields for editing
-            const inputFields = {};
-            Object.keys(row).forEach(key => {
-                const input = document.createElement('input');
-                input.value = row[key];
-                input.name = key; // Set the attribute name to the key
-                inputFields[key] = input;
-                listItem.appendChild(input);
-            });
-
-            // Hide the current row text
-            rowText.style.display = 'none';
-        }
-
-
-        function displayRowData(row, rowText) {
-            const fittingType = row['Fitting Type'];
-            const odSize = row[' OD Size'].trim();
-            const nippleSize = row[' Nipple Size'].trim();
-            const quantity = row[' Quantity'].trim();
-
-            if (fittingType === 'Reducer' && nippleSize) {
-                const reducerPart = nippleSize.match(/Reduced to: (.+)/);
-                if (reducerPart) {
-                    rowText.textContent = `${fittingType}, ${odSize}, ${reducerPart[0]}, ${quantity}`;
-                }
-            } else if (fittingType === 'Nipple' && nippleSize) {
-                rowText.textContent = `${fittingType}, ${odSize}, ${nippleSize}, ${quantity}`;
-            } else {
-                rowText.textContent = `${fittingType}, ${odSize}, , ${quantity}`;
-            }
-        }
-
-        function handleSaveRow(listItem, row, rowIndex, rowText) {
-            const inputFields = listItem.querySelectorAll('input');
-            const updatedRow = {};
-
-            inputFields.forEach(input => {
-                const key = input.getAttribute('name');
-                const value = input.value;
-                updatedRow[key] = value;
-            });
-
-            // Update the row data and display
-            Object.assign(row, updatedRow);
-            displayRowData(row, rowText);
-
-            // Show the edit button, hide the save button
-            listItem.querySelector('button:nth-child(1)').style.display = 'inline';
-            listItem.querySelector('button:nth-child(2)').style.display = 'none';
-
-            // Remove the input fields
-            inputFields.forEach(input => {
-                input.remove();
-            });
-        }
-
+       
         function exportData() {
             const data = ['Fitting Type, OD Size, Nipple Size, Quantity'];
             const items = itemsList.querySelectorAll('li');
