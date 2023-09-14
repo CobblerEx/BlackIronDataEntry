@@ -94,33 +94,45 @@
             text-align: center;
             
         }
+        .center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 60px;
+        }
 
-        /* Style for the "link" of the link main page */
-        a {
-            font-family: "comic", sans-serif; /* Replace "Your Desired Heading Font" with the actual font name */
-            font-weight: bold; /* Add bold font weight for headings */
-            color: #333; /* Set the text color */
+       /* Button 1 style */
+        .button1 {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #0078d4;
+            color: #fff;
             text-decoration: none;
-            background-color: rgb(255, 0, 200);
-            padding: 10px 20px; /* Add padding for better touch interaction */
-            font-size: 16px; /* Increase font size for readability on mobile devices */
-            border: #333 3px solid; /* Remove button border */
-            cursor: pointer;
-            text-align: center;
-
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
         }
 
-        /* Style for the "hover" of the link main page */
-
-        a:hover {
-            text-decoration: underline;
-            padding: 10px 20px; /* Add padding for better touch interaction */
-            font-size: 17px; /* Increase font size for readability on mobile devices */
-            border: #333 4px solid; /* Remove button border */
-            cursor: pointer;
-            background-color: rgb(253, 94, 219);
-
+        .button1:hover {
+            background-color: #005ea2;
         }
+
+        /* Button 2 style */
+        .button2 {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #ff5733;
+            color: #fff;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .button2:hover {
+            background-color: #e64c22;
+        }
+
     </style>
 </head>
     <body>
@@ -180,7 +192,15 @@
         <input type="text" id="jobName">
         <h1>Go to Main Page</h1>
         <p>Click the link below to go to the Main page:</p>
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/index.html">Go Main page</a>
+        <div class="center">
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/index.html" class="button1" >Go Main page</a>
+        </div>
+        <h1>Go to Upload Page</h1>
+        <p>Click the link below to go to the Upload page:</p>
+        <div class="center">
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/uploadcsv.html" class="button2">Go Upload page</a>
+        </div>
+
         
 
     <script>
