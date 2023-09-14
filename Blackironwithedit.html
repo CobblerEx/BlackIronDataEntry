@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Black Iron Gas Fittings Data Entry</title>
@@ -130,8 +132,76 @@
         <label for="jobName">Job Name:</label>
         <input type="text" id="jobName">
 
-    <script>
-     const fittingType = document.getElementById('fitting-type');
+        <input type="file" id="csvFileInput">
+        <div id="csvTable"></div>
+        <label for="newFileName">New File Name:</label>
+        <input type="text" id="newFileName" placeholder="Enter new file name">
+        <hr>
+        <h2>Add New Item</h2>
+        <label for="newFittingType">Fitting Type:</label>
+        <select id="newFittingType">
+            <option value="Nipple">Nipple</option>
+            <option value="90 degree elbow">90 degree elbow</option>
+            <option value="Tee">Tee</option>
+            <option value="Union">Union</option>
+            <option value="45 degree elbow">45 degree elbow</option>
+            <option value="Shut-off">Shut-off</option>
+            <option value="Reducer">Reducer</option>
+        </select>
+        <label for="newODSize">OD Size:</label>
+        <select id="newODSize">
+            <option value="3/8">3/8"</option>
+            <option value="1/2">1/2"</option>
+            <option value="3/4">3/4"</option>
+            <option value="1">1"</option>
+            <option value="1 1/4">1 1/4"</option>
+            <option value="1 1/2">1 1/2"</option>
+            <option value="2">2"</option>
+            <!-- Add other options as needed -->
+        </select>
+        <label for="newNippleSize" id="newNippleSizeLabel">Nipple Size:</label>
+        <select id="newNippleSize">
+            <option value="1 1/2">1 1/2"</option>
+            <option value="2">2"</option>
+            <option value="2 1/2">2 1/2"</option>
+            <option value="3">3"</option>
+            <option value="3 1/2">3 1/2"</option>
+            <option value="4">4"</option>
+            <option value="4 1/2">4 1/2"</option>
+            <option value="5">5"</option>
+            <option value="6">6"</option>
+            <option value="6 1/2'">6 1/2"</option>
+            <option value="7">7"</option>
+            <option value="8">8"</option>
+            <option value="10">10"</option>
+            <option value="12">12"</option>
+            <!-- Add other options as needed -->
+        </select>
+        <label for="newQuantity">Quantity:</label>
+        <input type="text" id="newQuantity">
+        
+        <!-- Add other input fields as needed -->
+        <button id="addItem">Add Item</button>
+        <button id="saveChanges">Save Changes and Download</button>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Fitting Type</th>
+                    <th>OD Size</th>
+                    <th>Nipple Size</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody id="csvTableBody">
+                <!-- Table rows will be appended here -->
+            </tbody>
+        </table>
+        
+    
+
+            <script>
+        const fittingType = document.getElementById('fitting-type');
         const odSize = document.getElementById('od-size');
         const reducerSizeLabel = document.getElementById('reducer-size-label');
         const reducerSize = document.getElementById('reducer-size');
@@ -141,10 +211,13 @@
         const itemsList = document.getElementById('items-list');
         const exportDataBtn = document.getElementById('exportData');
         const jobName = document.getElementById('jobName');
+        const csvTableBody = document.getElementById('csvTableBody');
+      
 
         fittingType.addEventListener('change', handleFittingTypeChange);
         addButton.addEventListener('click', addItem);
         exportDataBtn.addEventListener('click', exportData);
+        
 
         const addedItems = [];
 
@@ -237,7 +310,7 @@
             }
         });
         function exportData() {
-            const data = ['Fitting Type, OD Size, Nipple Size, Quantity'];
+            const data = [['Fitting Type', 'OD Size', 'Nipple Size', 'Quantity']]; // Initialize with headers
             const items = itemsList.querySelectorAll('li');
 
             items.forEach(item => {
@@ -267,18 +340,161 @@
                     nippleSize = reducerPart ? reducerPart : 'N/A';
                 }
 
-                data.push(`${fittingType}, ${odSize}, ${nippleSize}, Quantity: ${quantity}`);
+                data.push([fittingType, odSize, nippleSize, quantity]); // Push data as arrays
             });
 
             const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
             const filename = `${jobName.value || 'Untitled'}_nipple_data_${timestamp}.csv`;
 
-            const dataBlob = new Blob([data.join('\n')], { type: 'text/csv' });
+            const csv = Papa.unparse(data); // Use PapaParse to convert 2D array to CSV string
+
+            const dataBlob = new Blob([csv], { type: 'text/csv' });
             const downloadLink = document.createElement('a');
             downloadLink.href = URL.createObjectURL(dataBlob);
             downloadLink.download = filename;
             downloadLink.click();
         }
+        document.getElementById('csvFileInput').addEventListener('change', handleFileUpload);
+        document.getElementById('addItem').addEventListener('click', addNewItem);
+        document.getElementById('saveChanges').addEventListener('click', saveAndDownload);
+        
+
+        let parsedData = [];
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+
+            Papa.parse(file, {
+                complete: function (results) {
+                    parsedData = results.data;
+                    displayTable();
+                }
+            });
+        }
+
+        
+
+        function displayTable() {
+            // Clear the table body
+            while (csvTableBody.firstChild) {
+                csvTableBody.removeChild(csvTableBody.firstChild);
+            }
+
+            // Loop through parsedData and add rows to the table
+            parsedData.forEach(item => {
+                const fittingType = item[0];
+                const odSize = item[1];
+                const nippleSize = item[2];
+                const quantity = item[3];
+
+                const row = document.createElement('tr');
+                const fittingCell = document.createElement('td');
+                const odCell = document.createElement('td');
+                const nippleCell = document.createElement('td'); // Add nipple cell
+                const quantityCell = document.createElement('td');
+
+                fittingCell.textContent = fittingType;
+                odCell.textContent = odSize;
+
+                // Only add the nipple cell content if the fitting type is "Nipple" or "Reducer"
+                if (fittingType === 'Nipple' || fittingType === 'Reducer') {
+                    nippleCell.textContent = nippleSize;
+                }
+
+                quantityCell.textContent = quantity;
+
+                row.appendChild(fittingCell);
+                row.appendChild(odCell);
+                row.appendChild(nippleCell); // Add nipple cell
+                row.appendChild(quantityCell);
+
+                csvTableBody.appendChild(row);
+            });
+        
+        }
+        
+        
+        function addNewItem() {
+            const newFittingType = document.getElementById('newFittingType').value;
+            const newODSize = document.getElementById('newODSize').value;
+            const newNippleSize = document.getElementById('newNippleSize').value;
+            const newQuantity = document.getElementById('newQuantity').value;
+         
+
+            // Push the new item data into the parsedData array
+            parsedData.push([newFittingType, newODSize, newNippleSize, newQuantity]);
+
+            displayTable(); // Update the displayed table
+        }
+        document.getElementById('newFittingType').addEventListener('change', handleFittingTypeChange);
+
+        function handleFittingTypeChange() {
+            const newFittingType = document.getElementById('newFittingType').value;
+            const newNippleSizeLabel = document.getElementById('newNippleSizeLabel');
+            const newNippleSize = document.getElementById('newNippleSize');
+
+            if (!newNippleSizeLabel || !newNippleSize) {
+                console.log("Nipple elements not found.");
+                return; // Exit the function if elements are not found
+            }
+
+            if (newFittingType === 'Nipple' || newFittingType === 'Reducer') {
+                newNippleSizeLabel.style.display = 'block';
+                newNippleSize.style.display = 'block';
+            } else {
+                newNippleSizeLabel.style.display = 'none';
+                newNippleSize.style.display = 'none';
+            }
+        }
+        function makeCellEditable(cell, initialValue, rowIndex, columnIndex) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = initialValue;
+            cell.textContent = '';
+            cell.appendChild(input);
+
+            input.addEventListener('blur', () => {
+                parsedData[rowIndex][columnIndex] = input.value;
+                cell.textContent = input.value;
+            });
+
+                input.focus();
+        }
+        function deleteRow(row) {
+            const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+            row.parentNode.removeChild(row);
+            parsedData.splice(rowIndex, 1);
+        }
+
+        function saveAndDownload() {
+            // Get the updated data from the table
+            const updatedData = [];
+            const tableRows = document.querySelectorAll('#csvTable tr');
+
+            tableRows.forEach(row => {
+                const rowData = [];
+                const tableCells = row.querySelectorAll('td');
+
+                tableCells.forEach(cell => {
+                    rowData.push(cell.textContent);
+                });
+
+                updatedData.push(rowData);
+            });
+
+            const csvString = Papa.unparse(updatedData);
+            const blob = new Blob([csvString], { type: 'text/csv' });
+
+            // Get the new file name from the input field
+            const newFileName = document.getElementById('newFileName').value || 'modified_data.csv';
+
+            // Create an Object URL and download the file
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = newFileName;
+            downloadLink.click();
+        }
+
     </script>
 </body>
 </html>

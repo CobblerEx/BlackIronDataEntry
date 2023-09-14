@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit and Save CSV Data</title>
+    <style>
+        /* Style for select elements (drop-down menus) */
+        select {
+            padding: 10px; /* Add padding for better touch interaction */
+            font-size: 16px; /* Increase font size for readability on mobile devices */
+            border: 1px solid #ccc; /* Add a border for better visibility */
+            border-radius: 5px; /* Add rounded corners */
+            background-color: #fff; /* Set the background color */
+            color: #333; /* Set the text color */
+            width: 10%; /* Make the drop-down menu full width */
+            cursor: pointer;
+        }
+        /* Style for text input elements */
+        input[type="text"] {
+            padding: 10px; /* Add padding for better touch interaction */
+            font-size: 16px; /* Increase font size for readability on mobile devices */
+            border: 1px solid #ccc; /* Add a border for better visibility */
+            border-radius: 5px; /* Add rounded corners */
+            background-color: #fff; /* Set the background color */
+            color: #333; /* Set the text color */
+            width: 10%; 
+        }   
+        label {
+            font-family: "Your Desired Font", sans-serif; /* Replace "Your Desired Font" with the actual font name */
+            font-weight: bold; /* Add bold font weight for labels */
+            font-size: 18px; /* Adjust the font size as needed */
+            color: #333; /* Set the text color */
+        }
+        /* Style for headings */
+        h1, h2 {
+            font-family: "Your Desired Heading Font", sans-serif; /* Replace "Your Desired Heading Font" with the actual font name */
+            font-weight: bold; /* Add bold font weight for headings */
+            font-size: 24px; /* Adjust the font size as needed */
+            color: #333; /* Set the text color */
+        }
+        /* Style for buttons */
+
+        button {
+            padding: 10px 20px; /* Add padding for better touch interaction */
+            font-size: 16px; /* Increase font size for readability on mobile devices */
+            background-color: #007BFF; /* Change button background color */
+            color: #fff; /* Change button text color to white */
+            border: none; /* Remove button border */
+            cursor: pointer;
+        }
+        /* Style for the "submit" button in the upload form */
+        #upload-form button[type="submit"] {
+            background-color: #28a745; /* Change button color for emphasis */
+        }
+        /* Style for the "Add" button in the add data form */
+        #add-data-form button[type="button"] {
+            background-color: #28a745; /* Change button color for emphasis */
+        }
+        /* Style for the "Save Changes" button */
+        #save-changes {
+            background-color: #17a2b8; /* Change button color for emphasis */
+        } 
+        /* Style for the download link */
+        #download-link {
+            display: block;
+            margin-top: 10px; /* Add some spacing below the buttons */
+            text-align: center; /* Center the download link text */
+            font-weight: bold;
+            text-decoration: none;
+            color: #007BFF;
+        }
+        /* Style for the "Export Data" button */
+        #exportData {
+            padding: 10px 20px; /* Add padding for better touch interaction */
+            font-size: 16px; /* Increase font size for readability on mobile devices */
+            background-color: #007BFF; /* Change button background color */
+            color: #fff; /* Change button text color to white */
+            border: none; /* Remove button border */
+            cursor: pointer;
+        }
+        /* Style for the "Job Name" input */
+        #jobName {
+            padding: 10px; /* Add padding for better touch interaction */
+            font-size: 16px; /* Increase font size for readability on mobile devices */
+            border: 1px solid #ccc; /* Add a border for better visibility */
+            border-radius: 5px; /* Add rounded corners */
+            background-color: #fff; /* Set the background color */
+            color: #333; /* Set the text color */
+            width: 10%; 
+        }
+
+        /* Style for the upload form */
+        #upload-form {
+            margin-bottom: 20px; /* Add some spacing below the form */
+        }
+
+        /* Style for the editable table */
+        #editable-table-container {
+            display: none; /* Hide the table initially */
+            margin-bottom: 20px; /* Add some spacing below the table */
+        }
+
+        #editable-table {
+            border-collapse: collapse; /* Collapse borders */
+            width: 100%; /* Set table width to 100% */
+        }
+
+        #editable-table th,
+        #editable-table td {
+            padding: 10px; /* Add padding */
+            border: 1px solid #ddd; /* Add border */
+        }
+
+        #editable-table th {
+            background-color: #007BFF; /* Add background color to the table header */
+            color: #fff; /* Add text color to the table header */
+        }
+
+        /* Style for the add data form */
+        #add-data-form {
+            margin-bottom: 20px; /* Add some spacing below the form */
+        }
+
+        #add-data-form h2 {
+            margin-top: 0; /* Remove top margin */
+        }
+
+        #add-data-form label {
+            display: block; /* Make labels display as block-level elements */
+            margin-bottom: 5px; /* Add some spacing below the labels */
+        }
+
+        #add-data-form input,
+        #add-data-form select {
+            margin-bottom: 10px; /* Add some spacing below the inputs */
+        }
+
+
+        /* Style for the buttons */
+        button {
+            padding: 10px 20px; /* Add padding for better touch interaction */
+            font-size: 16px; /* Increase font size for readability on mobile devices */
+            background-color: #007BFF; /* Change button background color */
+            color: #fff; /* Change button text color to white */
+            border: none; /* Remove button border */
+            cursor: pointer;
+        }
+
+        /* Style for the "Add" button in the add data form */
+        #add-new-data {
+            background-color: #28a745; /* Change button color for emphasis */
+        }
+
+        /* Style for the "Save Changes" button */
+        #save-changes {
+            background-color: #17a2b8; /* Change button color for emphasis */
+        }
+
+        /* Style for the download link */
+        #download-link {
+            display: block;
+            margin-top: 10px; /* Add some spacing below the buttons */
+            text-align: center; /* Center the download link text */
+            font-weight: bold;
+            text-decoration: none;
+            color: #007BFF;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Edit and Save CSV Data</h1>
+
+    <!-- Upload Form -->
+    <form id="upload-form">
+        <label for="csv-file">Upload CSV File:</label>
+        <input type="file" id="csv-file" accept=".csv">
+        <button type="submit">Upload</button>
+    </form>
+
+    <!-- Editable Table -->
+    <div id="editable-table-container">
+        <table id="editable-table"></table>
+        <button id="save-changes">Save Changes</button>
+    </div>
+
+    <!-- Add New Data Form -->
+    <form id="add-data-form">
+        <h2>Add New Data</h2>
+        <label for="new-data-type">Type of Fitting:</label>
+        <select id="new-data-type">
+            <option value="90's">90's</option>
+            <option value="Tee's">Tee's</option>
+            <option value="Union">Union</option>
+            <option value="45's">45's</option>
+            <option value="Shut-off">Shut-off</option>
+            <option value="Reducer">Reducer</option>
+            <option value="Nipple">Nipple</option>
+            <option value="Coupling">Coupling</option>
+            <option value="Cap">Cap</option>
+            <option value="Plug">Plug</option>
+
+            <!-- Add more fitting types as needed -->
+        </select>
+        <label for="new-data-OD">OD:</label>
+        <select id="new-data-OD">
+            <option value="3/8">3/8"</option>
+            <option value="1/2">1/2"</option>
+            <option value="3/4">3/4"</option>
+            <option value="1">1"</option>
+            <option value="1 1/4">1 1/4"</option>
+            <option value="1 1/2">1 1/2"</option>
+            <option value="2">2"</option>
+            <option value="2 1/2">2 1/2"</option>
+        </select>
+        <label for="new-data-nipple-size">Nipple Size:</label>
+        <input type="text" id="new-data-nipple-size">
+        <label for="new-data-quantity">Quantity:</label>
+        <input type="text" id="new-data-quantity">
+        <button type="button" id="add-new-data">Add</button>
+    </form>
+
+    <!-- Download Link for Updated CSV -->
+    <a id="download-link" style="display: none" download="updated_data.csv">Download Updated CSV</a>
+    <label for="download-filename">Filename for Download:</label>
+    <input type="text" id="download-filename">
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script>
+        const uploadForm = document.getElementById('upload-form');
+        const csvFileInput = document.getElementById('csv-file');
+        const editableTableContainer = document.getElementById('editable-table-container');
+        const editableTable = document.getElementById('editable-table');
+        const saveChangesButton = document.getElementById('save-changes');
+        const addDataForm = document.getElementById('add-data-form');
+        const addDataTypeInput = document.getElementById('new-data-type');
+        const addDataODInput = document.getElementById('new-data-OD');
+        const addDataNipplesizeInput = document.getElementById('new-data-nipple-size');
+        const addDataQuantityInput = document.getElementById('new-data-quantity');
+        const addDataButton = document.getElementById('add-new-data');
+        const downloadLink = document.getElementById('download-link');
+        let csvData = null;
+
+        uploadForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const file = csvFileInput.files[0];
+
+            if (file) {
+                // Handle file upload
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const csvText = event.target.result;
+
+                    // Parse CSV data using PapaParse
+                    Papa.parse(csvText, {
+                        header: true, // Assuming the first row is the header
+                        skipEmptyLines: true,
+                        complete: function (results) {
+                            // Store parsed data and display it in an editable table
+                            csvData = results.data;
+                            renderEditableTable(csvData);
+                        }
+                    });
+                };
+
+                reader.readAsText(file);
+            }
+        });
+
+        function renderEditableTable(data) {
+            if (data.length > 0) {
+                const headers = Object.keys(data[0]);
+                const thead = document.createElement('thead');
+                const tbody = document.createElement('tbody');
+
+                // Create table headers
+                const headerRow = document.createElement('tr');
+                headers.forEach(header => {
+                    const th = document.createElement('th');
+                    th.textContent = header;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+
+                // Create table rows
+                data.forEach(rowData => {
+                    const tr = document.createElement('tr');
+                    headers.forEach(header => {
+                        const td = document.createElement('td');
+                        const value = rowData[header];
+                        td.contentEditable = true;
+                        td.textContent = value;
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+
+                editableTable.innerHTML = '';
+                editableTable.appendChild(thead);
+                editableTable.appendChild(tbody);
+
+                editableTableContainer.style.display = 'block';
+            } else {
+                editableTableContainer.style.display = 'none';
+            }
+        }
+
+        saveChangesButton.addEventListener('click', function () {
+            if (csvData) {
+                // Update the CSV data with edited values
+                const updatedData = [];
+                const tableRows = editableTable.querySelectorAll('tbody tr');
+                const headers = Array.from(editableTable.querySelectorAll('thead th')).map(th => th.textContent);
+
+                tableRows.forEach(row => {
+                    const updatedRow = {};
+                    const tableCells = row.querySelectorAll('td');
+                    tableCells.forEach((cell, index) => {
+                        updatedRow[headers[index]] = cell.textContent;
+                    });
+                    updatedData.push(updatedRow);
+                });
+
+                // Generate a new CSV file with the edited data
+                const updatedCsv = Papa.unparse(updatedData, { header: true });
+
+                // Get the user-specified filename
+                const filename = document.getElementById('download-filename').value || 'updated_data';
+
+                // Create a Blob object with the updated CSV data
+                const blob = new Blob([updatedCsv], { type: 'text/csv' });
+
+                // Create a download URL for the Blob and set it to the download link
+                const url = URL.createObjectURL(blob);
+                const downloadLink = document.getElementById('download-link');
+                downloadLink.href = url;
+
+                // Set the filename for the downloaded file
+                downloadLink.download = `${filename}.csv`;
+
+                // Display the download link and trigger a click to download the file
+                downloadLink.style.display = 'block';
+                downloadLink.click();
+
+                // Clean up by revoking the Object URL
+                URL.revokeObjectURL(url);
+            }
+        });
+
+        addDataButton.addEventListener('click', function () {
+            const name = addDataTypeInput.value.trim();
+            const OD = addDataODInput.value.trim();
+            const nipple = addDataNipplesizeInput.value.trim();
+            const quantity = addDataQuantityInput.value.trim();
+
+            if (name && OD) {
+                // Add new data to the table and CSV data
+                const newRow = {};
+                newRow['Fitting Type'] = name;
+                newRow['OD'] = OD;
+                newRow['Nipple Size'] = nipple;
+                newRow['Quantity'] = quantity;
+                
+
+                csvData.push(newRow);
+
+                // Append the new row to the table
+                const tbody = editableTable.querySelector('tbody');
+                const tr = document.createElement('tr');
+                Object.keys(newRow).forEach(header => {
+                    const td = document.createElement('td');
+                    td.contentEditable = true;
+                    td.textContent = newRow[header];
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+
+                // Clear the input fields
+                addDataNipplesizeInput.value = '';
+                addDataQuantityInput.value = '';
+            }
+        });
+    </script>
+</body>
+</html>
