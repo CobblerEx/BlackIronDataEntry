@@ -230,6 +230,16 @@
         .button2:hover {
             background-color: #e64c22;
         }
+        /* delete button style */
+        .delete-button {
+            background-color: #ff5733;
+            color: #fff;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 20px;
+        }
 
     </style>
 </head>
@@ -315,6 +325,7 @@
         const addDataQuantityInput = document.getElementById('new-data-quantity');
         const addDataButton = document.getElementById('add-new-data');
         const downloadLink = document.getElementById('download-link');
+
         let csvData = null;
 
         uploadForm.addEventListener('submit', function (e) {
@@ -369,16 +380,31 @@
                         tr.appendChild(td);
                     });
                     tbody.appendChild(tr);
+
+                    // Add delete button to each row
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.className = 'delete-button';
+                    tr.appendChild(deleteButton);
+
+                    // Add event listener to delete button
+                    deleteButton.addEventListener('click', function () {
+                        const index = Array.from(tbody.children).indexOf(tr);
+                        tbody.removeChild(tr);
+                        csvData.splice(index, 1);
+                    });
                 });
 
                 editableTable.innerHTML = '';
                 editableTable.appendChild(thead);
                 editableTable.appendChild(tbody);
-
+                
                 editableTableContainer.style.display = 'block';
             } else {
                 editableTableContainer.style.display = 'none';
             }
+
+            
         }
 
         saveChangesButton.addEventListener('click', function () {
