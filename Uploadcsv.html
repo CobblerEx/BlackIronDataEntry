@@ -462,7 +462,6 @@
                 newRow['OD'] = OD;
                 newRow['Nipple Size'] = nipple;
                 newRow['Quantity'] = quantity;
-                
 
                 csvData.push(newRow);
 
@@ -475,13 +474,28 @@
                     td.textContent = newRow[header];
                     tr.appendChild(td);
                 });
+
+                // Add delete button to the new row
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.className = 'delete-button';
+                tr.appendChild(deleteButton);
+
+                // Add event listener to delete button
+                deleteButton.addEventListener('click', function () {
+                    const index = Array.from(tbody.children).indexOf(tr);
+                    tbody.removeChild(tr);
+                    csvData.splice(index, 1);
+                });
+
                 tbody.appendChild(tr);
 
                 // Clear the input fields
                 addDataNipplesizeInput.value = '';
-                addDataQuantityInput.value = '';
+                
             }
         });
+
     </script>
 </body>
 </html>
