@@ -271,6 +271,14 @@
             const fitting = selectedFittingType;
             const od = odSize.value;
             const qty = parseInt(quantity.value, 10);
+
+             // Check if fitting is selected
+            if (!fitting) {
+                // Show error message (you can customize the error message as needed)
+                alert("Please select a fitting type.");
+                return; // Exit the function, item won't be added
+            }
+            
             let nipple = '';
 
             if (fitting === 'Nipple') {
@@ -364,7 +372,7 @@
                 const fittingType = dataParts[0];
                 const odSize = dataParts[1];
 
-                let quantity = parseInt(dataParts[3].split(':')[1].trim()); // Extract and parse quantity
+                let quantity = parseInt(dataParts[3]); // Extract and parse quantity
 
                 let nippleSize = '';
                 if (fittingType === 'Nipple') {
@@ -374,7 +382,7 @@
                     nippleSize = reducerPart ? reducerPart : 'N/A';
                 }
 
-                data.push(`${fittingType}, ${odSize}, ${nippleSize}, Quantity: ${quantity}`);
+                data.push(`${fittingType}, ${odSize}, ${nippleSize}, ${quantity}`);
             });
 
             const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
