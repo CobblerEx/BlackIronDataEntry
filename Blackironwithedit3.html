@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Black Iron Gas Fittings Data Entry</title>
+    
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -149,6 +150,11 @@
                     <option value="Cap">Cap</option>
                     <option value="Plug">Plug</option>
                     <option value="Coupling">Coupling</option>
+                    <option value="Stand off (Long)">Stand off (Long)</option>
+                    <option value="Stand off (Short)">Stand off (Short)</option>
+                    <option value="Paint">Paint</option>
+                    <option value="Hours">Hours</option>
+
                 </select>
         
                 <label for="od-size">Outer Diameter (OD) Size (inches):</label>
@@ -203,7 +209,7 @@
         <div class="center">
         <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html" class="button2">Go Upload page</a>
         </div>
-
+        <ul id="items-list"></ul>
         
 
     <script>
@@ -217,11 +223,13 @@
         const itemsList = document.getElementById('items-list');
         const exportDataBtn = document.getElementById('exportData');
         const jobName = document.getElementById('jobName');
+        
 
         fittingType.addEventListener('change', handleFittingTypeChange);
         addButton.addEventListener('click', addItem);
         exportDataBtn.addEventListener('click', exportData);
         
+        let draggedItem = null;
 
         const addedItems = [];
 
@@ -253,6 +261,12 @@
             }
 
             const listItem = document.createElement('li');
+            listItem.draggable = true; // Make the list item draggable
+            listItem.addEventListener('dragstart', handleDragStart);
+            listItem.addEventListener('dragover', handleDragOver);
+            listItem.addEventListener('drop', handleDrop);
+            listItem.addEventListener('dragend', handleDragEnd);
+
             const deleteButton = document.createElement('button');
             const editButton = document.createElement('button'); // Add the edit button
             deleteButton.textContent = 'Delete';
@@ -260,7 +274,7 @@
             deleteButton.className = 'delete-button';
             editButton.className = 'edit-button'; // Add class for styling
 
-            listItem.innerHTML = `${fitting}, ${od}", ${nipple},  ${qty}`;
+            listItem.innerHTML = `${fitting}, ${od}", ${nipple}, ${qty}`;
             listItem.appendChild(deleteButton);
             listItem.appendChild(editButton); // Add the edit button to the list item
             itemsList.appendChild(listItem);
@@ -277,70 +291,65 @@
             });
         }
 
+        // Drag-and-drop handlers
+        function handleDragStart(event) {
+            draggedItem = event.target;
+            setTimeout(() => event.target.style.display = 'none', 0);
+        }
 
-        itemsList.addEventListener('click', function (event) {
-            if (event.target.classList.contains('delete-button')) {
-                const listItem = event.target.parentElement;
-                const index = Array.from(itemsList.children).indexOf(listItem);
-
-                itemsList.removeChild(listItem);
-                addedItems.splice(index, 1);
+        function handleDragOver(event) {
+            event.preventDefault();
+            const targetItem = event.target.closest('li');
+            if (targetItem && targetItem !== draggedItem) {
+                const bounding = targetItem.getBoundingClientRect();
+                const offset = bounding.y + bounding.height / 2;
+                if (event.clientY - offset > 0) {
+                    targetItem.style['border-bottom'] = '2px solid #007bff';
+                    targetItem.style['border-top'] = '';
+                } else {
+                    targetItem.style['border-top'] = '2px solid #007bff';
+                    targetItem.style['border-bottom'] = '';
+                }
             }
-        });
-        itemsList.addEventListener('click', function (event) {
-            if (event.target.classList.contains('edit-button')) {
-                const listItem = event.target.parentElement;
-                const existingValues = listItem.innerText.split(', ');
+        }
 
-                const editControls = `
-                    <input type="text" class="edit-fitting" value="${existingValues[0]}" />
-                    <input type="text" class="edit-od" value="${existingValues[1]}" />
-                    <input type="text" class="edit-nipple" value="${existingValues[2]}" />
-                    <input type="number" class="edit-quantity" value="${existingValues[3].split(' ')[2]}" />
-                    <button class="save-button">Save</button>
-                `;
-
-                listItem.innerHTML = editControls;
-
-                listItem.querySelector('.save-button').addEventListener('click', function () {
-                    const fitting = listItem.querySelector('.edit-fitting').value;
-                    const od = listItem.querySelector('.edit-od').value;
-                    const nipple = listItem.querySelector('.edit-nipple').value;
-                    const quantity = listItem.querySelector('.edit-quantity').value;
-
-                    listItem.innerHTML = `${fitting}, ${od}, ${nipple}, Quantity: ${quantity}
-                    <button class="edit-button">Edit</button>`;
-                });
+        function handleDrop(event) {
+            event.preventDefault();
+            const targetItem = event.target.closest('li');
+            if (targetItem && targetItem !== draggedItem) {
+                targetItem.style['border-bottom'] = '';
+                targetItem.style['border-top'] = '';
+                itemsList.insertBefore(draggedItem, event.clientY < targetItem.getBoundingClientRect().top + targetItem.offsetHeight / 2 ? targetItem : targetItem.nextSibling);
             }
-        });
+        }
 
-       
+        function handleDragEnd(event) {
+            event.target.style.display = 'block';
+            event.target.style['border-bottom'] = '';
+            event.target.style['border-top'] = '';
+            draggedItem = null;
+        }
+
+        // Modify the exportData function to maintain the current order
         function exportData() {
-            const data = ['Fitting Type, OD Size, Nipple Size, Quantity'];
+            const data = ['Fitting Type, OD Size, Nipple Size/Reducer Size, Quantity'];
             const items = itemsList.querySelectorAll('li');
 
             items.forEach(item => {
-                const itemText = item.textContent;
-                const dataParts = itemText.split(',').map(part => part.trim());
+                const itemText = item.textContent.split(',').map(part => part.trim());
 
-                const fittingType = dataParts[0];
-                const odSize = dataParts[1];
+                const fittingType = itemText[0];
+                const odSize = itemText[1].replace('"', ''); // Remove any unwanted quotes
+                let nippleSize = itemText[2] ? itemText[2] : ''; // Nipple/Reducer size or empty if none
 
-                let quantity = parseInt(dataParts[3].split(':')[1].trim()); // Extract and parse quantity
+                const quantityText = itemText[3].match(/\d+/); // Extract digits for quantity
+                const quantity = quantityText ? parseInt(quantityText[0], 10) : 0;
 
-                let nippleSize = '';
-                if (fittingType === 'Nipple') {
-                    nippleSize = dataParts[2];
-                } else if (fittingType === 'Reducer') {
-                    const reducerPart = dataParts.find(part => part.startsWith('Reduced to:'));
-                    nippleSize = reducerPart ? reducerPart : 'N/A';
-                }
-
-                data.push(`${fittingType}, ${odSize}, ${nippleSize}, Quantity: ${quantity}`);
+                data.push(`${fittingType}, ${odSize}, ${nippleSize}, ${quantity}`);
             });
 
             const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
-            const filename = `${jobName.value || 'Untitled'}_nipple_data_${timestamp}.csv`;
+            const filename = `${jobName.value || 'Untitled'}_fittings_data_${timestamp}.csv`;
 
             const dataBlob = new Blob([data.join('\n')], { type: 'text/csv' });
             const downloadLink = document.createElement('a');
