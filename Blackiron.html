@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>90-Degree Angle</title>
+    <!-- Add your CSS links or styles here -->
+    <style>
+        /* Add your CSS styles here */
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        /* Style the canvas */
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>90-Degree Angle</h1>
+
+    <!-- Create a canvas element for drawing -->
+    <canvas id="angleCanvas" width="400" height="400"></canvas>
+
+    <!-- Add your JavaScript code here -->
+    <script>
+        // Get the canvas element and context
+        const canvas = document.getElementById("angleCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const angles = [];
+
+        let start = null;
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            start = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (start) {
+                const rect = canvas.getBoundingClientRect();
+                const end = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+                // Calculate perfect right-angle coordinates
+                const width = Math.abs(end.x - start.x);
+                const height = Math.abs(end.y - start.y);
+                const size = Math.min(width, height);
+                const angle = {
+                    x: start.x + size,
+                    y: start.y + size
+                };
+
+                angles.push({ start, angle, end });
+                draw();
+                start = null;
+            }
+        });
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const angle of angles) {
+                ctx.strokeStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(angle.start.x, angle.start.y, 5, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.strokeStyle = 'black';
+                ctx.beginPath();
+                ctx.moveTo(angle.start.x, angle.start.y);
+                ctx.lineTo(angle.angle.x, angle.angle.y);
+                ctx.lineTo(angle.end.x, angle.end.y);
+                ctx.stroke();
+            }
+        }
+    </script>
+</body>
+</html>
