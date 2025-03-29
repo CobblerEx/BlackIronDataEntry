@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black Iron Length Calculator with Fittings & Shut-Offs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 20px auto;
+            padding: 20px;
+            line-height: 1.4;
+        }
+        .input-section, .results {
+            margin-bottom: 20px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            padding: 8px 0;
+        }
+        button {
+            padding: 5px 10px;
+            margin-right: 10px;
+        }
+        .error {
+            color: red;
+        }
+        label, select, input {
+            margin-right: 10px;
+        }
+        .sub-entry {
+            margin-left: 20px;
+        }
+        #canvasContainer {
+            width: 100%;
+            overflow: auto;
+        }
+        #pipeCanvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Black Iron Length Calculator</h1>
+    <div class="input-section">
+        <label for="pipeSize">Pipe Size:</label>
+        <select id="pipeSize">
+            <option value="0.5">1/2"</option>
+            <option value="0.75">3/4"</option>
+            <option value="1">1"</option>
+            <option value="1.25">1-1/4"</option>
+        </select>
+        <label for="measurement">Assembled Length (inches):</label>
+        <input type="number" id="measurement" step="0.01" min="0">
+        <label for="startFitting">Starting Fitting:</label>
+        <select id="startFitting">
+            <option value="none">None</option>
+            <option value="elbow">90° Elbow</option>
+            <option value="tee">Tee</option>
+            <option value="coupling">Coupling</option>
+            <option value="shutoff">Shut-Off Valve</option>
+        </select>
+        <label for="fitting">Ending Fitting:</label>
+        <select id="fitting">
+            <option value="none">None</option>
+            <option value="elbow">90° Elbow</option>
+            <option value="tee">Tee</option>
+            <option value="coupling">Coupling</option>
+            <option value="shutoff">Shut-Off Valve</option>
+        </select>
+        <br>
+        <label for="shutoffPosition">Mid-Segment Shut-Off Position (inches, optional):</label>
+        <input type="number" id="shutoffPosition" step="0.01" min="0" placeholder="e.g., 60">
+        <button onclick="addMeasurement()">Add Length</button>
+        <button onclick="calculateTotal()">Calculate Total</button>
+        <button onclick="resetCalculator()">Reset</button>
+        <button onclick="exportToText()">Export to Text</button>
+        <label for="projectName">Project Name:</label>
+        <input type="text" id="projectName" placeholder="e.g., Kitchen Piping">
+        <button onclick="saveProject()">Save Project</button>
+        <select id="loadProject" onchange="loadProject()">
+            <option value="">Load Project</option>
+        </select>
+    </div>
+    <div>
+        <h3>Measurements:</h3>
+        <ul id="lengthList"></ul>
+    </div>
+    <div id="canvasContainer">
+        <canvas id="pipeCanvas" height="300"></canvas>
+    </div>
+    <div class="results" id="results"></div>
+
+    <script>
+        const fittingData = {
+            0.5: { 
+                elbow: { engagement: 0.64, body: 1.2 }, 
+                tee: { engagement: 0.64, body: 1.25 }, 
+                coupling: { engagement: 0.64, body: 1.12 },
+                shutoff: { engagement: 0.64, body: 2.0 }
+            },
+            0.75: { 
+                elbow: { engagement: 0.81, body: 1.4 }, 
+                tee: { engagement: 0.81, body: 2.0 }, 
+                coupling: { engagement: 0.67, body: 1.2 },
+                shutoff: { engagement: 0.81, body: 2.5 }
+            },
+            1: { 
+                elbow: { engagement: 0.92, body: 1.6 }, 
+                tee: { engagement: 0.92, body: 2.2 }, 
+                coupling: { engagement: 0.78, body: 1.4 },
+                shutoff: { engagement: 0.92, body: 3.0 }
+            },
+            1.25: { 
+                elbow: { engagement: 1.05, body: 1.8 }, 
+                tee: { engagement: 1.05, body: 2.4 }, 
+                coupling: { engagement: 0.89, body: 1.6 },
+                shutoff: { engagement: 1.05, body: 3.5 }
+            }
+        };
+
+        const nippleSizes = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 10, 12, 18, 24, 36, 48];
+
+        let entries = [];
+        let previousFitting = null;
+        let projects = JSON.parse(localStorage.getItem('pipeProjects')) || {};
+
+        function gcd(a, b) {
+            while (b) {
+                [a, b] = [b, a % b];
+            }
+            return a;
+        }
+
+        function toFraction(inches) {
+            const sixteenths = Math.round(inches * 16);
+            const wholeInches = Math.floor(sixteenths / 16);
+            let numerator = sixteenths % 16;
+            let denominator = 16;
+
+            if (numerator === 0) return `${wholeInches}`;
+
+            const divisor = gcd(numerator, denominator);
+            numerator /= divisor;
+            denominator /= divisor;
+
+            return `${wholeInches} ${numerator}/${denominator}`;
+        }
+
+        function toFeetAndFraction(inches) {
+            const totalFeet = inches / 12;
+            const wholeFeet = Math.floor(totalFeet);
+            const remainingInches = inches % 12;
+            const inchFraction = toFraction(remainingInches);
+            return `${wholeFeet} ft ${inchFraction} in`;
+        }
+
+        function getNippleOptions(cutLength, startingEngagement, endingEngagement, endingAdjustment) {
+            const sortedNipples = nippleSizes
+                .map(size => ({ size, diff: Math.abs(size - cutLength) }))
+                .sort((a, b) => a.diff - b.diff)
+                .slice(0, 3)
+                .map(item => item.size);
+
+            const closestNipple = sortedNipples[0];
+
+            return sortedNipples.map(nipple => {
+                const exposed = nipple - startingEngagement - endingEngagement;
+                const assembled = exposed + endingAdjustment;
+                return { nipple, assembled, isClosest: nipple === closestNipple };
+            });
+        }
+
+        function addMeasurement() {
+            const pipeSize = parseFloat(document.getElementById('pipeSize').value);
+            const lengthInput = document.getElementById('measurement');
+            const startFittingSelect = document.getElementById('startFitting');
+            const fittingSelect = document.getElementById('fitting');
+            const shutoffPositionInput = document.getElementById('shutoffPosition');
+            const resultsDiv = document.getElementById('results');
+
+            const assembledLength = parseFloat(lengthInput.value);
+            let startingFittingType = startFittingSelect.value;
+            const endingFittingType = fittingSelect.value;
+            const shutoffPosition = parseFloat(shutoffPositionInput.value) || 0;
+
+            if (isNaN(assembledLength) || assembledLength <= 0) {
+                resultsDiv.innerHTML = '<p class="error">Please enter a valid positive length.</p>';
+                return;
+            }
+            if (shutoffPosition && (shutoffPosition <= 0 || shutoffPosition >= assembledLength)) {
+                resultsDiv.innerHTML = '<p class="error">Shut-off position must be between 0 and the assembled length.</p>';
+                return;
+            }
+
+            // If there's a previous fitting and user didn't change startFitting, use previousFitting
+            if (previousFitting && startingFittingType === startFittingSelect.value) {
+                startingFittingType = previousFitting;
+                startFittingSelect.value = previousFitting; // Update UI to reflect this
+            }
+
+            const startingEngagement = startingFittingType !== 'none' 
+                ? fittingData[pipeSize][startingFittingType].engagement 
+                : (entries.length === 0 ? fittingData[pipeSize].elbow.engagement : previousFitting ? fittingData[pipeSize][previousFitting].engagement : 0);
+
+            let endingFittingAdjustment = 0;
+            let endingEngagement = 0;
+            if (endingFittingType !== 'none') {
+                const fitting = fittingData[pipeSize][endingFittingType];
+                endingFittingAdjustment = fitting.body - fitting.engagement;
+                endingEngagement = fitting.engagement;
+            }
+
+            if (shutoffPosition) {
+                const shutoffFitting = fittingData[pipeSize].shutoff;
+                const shutoffAdjustment = shutoffFitting.body - shutoffFitting.engagement;
+
+                const firstAssembled = shutoffPosition;
+                const firstBase = firstAssembled + startingEngagement - shutoffAdjustment;
+                const firstCut = firstBase + shutoffFitting.engagement;
+                const firstNippleOptions = getNippleOptions(firstCut, startingEngagement, shutoffFitting.engagement, shutoffAdjustment);
+
+                const secondAssembled = assembledLength - shutoffPosition;
+                const secondBase = secondAssembled + shutoffFitting.engagement - endingFittingAdjustment;
+                const secondCut = secondBase + endingEngagement;
+                const secondNippleOptions = getNippleOptions(secondCut, shutoffFitting.engagement, endingEngagement, endingFittingAdjustment);
+
+                entries.push({
+                    pipeSize,
+                    assembledLength,
+                    segments: [
+                        {
+                            assembledLength: firstAssembled,
+                            baseLength: firstBase,
+                            cutLength: firstCut,
+                            nippleOptions: firstNippleOptions,
+                            startingFitting: startingFittingType !== 'none' ? startingFittingType : (entries.length === 0 ? 'elbow' : previousFitting || 'none'),
+                            endingFittingType: 'shutoff',
+                            startingEngagement,
+                            endingFittingAdjustment: shutoffAdjustment,
+                            endingEngagement: shutoffFitting.engagement
+                        },
+                        {
+                            assembledLength: secondAssembled,
+                            baseLength: secondBase,
+                            cutLength: secondCut,
+                            nippleOptions: secondNippleOptions,
+                            startingFitting: 'shutoff',
+                            endingFittingType,
+                            startingEngagement: shutoffFitting.engagement,
+                            endingFittingAdjustment,
+                            endingEngagement
+                        }
+                    ]
+                });
+            } else {
+                const baseLength = assembledLength + startingEngagement - endingFittingAdjustment;
+                const cutLength = baseLength + endingEngagement;
+                const nippleOptions = getNippleOptions(cutLength, startingEngagement, endingEngagement, endingFittingAdjustment);
+                entries.push({ 
+                    pipeSize, 
+                    assembledLength,
+                    baseLength,
+                    cutLength,
+                    nippleOptions,
+                    startingFitting: startingFittingType !== 'none' ? startingFittingType : (entries.length === 0 ? 'elbow' : previousFitting || 'none'), 
+                    endingFittingType,
+                    startingEngagement,
+                    endingFittingAdjustment,
+                    endingEngagement
+                });
+            }
+
+            previousFitting = endingFittingType !== 'none' ? endingFittingType : null;
+            updateLengthList();
+            drawLayout();
+            lengthInput.value = '';
+            shutoffPositionInput.value = '';
+            // Set the startFitting dropdown to the new previousFitting for the next entry
+            if (previousFitting) {
+                startFittingSelect.value = previousFitting;
+            }
+            resultsDiv.innerHTML = '';
+        }
+
+        function updateLengthList() {
+            const list = document.getElementById('lengthList');
+            list.innerHTML = '';
+            entries.forEach((entry, index) => {
+                const li = document.createElement('li');
+                const sizeText = `${entry.pipeSize}"`;
+                let output = `Length ${index + 1}:<br>`;
+
+                if (entry.segments) {
+                    output += `  Assem: ${toFraction(entry.assembledLength)} in (${sizeText} pipe) with mid-segment shut-off<br>`;
+                    entry.segments.forEach((seg, subIndex) => {
+                        const startText = seg.startingFitting !== 'none' 
+                            ? `${seg.startingFitting} (-${toFraction(seg.startingEngagement)} in)` 
+                            : 'None';
+                        const endText = seg.endingFittingType !== 'none' 
+                            ? `${seg.endingFittingType} (${seg.endingFittingAdjustment >= 0 ? '+' : ''}${toFraction(Math.abs(seg.endingFittingAdjustment))} in)` 
+                            : 'None';
+                        const nippleText = seg.nippleOptions.map(opt => 
+                            opt.isClosest ? `<b>${opt.nipple}":${toFraction(opt.assembled)}</b>` : `${opt.nipple}":${toFraction(opt.assembled)}`
+                        ).join(', ');
+                        output += `  <span class="sub-entry">Segment ${subIndex + 1}:<br>` +
+                                  `    Assem: ${toFraction(seg.assembledLength)} in<br>` +
+                                  `    Start: ${startText}<br>` +
+                                  `    End: ${endText}<br>` +
+                                  `    Cut: ${toFraction(seg.cutLength)} in<br>` +
+                                  `    Nipples: ${nippleText}</span><br>`;
+                    });
+                    output = output.slice(0, -4); // Remove trailing <br>
+                } else {
+                    const startText = entry.startingFitting !== 'none' 
+                        ? `${entry.startingFitting} (-${toFraction(entry.startingEngagement)} in)` 
+                        : 'None';
+                    const endText = entry.endingFittingType !== 'none' 
+                        ? `${entry.endingFittingType} (${entry.endingFittingAdjustment >= 0 ? '+' : ''}${toFraction(Math.abs(entry.endingFittingAdjustment))} in)` 
+                        : 'None';
+                    const nippleText = entry.nippleOptions.map(opt => 
+                        opt.isClosest ? `<b>${opt.nipple}":${toFraction(opt.assembled)}</b>` : `${opt.nipple}":${toFraction(opt.assembled)}`
+                    ).join(', ');
+                    output += `  Assem: ${toFraction(entry.assembledLength)} in (${sizeText} pipe)<br>` +
+                              `  Start: ${startText}<br>` +
+                              `  End: ${endText}<br>` +
+                              `  Cut: ${toFraction(entry.cutLength)} in<br>` +
+                              `  Nipples: ${nippleText}`;
+                }
+
+                li.innerHTML = output;
+                list.appendChild(li);
+            });
+        }
+
+        function calculateTotal() {
+            if (entries.length === 0) {
+                document.getElementById('results').innerHTML = 
+                    '<p class="error">No measurements added yet.</p>';
+                return;
+            }
+
+            let totalAssembledLength = 0;
+            let totalCutLength = 0;
+            let totalStartingEngagement = 0;
+            let totalEndingAdjustment = 0;
+
+            entries.forEach(entry => {
+                if (entry.segments) {
+                    entry.segments.forEach(seg => {
+                        totalAssembledLength += seg.assembledLength;
+                        totalCutLength += seg.cutLength;
+                        totalStartingEngagement += seg.startingEngagement;
+                        totalEndingAdjustment += seg.endingFittingAdjustment;
+                    });
+                } else {
+                    totalAssembledLength += entry.assembledLength;
+                    totalCutLength += entry.cutLength;
+                    totalStartingEngagement += entry.startingEngagement;
+                    totalEndingAdjustment += entry.endingFittingAdjustment;
+                }
+            });
+
+            document.getElementById('results').innerHTML = `
+                <h3>Results:</h3>
+                <p>Base Length: ${toFraction(entries.reduce((sum, e) => sum + (e.segments ? e.segments.reduce((s, seg) => s + seg.baseLength, 0) : e.baseLength), 0))} in</p>
+                <p>Starting Engagements: -${toFraction(totalStartingEngagement)} in</p>
+                <p>Ending Fitting Adjustments: ${totalEndingAdjustment >= 0 ? '+' : ''}${toFraction(Math.abs(totalEndingAdjustment))} in</p>
+                <p>Total Assembled Length: ${toFraction(totalAssembledLength)} in (${toFeetAndFraction(totalAssembledLength)})</p>
+                <p>Total Pipe Cut Length: ${toFraction(totalCutLength)} in (${toFeetAndFraction(totalCutLength)})</p>
+            `;
+        }
+
+        function resetCalculator() {
+            entries = [];
+            previousFitting = null;
+            document.getElementById('measurement').value = '';
+            document.getElementById('shutoffPosition').value = '';
+            document.getElementById('startFitting').value = 'none';
+            document.getElementById('fitting').value = 'none';
+            document.getElementById('pipeSize').value = '0.5';
+            document.getElementById('projectName').value = '';
+            updateLengthList();
+            drawLayout();
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function drawLayout() {
+            const canvas = document.getElementById('pipeCanvas');
+            const ctx = canvas.getContext('2d');
+            const containerWidth = document.getElementById('canvasContainer').clientWidth;
+            canvas.width = containerWidth * 0.9;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (entries.length === 0) return;
+
+            let maxX = 0, maxY = 0, minY = 0;
+            let segments = [];
+            entries.forEach(entry => {
+                if (entry.segments) {
+                    segments = segments.concat(entry.segments);
+                } else {
+                    segments.push(entry);
+                }
+            });
+
+            let x = 20, y = canvas.height / 2;
+            let direction = 'right';
+
+            segments.forEach(seg => {
+                const length = seg.assembledLength;
+                if (direction === 'right') maxX = Math.max(maxX, x + length);
+                if (direction === 'left') maxX = Math.max(maxX, x);
+                if (direction === 'down') maxY = Math.max(maxY, y + length);
+                if (direction === 'up') minY = Math.min(minY, y - length);
+            });
+
+            const scaleX = (canvas.width - 40) / (maxX - (minY < 0 ? -minY : 0));
+            const scaleY = (canvas.height - 40) / (maxY - minY);
+            const scale = Math.min(scaleX, scaleY);
+
+            x = 20;
+            y = canvas.height / 2 - (minY < 0 ? minY * scale : 0);
+            direction = 'right';
+
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+            ctx.font = '10px Arial';
+
+            segments.forEach((seg, index) => {
+                const length = seg.assembledLength * scale;
+
+                if (seg.startingFitting !== 'none') {
+                    drawFitting(ctx, x, y, seg.startingFitting, direction);
+                }
+
+                ctx.moveTo(x, y);
+                if (direction === 'right') x += length;
+                else if (direction === 'left') x -= length;
+                else if (direction === 'down') y += length;
+                else if (direction === 'up') y -= length;
+                ctx.lineTo(x, y);
+                ctx.stroke();
+
+                const labelX = direction === 'right' || direction === 'left' ? (x + (direction === 'left' ? length : -length)) / 2 : x - 15;
+                const labelY = direction === 'down' || direction === 'up' ? (y + (direction === 'up' ? length : -length)) / 2 : y - 10;
+                ctx.fillText(toFraction(seg.assembledLength), labelX, labelY);
+
+                if (seg.endingFittingType !== 'none') {
+                    drawFitting(ctx, x, y, seg.endingFittingType, direction);
+                    if (seg.endingFittingType === 'elbow') {
+                        direction = turnDirection(direction);
+                    }
+                }
+            });
+        }
+
+        function turnDirection(current) {
+            switch (current) {
+                case 'right': return 'down';
+                case 'down': return 'left';
+                case 'left': return 'up';
+                case 'up': return 'right';
+            }
+        }
+
+        function drawFitting(ctx, x, y, type, direction) {
+            ctx.beginPath();
+            if (type === 'elbow') {
+                if (direction === 'right') ctx.arc(x, y, 5, 0, Math.PI / 2);
+                else if (direction === 'down') ctx.arc(x, y, 5, Math.PI / 2, Math.PI);
+                else if (direction === 'left') ctx.arc(x, y, 5, Math.PI, 3 * Math.PI / 2);
+                else if (direction === 'up') ctx.arc(x, y, 5, 3 * Math.PI / 2, 0);
+            } else if (type === 'tee') {
+                ctx.moveTo(x, y - 10);
+                ctx.lineTo(x, y + 10);
+                ctx.moveTo(x - 5, y);
+                ctx.lineTo(x + 5, y);
+            } else if (type === 'coupling') {
+                ctx.rect(x - 5, y - 5, 10, 10);
+            } else if (type === 'shutoff') {
+                ctx.moveTo(x - 5, y - 5);
+                ctx.lineTo(x + 5, y + 5);
+                ctx.moveTo(x + 5, y - 5);
+                ctx.lineTo(x - 5, y + 5);
+            }
+            ctx.stroke();
+        }
+
+        function exportToText() {
+            if (entries.length === 0) {
+                document.getElementById('results').innerHTML = '<p class="error">No measurements to export.</p>';
+                return;
+            }
+
+            let textContent = "Black Iron Length Calculator Export\n\n";
+            textContent += "Measurements:\n";
+            entries.forEach((entry, index) => {
+                textContent += `Length ${index + 1}:\n`;
+                if (entry.segments) {
+                    textContent += `  Assembled: ${toFraction(entry.assembledLength)} in (${entry.pipeSize}" pipe) with mid-segment shut-off\n`;
+                    entry.segments.forEach((seg, subIndex) => {
+                        textContent += `  Segment ${subIndex + 1}:\n` +
+                                       `    Assembled: ${toFraction(seg.assembledLength)} in\n` +
+                                       `    Start: ${seg.startingFitting !== 'none' ? `${seg.startingFitting} (-${toFraction(seg.startingEngagement)} in)` : 'None'}\n` +
+                                       `    End: ${seg.endingFittingType !== 'none' ? `${seg.endingFittingType} (${seg.endingFittingAdjustment >= 0 ? '+' : ''}${toFraction(Math.abs(seg.endingFittingAdjustment))} in)` : 'None'}\n` +
+                                       `    Cut: ${toFraction(seg.cutLength)} in\n` +
+                                       `    Nipples: ${seg.nippleOptions.map(opt => opt.isClosest ? `${opt.nipple}" (${toFraction(opt.assembled)})` : `${opt.nipple}"`).join(', ')}\n`;
+                    });
+                } else {
+                    textContent += `  Assembled: ${toFraction(entry.assembledLength)} in (${entry.pipeSize}" pipe)\n` +
+                                   `  Start: ${entry.startingFitting !== 'none' ? `${entry.startingFitting} (-${toFraction(entry.startingEngagement)} in)` : 'None'}\n` +
+                                   `  End: ${entry.endingFittingType !== 'none' ? `${entry.endingFittingType} (${entry.endingFittingAdjustment >= 0 ? '+' : ''}${toFraction(Math.abs(entry.endingFittingAdjustment))} in)` : 'None'}\n` +
+                                   `  Cut: ${toFraction(entry.cutLength)} in\n` +
+                                   `  Nipples: ${entry.nippleOptions.map(opt => opt.isClosest ? `${opt.nipple}" (${toFraction(opt.assembled)})` : `${opt.nipple}"`).join(', ')}\n`;
+                }
+            });
+
+            const resultsDiv = document.getElementById('results').innerHTML;
+            if (resultsDiv && !resultsDiv.includes('error')) {
+                textContent += "\nResults:\n" + resultsDiv.replace(/<[^>]+>/g, '').replace(/\n\s+/g, '\n');
+            }
+
+            const blob = new Blob([textContent], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'pipe_calculator_export.txt';
+            link.click();
+        }
+
+        function saveProject() {
+            const projectName = document.getElementById('projectName').value.trim();
+            if (!projectName) {
+                document.getElementById('results').innerHTML = '<p class="error">Please enter a project name.</p>';
+                return;
+            }
+            if (entries.length === 0) {
+                document.getElementById('results').innerHTML = '<p class="error">No measurements to save.</p>';
+                return;
+            }
+
+            projects[projectName] = {
+                entries: JSON.parse(JSON.stringify(entries)),
+                previousFitting: previousFitting
+            };
+            localStorage.setItem('pipeProjects', JSON.stringify(projects));
+            updateProjectDropdown();
+            document.getElementById('results').innerHTML = `<p>Saved project: ${projectName}</p>`;
+            document.getElementById('projectName').value = '';
+        }
+
+        function loadProject() {
+            const projectSelect = document.getElementById('loadProject');
+            const projectName = projectSelect.value;
+            if (!projectName) return;
+
+            const project = projects[projectName];
+            if (project) {
+                entries = JSON.parse(JSON.stringify(project.entries));
+                previousFitting = project.previousFitting;
+                updateLengthList();
+                drawLayout();
+                calculateTotal();
+                document.getElementById('results').innerHTML = `<p>Loaded project: ${projectName}</p>`;
+                // Update startFitting dropdown after loading
+                document.getElementById('startFitting').value = previousFitting || 'none';
+            }
+            projectSelect.value = '';
+        }
+
+        function updateProjectDropdown() {
+            const projectSelect = document.getElementById('loadProject');
+            projectSelect.innerHTML = '<option value="">Load Project</option>';
+            Object.keys(projects).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                projectSelect.appendChild(option);
+            });
+        }
+
+        window.onload = function() {
+            updateProjectDropdown();
+            drawLayout();
+        };
+    </script>
+</body>
+</html>
