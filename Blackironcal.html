@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black Iron Pipe Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f2f2f2;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f9f9f9;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab.active {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        label, select, input {
+            margin-right: 10px;
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: red;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .delete-button {
+            background-color: #e74c3c;
+        }
+        .edit-button {
+            background-color: #3498db;
+        }
+        #canvasContainer {
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        #pipeCanvas {
+            border: 1px solid #ccc;
+            cursor: grab;
+        }
+        #canvasControls {
+            margin-top: 10px;
+        }
+        .sub-entry {
+            margin-left: 20px;
+            margin-top: 5px;
+        }
+        .measurement-item {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Black Iron Pipe Tool</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="showSection('calculator')">Length Calculator</div>
+            <div class="tab" onclick="showSection('dataEntry')">Fittings Data Entry</div>
+        </div>
+
+        <!-- Length Calculator Section -->
+        <div id="calculator" class="section active">
+            <div class="input-section">
+                <label for="pipeSize">Pipe Size:</label>
+                <select id="pipeSize">
+                    <option value="0.5">1/2"</option>
+                    <option value="0.75">3/4"</option>
+                    <option value="1">1"</option>
+                    <option value="1.25">1-1/4"</option>
+                </select>
+                <label for="measurement">Assembled Length (inches):</label>
+                <input type="number" id="measurement" step="0.01" min="0">
+                <label for="startFitting">Starting Fitting:</label>
+                <select id="startFitting">
+                    <option value="none">None</option>
+                    <option value="elbow">90° Elbow</option>
+                    <option value="tee">Tee</option>
+                    <option value="coupling">Coupling</option>
+                    <option value="shutoff">Shut-Off Valve</option>
+                </select>
+                <label for="fitting">Ending Fitting:</label>
+                <select id="fitting">
+                    <option value="none">None</option>
+                    <option value="elbow">90° Elbow</option>
+                    <option value="tee">Tee</option>
+                    <option value="coupling">Coupling</option>
+                    <option value="shutoff">Shut-Off Valve</option>
+                </select>
+                <br>
+                <label for="shutoffPosition">Mid-Segment Shut-Off Position (inches, optional):</label>
+                <input type="number" id="shutoffPosition" step="0.01" min="0" placeholder="e.g., 60">
+                <label for="autoTransfer">Auto Transfer Fittings:</label>
+                <input type="checkbox" id="autoTransfer" checked>
+                <button onclick="addMeasurement()">Add Length</button>
+                <button onclick="calculateTotal()">Calculate Total</button>
+                <button onclick="resetCalculator()">Reset</button>
+            </div>
+            <h3>Measurements:</h3>
+            <ul id="lengthList"></ul>
+            <div id="canvasContainer">
+                <canvas id="pipeCanvas" width="800" height="300"></canvas>
+                <div id="canvasControls">
+                    <button onclick="zoomCanvas(1.2)">Zoom In</button>
+                    <button onclick="zoomCanvas(0.8)">Zoom Out</button>
+                    <button onclick="resetCanvasView()">Reset View</button>
+                </div>
+            </div>
+            <div class="results" id="results"></div>
+        </div>
+
+        <!-- Data Entry Section -->
+        <div id="dataEntry" class="section">
+            <label for="fitting-type">Fitting Type:</label>
+            <select id="fitting-type">
+                <option value="Nipple">Nipple</option>
+                <option value="90 degree elbow">90 degree elbow</option>
+                <option value="Tee">Tee</option>
+                <option value="Union">Union</option>
+                <option value="45 degree elbow">45 degree elbow</option>
+                <option value="Shut-off">Shut-off</option>
+                <option value="Reducer">Reducer</option>
+            </select>
+            <label for="od-size">Outer Diameter (OD) Size (inches):</label>
+            <select id="od-size">
+                <option value="3/8">3/8</option>
+                <option value="1/2">1/2</option>
+                <option value="3/4">3/4</option>
+                <option value="1">1</option>
+                <option value="1 1/4">1 1/4</option>
+                <option value="1 1/2">1 1/2</option>
+                <option value="2">2</option>
+                <option value="2 1/2">2 1/2</option>
+            </select>
+            <label id="reducer-size-label" style="display: none" for="reducer-size">Reducer Size (inches):</label>
+            <input type="text" id="reducer-size" style="display: none">
+            <label for="nipple-size">Nipple Size (inches):</label>
+            <select id="nipple-size">
+                <option value="1 1/2">1 1/2"</option>
+                <option value="2">2"</option>
+                <option value="2 1/2">2 1/2"</option>
+                <option value="3">3</option>
+                <option value="3 1/2">3 1/2"</option>
+                <option value="4">4"</option>
+                <option value="4 1/2">4 1/2"</option>
+                <option value="5">5"</option>
+                <option value="6">6"</option>
+                <option value="8">8"</option>
+                <option value="10">10"</option>
+                <option value="12">12"</option>
+            </select>
+            <label for="quantity">Quantity:</label>
+            <input type="number" id="quantity" />
+            <button id="add-button">Add Item</button>
+            <ul id="items-list"></ul>
+            <label for="jobName">Job Name:</label>
+            <input type="text" id="jobName">
+            <button id="exportData">Export Data</button>
+        </div>
+    </div>
+
+    <script>
+        // Tab Switching
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            document.querySelector(`.tab[onclick="showSection('${sectionId}')"]`).classList.add('active');
+            if (sectionId === 'calculator') drawLayout();
+            if (sectionId === 'dataEntry') updateItemsList();
+        }
+
+        // Length Calculator Logic
+        const fittingData = {
+            0.5: { elbow: { engagement: 0.64, body: 1.2 }, tee: { engagement: 0.64, body: 1.25 }, coupling: { engagement: 0.64, body: 1.12 }, shutoff: { engagement: 0.64, body: 2.0 } },
+            0.75: { elbow: { engagement: 0.81, body: 1.4 }, tee: { engagement: 0.81, body: 2.0 }, coupling: { engagement: 0.67, body: 1.2 }, shutoff: { engagement: 0.81, body: 2.5 } },
+            1: { elbow: { engagement: 0.92, body: 1.6 }, tee: { engagement: 0.92, body: 2.2 }, coupling: { engagement: 0.78, body: 1.4 }, shutoff: { engagement: 0.92, body: 3.0 } },
+            1.25: { elbow: { engagement: 1.05, body: 1.8 }, tee: { engagement: 1.05, body: 2.4 }, coupling: { engagement: 0.89, body: 1.6 }, shutoff: { engagement: 1.05, body: 3.5 } }
+        };
+        const nippleSizes = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 10, 12, 18, 24, 36, 48];
+        let entries = [];
+        let previousFitting = null;
+
+        // Canvas Zoom and Pan Variables
+        let zoomLevel = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let startX, startY;
+
+        function gcd(a, b) { while (b) [a, b] = [b, a % b]; return a; }
+        function toFraction(inches) {
+            const sixteenths = Math.round(inches * 16);
+            const wholeInches = Math.floor(sixteenths / 16);
+            let numerator = sixteenths % 16;
+            if (numerator === 0) return `${wholeInches}`;
+            const divisor = gcd(numerator, 16);
+            return `${wholeInches} ${numerator / divisor}/${16 / divisor}`;
+        }
+        function toFeetAndFraction(inches) {
+            const wholeFeet = Math.floor(inches / 12);
+            const remainingInches = inches % 12;
+            return `${wholeFeet} ft ${toFraction(remainingInches)} in`;
+        }
+        function getNippleOptions(cutLength, startingEngagement, endingEngagement, endingAdjustment) {
+            const sortedNipples = nippleSizes.map(size => ({ size, diff: Math.abs(size - cutLength) }))
+                .sort((a, b) => a.diff - b.diff).slice(0, 3).map(item => item.size);
+            return sortedNipples.map(nipple => ({
+                nipple, assembled: nipple - startingEngagement - endingEngagement + endingAdjustment, isClosest: nipple === sortedNipples[0]
+            }));
+        }
+        function addFittingToDataEntry(fittingType, odSize, nippleSize = '') {
+            const existingItem = addedItems.find(item => 
+                item.fittingType === fittingType && 
+                item.odSize === odSize && 
+                item.nippleSize === nippleSize
+            );
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                addedItems.push({ fittingType, odSize, nippleSize, quantity: 1 });
+            }
+            updateItemsList();
+        }
+        function addMeasurement() {
+            const pipeSize = parseFloat(document.getElementById('pipeSize').value);
+            const assembledLength = parseFloat(document.getElementById('measurement').value);
+            const startingFittingType = document.getElementById('startFitting').value;
+            const endingFittingType = document.getElementById('fitting').value;
+            const shutoffPosition = parseFloat(document.getElementById('shutoffPosition').value) || 0;
+            const autoTransfer = document.getElementById('autoTransfer').checked;
+            const resultsDiv = document.getElementById('results');
+            const odSizeMap = { 0.5: '1/2', 0.75: '3/4', 1: '1', 1.25: '1 1/4' };
+            const odSize = odSizeMap[pipeSize];
+            const fittingMap = { elbow: '90 degree elbow', tee: 'Tee', coupling: 'Coupling', shutoff: 'Shut-off' };
+
+            if (isNaN(assembledLength) || assembledLength <= 0) {
+                resultsDiv.innerHTML = '<p class="error">Please enter a valid positive length.</p>';
+                return;
+            }
+            if (shutoffPosition && (shutoffPosition <= 0 || shutoffPosition >= assembledLength)) {
+                resultsDiv.innerHTML = '<p class="error">Shut-off position must be between 0 and the assembled length.</p>';
+                return;
+            }
+
+            const startingEngagement = startingFittingType !== 'none' ? fittingData[pipeSize][startingFittingType].engagement :
+                (entries.length === 0 ? fittingData[pipeSize].elbow.engagement : previousFitting ? fittingData[pipeSize][previousFitting].engagement : 0);
+            let endingFittingAdjustment = endingFittingType !== 'none' ? fittingData[pipeSize][endingFittingType].body - fittingData[pipeSize][endingFittingType].engagement : 0;
+            let endingEngagement = endingFittingType !== 'none' ? fittingData[pipeSize][endingFittingType].engagement : 0;
+
+            if (shutoffPosition) {
+                const shutoffFitting = fittingData[pipeSize].shutoff;
+                const shutoffAdjustment = shutoffFitting.body - shutoffFitting.engagement;
+                const firstAssembled = shutoffPosition;
+                const firstBase = firstAssembled + startingEngagement - shutoffAdjustment;
+                const firstCut = firstBase + shutoffFitting.engagement;
+                const firstNippleOptions = getNippleOptions(firstCut, startingEngagement, shutoffFitting.engagement, shutoffAdjustment);
+                const secondAssembled = assembledLength - shutoffPosition;
+                const secondBase = secondAssembled + shutoffFitting.engagement - endingFittingAdjustment;
+                const secondCut = secondBase + endingEngagement;
+                const secondNippleOptions = getNippleOptions(secondCut, shutoffFitting.engagement, endingEngagement, endingFittingAdjustment);
+
+                entries.push({
+                    pipeSize, assembledLength, segments: [
+                        { assembledLength: firstAssembled, baseLength: firstBase, cutLength: firstCut, nippleOptions: firstNippleOptions, startingFitting: startingFittingType !== 'none' ? startingFittingType : (entries.length === 0 ? 'elbow' : previousFitting || 'none'), endingFittingType: 'shutoff', startingEngagement, endingFittingAdjustment: shutoffAdjustment, endingEngagement: shutoffFitting.engagement },
+                        { assembledLength: secondAssembled, baseLength: secondBase, cutLength: secondCut, nippleOptions: secondNippleOptions, startingFitting: 'shutoff', endingFittingType, startingEngagement: shutoffFitting.engagement, endingFittingAdjustment, endingEngagement }
+                    ]
+                });
+
+                if (autoTransfer) {
+                    if (entries.length === 1 && startingFittingType !== 'none') addFittingToDataEntry(fittingMap[startingFittingType], odSize);
+                    addFittingToDataEntry('Shut-off', odSize);
+                    addFittingToDataEntry('Nipple', odSize, `${firstNippleOptions[0].nipple}"`);
+                    addFittingToDataEntry('Nipple', odSize, `${secondNippleOptions[0].nipple}"`);
+                    if (endingFittingType !== 'none') addFittingToDataEntry(fittingMap[endingFittingType], odSize);
+                }
+            } else {
+                const baseLength = assembledLength + startingEngagement - endingFittingAdjustment;
+                const cutLength = baseLength + endingEngagement;
+                const nippleOptions = getNippleOptions(cutLength, startingEngagement, endingEngagement, endingFittingAdjustment);
+                entries.push({ pipeSize, assembledLength, baseLength, cutLength, nippleOptions, startingFitting: startingFittingType !== 'none' ? startingFittingType : (entries.length === 0 ? 'elbow' : previousFitting || 'none'), endingFittingType, startingEngagement, endingFittingAdjustment, endingEngagement });
+
+                if (autoTransfer) {
+                    if (entries.length === 1 && startingFittingType !== 'none') addFittingToDataEntry(fittingMap[startingFittingType], odSize);
+                    addFittingToDataEntry('Nipple', odSize, `${nippleOptions[0].nipple}"`);
+                    if (endingFittingType !== 'none') addFittingToDataEntry(fittingMap[endingFittingType], odSize);
+                }
+            }
+
+            if (previousFitting) document.getElementById('startFitting').value = previousFitting;
+            previousFitting = endingFittingType !== 'none' ? endingFittingType : null;
+
+            updateLengthList();
+            drawLayout();
+            document.getElementById('measurement').value = '';
+            document.getElementById('shutoffPosition').value = '';
+            resultsDiv.innerHTML = '';
+        }
+        function updateLengthList() {
+            const list = document.getElementById('lengthList');
+            list.innerHTML = '';
+            entries.forEach((entry, index) => {
+                const li = document.createElement('li');
+                li.className = 'measurement-item';
+                const sizeText = `${entry.pipeSize}"`;
+                if (entry.segments) {
+                    li.innerHTML = `Length ${index + 1}: ${toFraction(entry.assembledLength)} in (${sizeText} pipe) with mid-segment shut-off`;
+                    entry.segments.forEach((seg, subIndex) => {
+                        const subLi = document.createElement('li');
+                        subLi.className = 'sub-entry';
+                        const startText = seg.startingFitting !== 'none' ? `from ${seg.startingFitting} (-${toFraction(seg.startingEngagement)} in)` : '';
+                        const endText = seg.endingFittingType !== 'none' ? ` to ${seg.endingFittingType} (${seg.endingFittingAdjustment >= 0 ? '+' : ''}${toFraction(Math.abs(seg.endingFittingAdjustment))} in)` : '';
+                        const nippleText = seg.nippleOptions.map(opt => opt.isClosest ? `<b>${opt.nipple} → ${toFraction(opt.assembled)}</b>` : `${opt.nipple} → ${toFraction(opt.assembled)}`).join(', ');
+                        subLi.innerHTML = `Segment ${subIndex + 1}: ${toFraction(seg.assembledLength)} in ${startText}${endText}<br>Cut Length: ${toFraction(seg.cutLength)} in<br>Nipple Options: ${nippleText}`;
+                        list.appendChild(subLi);
+                    });
+                } else {
+                    const startText = entry.startingFitting !== 'none' ? `from ${entry.startingFitting} (-${toFraction(entry.startingEngagement)} in)` : '';
+                    const endText = entry.endingFittingType !== 'none' ? ` to ${entry.endingFittingType} (${entry.endingFittingAdjustment >= 0 ? '+' : ''}${toFraction(Math.abs(entry.endingFittingAdjustment))} in)` : '';
+                    const nippleText = entry.nippleOptions.map(opt => opt.isClosest ? `<b>${opt.nipple} → ${toFraction(opt.assembled)}</b>` : `${opt.nipple} → ${toFraction(opt.assembled)}`).join(', ');
+                    li.innerHTML = `Length ${index + 1}: ${toFraction(entry.assembledLength)} in (${sizeText} pipe) ${startText}${endText}<br>Cut Length: ${toFraction(entry.cutLength)} in<br>Nipple Options: ${nippleText}`;
+                }
+                list.appendChild(li);
+            });
+        }
+        function calculateTotal() {
+            if (entries.length === 0) {
+                document.getElementById('results').innerHTML = '<p class="error">No measurements added yet.</p>';
+                return;
+            }
+            let totalAssembledLength = 0, totalCutLength = 0, totalStartingEngagement = 0, totalEndingAdjustment = 0;
+            entries.forEach(entry => {
+                if (entry.segments) {
+                    entry.segments.forEach(seg => {
+                        totalAssembledLength += seg.assembledLength;
+                        totalCutLength += seg.cutLength;
+                        totalStartingEngagement += seg.startingEngagement;
+                        totalEndingAdjustment += seg.endingFittingAdjustment;
+                    });
+                } else {
+                    totalAssembledLength += entry.assembledLength;
+                    totalCutLength += entry.cutLength;
+                    totalStartingEngagement += entry.startingEngagement;
+                    totalEndingAdjustment += entry.endingFittingAdjustment;
+                }
+            });
+            document.getElementById('results').innerHTML = `
+                <h3>Results:</h3>
+                <p>Base Length: ${toFraction(entries.reduce((sum, e) => sum + (e.segments ? e.segments.reduce((s, seg) => s + seg.baseLength, 0) : e.baseLength), 0))} in</p>
+                <p>Starting Engagements: -${toFraction(totalStartingEngagement)} in</p>
+                <p>Ending Fitting Adjustments: ${totalEndingAdjustment >= 0 ? '+' : ''}${toFraction(Math.abs(totalEndingAdjustment))} in</p>
+                <p>Total Assembled Length: ${toFraction(totalAssembledLength)} in (${toFeetAndFraction(totalAssembledLength)})</p>
+                <p>Total Pipe Cut Length: ${toFraction(totalCutLength)} in (${toFeetAndFraction(totalCutLength)})</p>
+            `;
+        }
+        function resetCalculator() {
+            entries = [];
+            previousFitting = null;
+            document.getElementById('measurement').value = '';
+            document.getElementById('shutoffPosition').value = '';
+            document.getElementById('startFitting').value = 'none';
+            document.getElementById('fitting').value = 'none';
+            document.getElementById('pipeSize').value = '0.5';
+            document.getElementById('autoTransfer').checked = true;
+            zoomLevel = 1;
+            offsetX = 0;
+            offsetY = 0;
+            updateLengthList();
+            drawLayout();
+            document.getElementById('results').innerHTML = '';
+        }
+        function drawLayout() {
+            const canvas = document.getElementById('pipeCanvas');
+            const ctx = canvas.getContext('2d');
+            const containerWidth = document.getElementById('canvasContainer').clientWidth;
+            canvas.width = containerWidth * 0.9;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (entries.length === 0) return;
+
+            let maxX = 0, maxY = 0, minY = 0;
+            let segments = [];
+            entries.forEach(entry => { segments = segments.concat(entry.segments || [entry]); });
+            let x = 20, y = canvas.height / 2, direction = 'right';
+            segments.forEach(seg => {
+                const length = seg.assembledLength;
+                if (direction === 'right') maxX = Math.max(maxX, x + length);
+                if (direction === 'left') maxX = Math.max(maxX, x);
+                if (direction === 'down') maxY = Math.max(maxY, y + length);
+                if (direction === 'up') minY = Math.min(minY, y - length);
+            });
+            const baseScale = Math.min((canvas.width - 40) / (maxX - (minY < 0 ? -minY : 0)), (canvas.height - 40) / (maxY - minY));
+            const scale = baseScale * zoomLevel;
+
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(zoomLevel, zoomLevel);
+
+            x = 20; y = canvas.height / (2 * zoomLevel) - (minY < 0 ? minY * baseScale : 0);
+            ctx.beginPath();
+            ctx.lineWidth = 2 / zoomLevel; // Adjust line width based on zoom
+            ctx.font = `${10 / zoomLevel}px Arial`; // Adjust font size based on zoom
+            segments.forEach((seg, index) => {
+                const length = seg.assembledLength * baseScale;
+                if (seg.startingFitting !== 'none') drawFitting(ctx, x, y, seg.startingFitting, direction);
+                ctx.moveTo(x, y);
+                if (direction === 'right') x += length; else if (direction === 'left') x -= length; else if (direction === 'down') y += length; else if (direction === 'up') y -= length;
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                const labelX = direction === 'right' || direction === 'left' ? (x + (direction === 'left' ? length : -length)) / 2 : x - 15 / zoomLevel;
+                const labelY = direction === 'down' || direction === 'up' ? (y + (direction === 'up' ? length : -length)) / 2 : y - 10 / zoomLevel;
+                ctx.fillText(toFraction(seg.assembledLength), labelX, labelY);
+                if (seg.endingFittingType !== 'none') {
+                    drawFitting(ctx, x, y, seg.endingFittingType, direction);
+                    if (seg.endingFittingType === 'elbow') direction = turnDirection(direction);
+                }
+            });
+            ctx.restore();
+        }
+        function turnDirection(current) {
+            switch (current) { case 'right': return 'down'; case 'down': return 'left'; case 'left': return 'up'; case 'up': return 'right'; }
+        }
+        function drawFitting(ctx, x, y, type, direction) {
+            ctx.beginPath();
+            if (type === 'elbow') {
+                if (direction === 'right') ctx.arc(x, y, 5 / zoomLevel, 0, Math.PI / 2);
+                else if (direction === 'down') ctx.arc(x, y, 5 / zoomLevel, Math.PI / 2, Math.PI);
+                else if (direction === 'left') ctx.arc(x, y, 5 / zoomLevel, Math.PI, 3 * Math.PI / 2);
+                else if (direction === 'up') ctx.arc(x, y, 5 / zoomLevel, 3 * Math.PI / 2, 0);
+            } else if (type === 'tee') {
+                ctx.moveTo(x, y - 10 / zoomLevel); ctx.lineTo(x, y + 10 / zoomLevel); ctx.moveTo(x - 5 / zoomLevel, y); ctx.lineTo(x + 5 / zoomLevel, y);
+            } else if (type === 'coupling') {
+                ctx.rect(x - 5 / zoomLevel, y - 5 / zoomLevel, 10 / zoomLevel, 10 / zoomLevel);
+            } else if (type === 'shutoff') {
+                ctx.moveTo(x - 5 / zoomLevel, y - 5 / zoomLevel); ctx.lineTo(x + 5 / zoomLevel, y + 5 / zoomLevel); ctx.moveTo(x + 5 / zoomLevel, y - 5 / zoomLevel); ctx.lineTo(x - 5 / zoomLevel, y + 5 / zoomLevel);
+            }
+            ctx.stroke();
+        }
+        function zoomCanvas(factor) {
+            zoomLevel *= factor;
+            zoomLevel = Math.max(0.1, Math.min(zoomLevel, 10)); // Limit zoom between 0.1x and 10x
+            drawLayout();
+        }
+        function resetCanvasView() {
+            zoomLevel = 1;
+            offsetX = 0;
+            offsetY = 0;
+            drawLayout();
+        }
+
+        // Canvas Event Listeners for Zoom and Pan
+        const canvas = document.getElementById('pipeCanvas');
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9; // Zoom in or out
+            zoomCanvas(zoomFactor);
+        });
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - offsetX;
+            startY = e.clientY - offsetY;
+            canvas.style.cursor = 'grabbing';
+        });
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                offsetX = e.clientX - startX;
+                offsetY = e.clientY - startY;
+                drawLayout();
+            }
+        });
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            canvas.style.cursor = 'grab';
+        });
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            canvas.style.cursor = 'grab';
+        });
+
+        // Data Entry Logic
+        const fittingType = document.getElementById('fitting-type');
+        const odSize = document.getElementById('od-size');
+        const reducerSizeLabel = document.getElementById('reducer-size-label');
+        const reducerSize = document.getElementById('reducer-size');
+        const quantity = document.getElementById('quantity');
+        const addButton = document.getElementById('add-button');
+        const itemsList = document.getElementById('items-list');
+        const exportDataBtn = document.getElementById('exportData');
+        const jobName = document.getElementById('jobName');
+        let addedItems = [];
+
+        fittingType.addEventListener('change', () => {
+            reducerSizeLabel.style.display = fittingType.value === 'Reducer' ? 'block' : 'none';
+            reducerSize.style.display = fittingType.value === 'Reducer' ? 'block' : 'none';
+        });
+        addButton.addEventListener('click', () => {
+            const fitting = fittingType.value;
+            const od = odSize.value;
+            const qty = parseInt(quantity.value, 10);
+            let nipple = '';
+            if (fitting === 'Nipple') nipple = `${document.getElementById('nipple-size').value}"`;
+            else if (fitting === 'Reducer') nipple = `Reduced to: ${reducerSize.value}"`;
+
+            addFittingToDataEntry(fitting, od, nipple);
+            reducerSize.value = '';
+            document.getElementById('nipple-size').value = '';
+            quantity.value = '';
+        });
+        function updateItemsList() {
+            itemsList.innerHTML = '';
+            addedItems.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `${item.fittingType}, ${item.odSize}, ${item.nippleSize}, Quantity: ${item.quantity}<button class="delete-button">Delete</button><button class="edit-button">Edit</button>`;
+                itemsList.appendChild(listItem);
+            });
+        }
+        itemsList.addEventListener('click', (event) => {
+            if (event.target.classList.contains('delete-button')) {
+                const listItem = event.target.parentElement;
+                const index = Array.from(itemsList.children).indexOf(listItem);
+                itemsList.removeChild(listItem);
+                addedItems.splice(index, 1);
+            } else if (event.target.classList.contains('edit-button')) {
+                const listItem = event.target.parentElement;
+                const [fitting, od, nipple, qtyText] = listItem.innerText.split(', ');
+                const qty = qtyText.split(' ')[1];
+                listItem.innerHTML = `
+                    <input type="text" class="edit-fitting" value="${fitting}" />
+                    <input type="text" class="edit-od" value="${od}" />
+                    <input type="text" class="edit-nipple" value="${nipple}" />
+                    <input type="number" class="edit-quantity" value="${qty}" />
+                    <button class="save-button">Save</button>
+                `;
+                listItem.querySelector('.save-button').addEventListener('click', () => {
+                    const newFitting = listItem.querySelector('.edit-fitting').value;
+                    const newOd = listItem.querySelector('.edit-od').value;
+                    const newNipple = listItem.querySelector('.edit-nipple').value;
+                    const newQty = listItem.querySelector('.edit-quantity').value;
+                    listItem.innerHTML = `${newFitting}, ${newOd}, ${newNipple}, Quantity: ${newQty}<button class="delete-button">Delete</button><button class="edit-button">Edit</button>`;
+                    const index = Array.from(itemsList.children).indexOf(listItem);
+                    addedItems[index] = { fittingType: newFitting, odSize: newOd, nippleSize: newNipple, quantity: parseInt(newQty) };
+                });
+            }
+        });
+        exportDataBtn.addEventListener('click', () => {
+            const data = ['Fitting Type, OD Size, Nipple Size, Quantity'];
+            addedItems.forEach(item => data.push(`${item.fittingType}, ${item.odSize}, ${item.nippleSize}, Quantity: ${item.quantity}`));
+            const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
+            const filename = `${jobName.value || 'Untitled'}_fitting_data_${timestamp}.csv`;
+            const dataBlob = new Blob([data.join('\n')], { type: 'text/csv' });
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(dataBlob);
+            downloadLink.download = filename;
+            downloadLink.click();
+        });
+
+        drawLayout();
+    </script>
+</body>
+</html>
