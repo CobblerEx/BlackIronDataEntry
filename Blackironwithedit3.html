@@ -5,141 +5,163 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Black Iron Gas Fittings Data Entry</title>
+    <title>Black Iron Forge</title>
     
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Orbitron', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f2f2f2;
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            color: #fff;
+            overflow-x: hidden;
         }
-
         #entry-frame {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin: 20px auto;
-            max-width: 500px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            margin: 30px auto;
+            max-width: 600px;
+            border: 2px solid #00ffff;
+            animation: glow 2s infinite alternate;
         }
-
+        @keyframes glow {
+            from { box-shadow: 0 0 10px #00ffff; }
+            to { box-shadow: 0 0 30px #00ffff; }
+        }
         label {
             display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        select,
-        input[type="text"],
-        input[type="number"] {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
             font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
         }
-
-        button {
-            padding: 10px 15px;
-            background-color: #007bff;
+        select, input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            background: #1a1a1a;
             color: #fff;
+            font-size: 16px;
+            box-shadow: inset 0 0 5px rgba(0, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        select:focus, input:focus {
+            outline: none;
+            box-shadow: 0 0 15px #00ffff;
+            border-color: #ff00ff;
+        }
+        button {
+            padding: 12px 20px;
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            color: #000;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
-
         button:hover {
-            background-color: #0056b3;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #ff00ff;
         }
-
         ul {
             list-style-type: none;
             padding: 0;
+            margin-top: 20px;
         }
-
         li {
-            padding: 10px;
-            background-color: #f9f9f9;
-            border: 1px solid #ccc;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #00ffff;
+            border-radius: 10px;
             margin-bottom: 10px;
-            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
         }
-
+        li:hover {
+            background: rgba(0, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
         .delete-button {
-            background-color: #e74c3c;
-            margin-left: 5px;
-            color: #fff;
-            border: none;
-            padding: 5px;
-            cursor: pointer;
-            border-radius: 4px;
+            background: linear-gradient(45deg, #ff3333, #ff6666);
+            padding: 8px 12px;
+            margin-left: 10px;
         }
-
         .edit-button {
-            background-color: #3498db;
-            color: #fff;
-            border: none;
-            padding: 5px;
-            cursor: pointer;
-            border-radius: 4px;
+            background: linear-gradient(45deg, #00ccff, #66ffff);
+            padding: 8px 12px;
+            margin-left: 10px;
         }
-
         h1 {
-            font-family: "comic", sans-serif; 
-            font-weight: bold; 
-            font-size: 16px; 
-            color: #333; 
+            font-size: 24px;
+            color: #00ffff;
             text-align: center;
+            text-shadow: 0 0 10px #00ffff;
+            margin: 20px 0 5px;
         }
-
         p {
-            font-family: "comic", sans-serif; 
-            font-weight: bold; 
-            font-size: 12px; 
-            color: #333; 
+            font-size: 14px;
+            color: #fff;
             text-align: center;
+            margin-bottom: 20px;
         }
-
         .center {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 60px;
+            margin: 20px 0;
         }
-
         .button1, .button2 {
-            display: inline-block;
-            padding: 10px 20px;
-            color: #fff;
+            padding: 12px 25px;
+            color: #000;
             text-decoration: none;
-            border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-weight: bold;
+            transition: all 0.3s ease;
         }
-
         .button1 {
-            background-color: #0078d4;
+            background: linear-gradient(45deg, #00ffff, #66ffff);
         }
-
         .button1:hover {
-            background-color: #005ea2;
+            background: linear-gradient(45deg, #66ffff, #00ffff);
+            box-shadow: 0 0 15px #00ffff;
         }
-
         .button2 {
-            background-color: #ff5733;
+            background: linear-gradient(45deg, #ff00ff, #ff66ff);
         }
-
         .button2:hover {
-            background-color: #e64c22;
+            background: linear-gradient(45deg, #ff66ff, #ff00ff);
+            box-shadow: 0 0 15px #ff00ff;
+        }
+        #reset-button {
+            background: linear-gradient(45deg, #ff9900, #ffcc33);
+            margin-left: 10px;
+        }
+        #exportData {
+            margin: 20px auto;
+            display: block;
+        }
+        #jobName {
+            background: #1a1a1a;
+            border: 1px solid #00ffff;
+            color: #fff;
         }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="entry-frame">            
-        <label for="fitting-type">Fitting Type:</label>
+        <label for="fitting-type">Forge Type</label>
         <select id="fitting-type">
             <optgroup label="Nipple">
                 <option value="Nipple">Nipple</option>
@@ -158,7 +180,7 @@
                 <option value="Cap">Cap</option>
                 <option value="Plug">Plug</option>
                 <option value="Flex Connector">Flex Connector</option>
-            </optgroup>
+            </optgroupYN>
             <optgroup label="Stand offs">
                 <option value="Stand off (Long)">Stand off (Long)</option>
                 <option value="Stand off (Short)">Stand off (Short)</option>
@@ -169,7 +191,7 @@
             </optgroup>
         </select>
         
-        <label for="od-size">Outer Diameter (OD) Size (inches):</label>
+        <label for="od-size">OD Blast (in)</label>
         <select id="od-size">
             <option value="3/8">3/8</option>
             <option value="1/2">1/2</option>
@@ -181,10 +203,19 @@
             <option value="2 1/2">2 1/2</option>
         </select>
         
-        <label id="reducer-size-label" style="display: none" for="reducer-size">Reducer Size (inches):</label>
-        <input type="text" id="reducer-size" style="display: none">
+        <label id="reducer-size-label" style="display: none" for="reducer-size">Reducer Warp (in)</label>
+        <select id="reducer-size" style="display: none">
+            <option value="3/8">3/8</option>
+            <option value="1/2">1/2</option>
+            <option value="3/4">3/4</option>
+            <option value="1">1</option>
+            <option value="1 1/4">1 1/4</option>
+            <option value="1 1/2">1 1/2</option>
+            <option value="2">2</option>
+            <option value="2 1/2">2 1/2</option>
+        </select>
         
-        <label for="nipple-size">Nipple Size (inches):</label>
+        <label for="nipple-size">Nipple Flux (in)</label>
         <select id="nipple-size">
             <option value="1 1/2">1 1/2"</option>
             <option value="2">2"</option>
@@ -200,33 +231,35 @@
             <option value="12">12"</option>
         </select>
         
-        <label for="quantity">Quantity:</label>
-        <input type="number" id="quantity" />
+        <label for="quantity">Quantum Yield</label>
+        <input type="number" id="quantity" placeholder="Enter amount..." />
         
-        <button id="add-button">Add Item</button>
+        <button id="add-button">Forge Item</button>
+        <button id="update-button" style="display: none;">Reforge Item</button>
+        <button id="reset-button">Purge Matrix</button>
         <ul id="items-list"></ul>
     </div>
 
-    <button id="exportData">Export Data</button>
-    <label for="jobName">Job Name:</label>
-    <input type="text" id="jobName">
+    <button id="exportData">Extract Codex</button>
+    <label for="jobName">Mission Tag</label>
+    <input type="text" id="jobName" placeholder="Name your mission...">
     
-    <h1>Go to Main Page</h1>
-    <p>Click the link below to go to the Main page:</p>
+    <h1>Jump to Core Hub</h1>
+    <p>Teleport to the main grid:</p>
     <div class="center">
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/index.html" class="button1">Go Main page</a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/index.html" class="button1">Core Hub</a>
     </div>
     
-    <h1>Go to Upload Page</h1>
-    <p>Click the link below to go to the Upload page:</p>
+    <h1>Upload Nexus</h1>
+    <p>Access the data uplink:</p>
     <div class="center">
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html" class="button2">Go Upload page</a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html" class="button2">Nexus</a>
     </div>
     
-    <h1>Go to Blackiron Calculator</h1>
-    <p>Click the link below to go to the Blackiron Calculator:</p>
+    <h1>Quantum Forge Calc</h1>
+    <p>Compute the cosmos:</p>
     <div class="center">
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironcal2.html" class="button2">Go Calculator</a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironcal2.html" class="button2">Forge Calc</a>
     </div>
 
     <script>
@@ -237,76 +270,134 @@
         const nippleSize = document.getElementById('nipple-size');
         const quantity = document.getElementById('quantity');
         const addButton = document.getElementById('add-button');
+        const updateButton = document.getElementById('update-button');
+        const resetButton = document.getElementById('reset-button');
         const itemsList = document.getElementById('items-list');
         const exportDataBtn = document.getElementById('exportData');
         const jobName = document.getElementById('jobName');
 
         let draggedItem = null;
-        const addedItems = [];
+        let addedItems = loadItemsFromStorage();
+        let editingIndex = null;
 
         fittingType.addEventListener('change', handleFittingTypeChange);
         addButton.addEventListener('click', addItem);
+        updateButton.addEventListener('click', updateItem);
+        resetButton.addEventListener('click', executeMasterReset);
         exportDataBtn.addEventListener('click', exportData);
+
+        renderItems();
 
         function handleFittingTypeChange() {
             const selectedFitting = fittingType.value;
-            if (selectedFitting === 'Reducer') {
-                reducerSizeLabel.style.display = 'block';
-                reducerSize.style.display = 'block';
-            } else {
-                reducerSizeLabel.style.display = 'none';
-                reducerSize.style.display = 'none';
+            reducerSizeLabel.style.display = selectedFitting === 'Reducer' ? 'block' : 'none';
+            reducerSize.style.display = selectedFitting === 'Reducer' ? 'block' : 'none';
+        }
+
+        function executeMasterReset() {
+            addedItems.length = 0;
+            saveItemsToStorage();
+            renderItems();
+            resetForm();
+            alert('Matrix purged—start from the abyss!');
+        }
+
+        function resetForm() {
+            if (!fittingType || !odSize || !reducerSize || !nippleSize || !quantity || 
+                !reducerSizeLabel || !addButton || !updateButton) {
+                console.error('DOM breach detected!');
+                alert('Error: Forge controls lost. Reload to stabilize.');
+                return;
             }
+            fittingType.value = 'Nipple';
+            fittingType.dispatchEvent(new Event('change'));
+            odSize.value = '3/8';
+            reducerSize.value = '3/8';
+            nippleSize.value = '1 1/2';
+            quantity.value = '';
+            addButton.style.display = 'block';
+            updateButton.style.display = 'none';
+            editingIndex = null;
         }
 
         function addItem() {
+            const item = createItemFromForm();
+            if (!item) return;
+            addedItems.push(item);
+            saveItemsToStorage();
+            renderItems();
+            resetForm();
+        }
+
+        function updateItem() {
+            if (editingIndex === null) return;
+            const item = createItemFromForm();
+            if (!item) return;
+            addedItems[editingIndex] = item;
+            saveItemsToStorage();
+            renderItems();
+            resetForm();
+        }
+
+        function createItemFromForm() {
             const fitting = fittingType.value;
             const od = odSize.value;
             const qty = parseInt(quantity.value, 10);
-            let nipple = '';
-
-            if (fitting === 'Nipple') {
-                nipple = nippleSize.value + '"';
-            } else if (fitting === 'Reducer') {
-                nipple = `Reduced to: ${reducerSize.value}"`;
+            if (isNaN(qty) || qty <= 0) {
+                alert('Quantum yield must be positive!');
+                return null;
             }
+            let nipple = fitting === 'Nipple' ? `${nippleSize.value}"` : 
+                        fitting === 'Reducer' ? `Reduced to: ${reducerSize.value}"` : '';
+            return { fittingType: fitting, odSize: od, nippleSize: nipple, quantity: qty };
+        }
 
-            const listItem = document.createElement('li');
-            listItem.draggable = true;
-            listItem.addEventListener('dragstart', handleDragStart);
-            listItem.addEventListener('dragover', handleDragOver);
-            listItem.addEventListener('drop', handleDrop);
-            listItem.addEventListener('dragend', handleDragEnd);
+        function renderItems() {
+            itemsList.innerHTML = '';
+            addedItems.forEach((item, index) => {
+                const listItem = document.createElement('li');
+                listItem.draggable = true;
+                listItem.dataset.index = index;
+                listItem.addEventListener('dragstart', handleDragStart);
+                listItem.addEventListener('dragover', handleDragOver);
+                listItem.addEventListener('drop', handleDrop);
+                listItem.addEventListener('dragend', handleDragEnd);
 
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Delete';
-            deleteButton.className = 'delete-button';
-            deleteButton.addEventListener('click', () => listItem.remove());
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'X';
+                deleteButton.className = 'delete-button';
+                deleteButton.addEventListener('click', () => {
+                    addedItems.splice(index, 1);
+                    saveItemsToStorage();
+                    renderItems();
+                });
 
-            const editButton = document.createElement('button');
-            editButton.textContent = 'Edit';
-            editButton.className = 'edit-button';
-            editButton.addEventListener('click', () => {
-                fittingType.value = fitting;
-                odSize.value = od;
-                quantity.value = qty;
-                if (fitting === 'Nipple') {
-                    nippleSize.value = nipple.replace('"', '');
-                } else if (fitting === 'Reducer') {
-                    reducerSize.value = nipple.replace('Reduced to: ', '').replace('"', '');
-                }
-                listItem.remove();
+                const editButton = document.createElement('button');
+                editButton.textContent = '✎';
+                editButton.className = 'edit-button';
+                editButton.addEventListener('click', () => editItem(index));
+
+                listItem.innerHTML = `${item.fittingType} | ${item.odSize}" | ${item.nippleSize} | x${item.quantity}`;
+                listItem.appendChild(editButton);
+                listItem.appendChild(deleteButton);
+                itemsList.appendChild(listItem);
             });
+        }
 
-            listItem.innerHTML = `${fitting}, ${od}", ${nipple}, ${qty}`;
-            listItem.appendChild(editButton);
-            listItem.appendChild(deleteButton);
-            itemsList.appendChild(listItem);
-
-            addedItems.push({ fittingType: fitting, odSize: od, nippleSize: nipple, quantity: qty });
-            reducerSize.value = '';
-            nippleSize.value = '';  
-            quantity.value = '';
+        function editItem(index) {
+            const item = addedItems[index];
+            fittingType.value = item.fittingType;
+            fittingType.dispatchEvent(new Event('change'));
+            odSize.value = item.odSize;
+            quantity.value = item.quantity;
+            if (item.fittingType === 'Nipple') {
+                nippleSize.value = item.nippleSize.replace('"', '');
+            } else if (item.fittingType === 'Reducer') {
+                reducerSize.value = item.nippleSize.replace('Reduced to: ', '').replace('"', '');
+            }
+            addButton.style.display = 'none';
+            updateButton.style.display = 'block';
+            editingIndex = index;
         }
 
         function handleDragStart(event) {
@@ -320,13 +411,8 @@
             if (targetItem && targetItem !== draggedItem) {
                 const bounding = targetItem.getBoundingClientRect();
                 const offset = bounding.y + bounding.height / 2;
-                if (event.clientY - offset > 0) {
-                    targetItem.style['border-bottom'] = '2px solid #007bff';
-                    targetItem.style['border-top'] = '';
-                } else {
-                    targetItem.style['border-top'] = '2px solid #007bff';
-                    targetItem.style['border-bottom'] = '';
-                }
+                targetItem.style['border-bottom'] = event.clientY - offset > 0 ? '2px solid #ff00ff' : '';
+                targetItem.style['border-top'] = event.clientY - offset <= 0 ? '2px solid #ff00ff' : '';
             }
         }
 
@@ -334,42 +420,47 @@
             event.preventDefault();
             const targetItem = event.target.closest('li');
             if (targetItem && targetItem !== draggedItem) {
-                targetItem.style['border-bottom'] = '';
-                targetItem.style['border-top'] = '';
-                itemsList.insertBefore(draggedItem, event.clientY < targetItem.getBoundingClientRect().top + targetItem.offsetHeight / 2 ? targetItem : targetItem.nextSibling);
+                const fromIndex = parseInt(draggedItem.dataset.index);
+                const toIndex = parseInt(targetItem.dataset.index);
+                const [movedItem] = addedItems.splice(fromIndex, 1);
+                addedItems.splice(toIndex, 0, movedItem);
+                saveItemsToStorage();
+                renderItems();
             }
         }
 
         function handleDragEnd(event) {
-            event.target.style.display = 'block';
+            event.target.style.display = 'flex';
             event.target.style['border-bottom'] = '';
             event.target.style['border-top'] = '';
             draggedItem = null;
         }
 
         function exportData() {
+            if (addedItems.length === 0) {
+                alert('No data to extract—forge something first!');
+                return;
+            }
             const data = ['Fitting Type, OD Size, Nipple Size/Reducer Size, Quantity'];
-            const items = itemsList.querySelectorAll('li');
-
-            items.forEach(item => {
-                const itemText = item.textContent.split(',').map(part => part.trim());
-                const fittingType = itemText[0];
-                const odSize = itemText[1].replace('"', '');
-                let nippleSize = itemText[2] ? itemText[2] : '';
-                const quantityText = itemText[3].match(/\d+/);
-                const quantity = quantityText ? parseInt(quantityText[0], 10) : 0;
-
-                data.push(`${fittingType}, ${odSize}, ${nippleSize}, ${quantity}`);
+            addedItems.forEach(item => {
+                data.push(`${item.fittingType}, ${item.odSize}, ${item.nippleSize}, ${item.quantity}`);
             });
-
             const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
             const filename = `${jobName.value || 'Untitled'}_fittings_data_${timestamp}.csv`;
-
             const dataBlob = new Blob([data.join('\n')], { type: 'text/csv' });
             const downloadLink = document.createElement('a');
             downloadLink.href = URL.createObjectURL(dataBlob);
             downloadLink.download = filename;
             downloadLink.click();
+        }
+
+        function saveItemsToStorage() {
+            localStorage.setItem('blackIronFittings', JSON.stringify(addedItems));
+        }
+
+        function loadItemsFromStorage() {
+            const stored = localStorage.getItem('blackIronFittings');
+            return stored ? JSON.parse(stored) : [];
         }
     </script>
 </body>
