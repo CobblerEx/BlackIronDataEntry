@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Timesheet Viewer</title>
+    <style>
+        table { border-collapse: collapse; margin-bottom: 20px; width: 100%; }
+        th, td { border: 1px solid black; padding: 5px; text-align: left; }
+        h2 { margin-top: 20px; }
+        #output { margin-top: 20px; }
+        .toggle-controls { margin-bottom: 10px; }
+        .hidden { display: none; }
+        .table-container { display: none; }
+        .table-container.active { display: block; }
+        #fileSelector { margin-bottom: 10px; }
+        .edit-input { width: 100%; box-sizing: border-box; }
+        .action-buttons { margin-bottom: 10px; }
+    </style>
+    <!-- Load the xlsx library from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <h1>Upload Excel Timesheets</h1>
+    <input type="file" id="fileInput" multiple accept=".xlsx">
+    <div class="toggle-controls">
+        <label><input type="checkbox" id="toggleDate" checked> Show Date</label>
+        <label><input type="checkbox" id="toggleTimeIn" checked> Show Time In</label>
+        <label><input type="checkbox" id="toggleTimeOut" checked> Show Time Out</label>
+        <label><input type="checkbox" id="toggleTotalTime" checked> Show Total Time</label>
+    </div>
+    <div id="fileSelector"></div>
+    <div id="output"></div>
+
+    <script>
+        // Helper function to format Excel date/time values for display
+        function formatExcelDateTime(value, isTime = false, isClockTime = false) {
+            if (!value) return '';
+
+            // Handle date (e.g., "2025-04-01 00:00:00")
+            if (!isTime && typeof value === 'string' && value.includes(' ')) {
+                return value.split(' ')[0]; // Extract "2025-04-01"
+            }
+
+            // Handle time (e.g., "08:00:00")
+            if (isTime && typeof value === 'string') {
+                if (isClockTime) {
+                    // Convert to 12-hour clock for Time In and Time Out
+                    const [hours, minutes, seconds] = value.split(':').map(Number);
+                    const period = hours >= 12 ? 'PM' : 'AM';
+                    const adjustedHours = hours % 12 || 12; // Convert to 12-hour format (0 becomes 12)
+                    return `${adjustedHours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} ${period}`;
+                }
+                // Leave as-is for Total Time
+                return value;
+            }
+
+            // Handle Excel serial date/time
+            if (typeof value === 'number') {
+                if (isTime || value < 1) {
+                    // Time value (fraction of a day)
+                    const totalSeconds = value * 24 * 60 * 60;
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = Math.floor(totalSeconds % 60);
+                    if (isClockTime) {
+                        // Convert to 12-hour clock for Time In and Time Out
+                        const period = hours >= 12 ? 'PM' : 'AM';
+                        const adjustedHours = hours % 12 || 12; // Convert to 12-hour format
+                        return `${adjustedHours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} ${period}`;
+                    }
+                    // Leave as-is for Total Time
+                    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                } else {
+                    // Date value (Excel serial date)
+                    const date = XLSX.SSF.parse_date_code(value);
+                    return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+                }
+            }
+
+            return value; // Return as-is if not a date/time
+        }
+
+        // Convert 12-hour time (e.g., "8:00:00 AM") back to 24-hour format (e.g., "08:00:00")
+        function parse12HourTime(value) {
+            if (!value || !value.includes(' ')) return value; // Not a 12-hour time
+            const [time, period] = value.split(' ');
+            const [hours, minutes, seconds] = time.split(':').map(Number);
+            let adjustedHours = hours;
+            if (period === 'PM' && hours !== 12) adjustedHours += 12;
+            if (period === 'AM' && hours === 12) adjustedHours = 0;
+            return `${String(adjustedHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // Calculate total hours from Total Time column
+        function calculateTotalHours(dataRows) {
+            let totalSeconds = 0;
+            dataRows.forEach(row => {
+                const totalTime = row[4]; // Total Time column
+                if (totalTime && typeof totalTime === 'string' && totalTime.includes(':')) {
+                    const [hours, minutes, seconds] = totalTime.split(':').map(Number);
+                    totalSeconds += hours * 3600 + minutes * 60 + seconds;
+                }
+            });
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            return `${hours}:${String(minutes).padStart(2, '0')} hours`;
+        }
+
+        // Toggle column visibility
+        function toggleColumn(columnIndex, show) {
+            const cells = document.querySelectorAll(`td:nth-child(${columnIndex}), th:nth-child(${columnIndex})`);
+            cells.forEach(cell => {
+                if (show) {
+                    cell.classList.remove('hidden');
+                } else {
+                    cell.classList.add('hidden');
+                }
+            });
+        }
+
+        // Set up toggle event listeners
+        document.getElementById('toggleDate').addEventListener('change', function(e) {
+            toggleColumn(1, e.target.checked); // Date is 1st column (index 0 + 1)
+        });
+
+        document.getElementById('toggleTimeIn').addEventListener('change', function(e) {
+            toggleColumn(3, e.target.checked); // Time In is 3rd column (index 2 + 1)
+        });
+
+        document.getElementById('toggleTimeOut').addEventListener('change', function(e) {
+            toggleColumn(4, e.target.checked); // Time Out is 4th column (index 3 + 1)
+        });
+
+        document.getElementById('toggleTotalTime').addEventListener('change', function(e) {
+            toggleColumn(5, e.target.checked); // Total Time is 5th column (index 4 + 1)
+        });
+
+        // Store data for each file
+        const fileData = [];
+
+        // Handle file uploads and table rendering
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const output = document.getElementById('output');
+            const fileSelector = document.getElementById('fileSelector');
+            output.innerHTML = ''; // Clear previous output
+            fileSelector.innerHTML = ''; // Clear previous selector
+            fileData.length = 0; // Clear previous data
+
+            const tables = []; // Store HTML for each table
+
+            Array.from(files).forEach((file, fileIndex) => {
+                const reader = new FileReader();
+
+                reader.onload = function(event) {
+                    // Parse the Excel file
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+                    // Extract employee name from first row
+                    const employeeName = jsonData[0][1] || 'Unknown Employee';
+
+                    // Headers are in the second row (index 1)
+                    const headers = jsonData[1];
+
+                    // Collect data rows (start at index 2, stop at "Total Hours")
+                    const dataRows = [];
+                    let currentDate = '';
+                    for (let i = 2; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        const firstCell = row[0]?.toString().trim();
+
+                        // Stop at "Total Hours"
+                        if (firstCell && firstCell.includes('Total Hours')) {
+                            break;
+                        }
+
+                        // If the row has at least one non-empty cell, include it
+                        if (row.some(cell => cell?.toString().trim())) {
+                            // Fill in the date if empty
+                            if (row[0]) {
+                                currentDate = formatExcelDateTime(row[0], false);
+                            }
+                            row[0] = currentDate;
+                            dataRows.push(row);
+                        }
+                    }
+
+                    // Store the data for editing
+                    fileData[fileIndex] = {
+                        headers: headers,
+                        rows: dataRows,
+                        employeeName: employeeName,
+                        filename: file.name,
+                        totalHours: calculateTotalHours(dataRows)
+                    };
+
+                    // Generate HTML table
+                    let html = `<div class="table-container" id="table-${fileIndex}">`;
+                    html += `<div class="action-buttons">`;
+                    html += `<button onclick="enterEditMode(${fileIndex})">Edit</button>`;
+                    html += `<button onclick="downloadExcel(${fileIndex})">Download</button>`;
+                    html += `</div>`;
+                    html += `<h2>${file.name} - ${employeeName}</h2>`;
+                    html += `<table id="table-data-${fileIndex}">`;
+                    
+                    // Headers
+                    html += '<tr>';
+                    headers.forEach(header => html += `<th>${header}</th>`);
+                    html += '</tr>';
+
+                    // Data rows with formatted dates and times
+                    dataRows.forEach((row, rowIndex) => {
+                        html += `<tr data-row="${rowIndex}">`;
+                        row.forEach((cell, colIndex) => {
+                            // Format Date (index 0), Time In (index 2), Time Out (index 3), Total Time (index 4)
+                            if (colIndex === 0) {
+                                cell = formatExcelDateTime(cell, false); // Date
+                            } else if (colIndex === 2 || colIndex === 3) {
+                                cell = formatExcelDateTime(cell, true, true); // Time In and Time Out (12-hour clock)
+                            } else if (colIndex === 4) {
+                                cell = formatExcelDateTime(cell, true, false); // Total Time (leave as-is)
+                            }
+                            html += `<td data-col="${colIndex}">${cell}</td>`;
+                        });
+                        html += '</tr>';
+                    });
+
+                    // Total Hours row
+                    html += '<tr>';
+                    html += '<td></td><td></td><td></td><td>Total Hours =</td>';
+                    html += `<td>${fileData[fileIndex].totalHours}</td><td></td>`;
+                    html += '</tr>';
+
+                    html += '</table>';
+                    html += '</div>';
+
+                    tables[fileIndex] = html;
+
+                    // Once all files are processed, render the tables and selector
+                    if (tables.filter(Boolean).length === files.length) {
+                        // Render all tables
+                        output.innerHTML = tables.join('');
+
+                        // Create file selector dropdown
+                        let selectorHtml = '<select id="fileSelect">';
+                        Array.from(files).forEach((f, i) => {
+                            selectorHtml += `<option value="${i}">${f.name}</option>`;
+                        });
+                        selectorHtml += '</select>';
+                        fileSelector.innerHTML = selectorHtml;
+
+                        // Show the first table by default
+                        document.getElementById('table-0').classList.add('active');
+
+                        // Handle file selection
+                        document.getElementById('fileSelect').addEventListener('change', function(e) {
+                            const selectedIndex = e.target.value;
+                            document.querySelectorAll('.table-container').forEach(container => {
+                                container.classList.remove('active');
+                            });
+                            document.getElementById(`table-${selectedIndex}`).classList.add('active');
+                        });
+
+                        // Apply initial toggle states
+                        toggleColumn(1, document.getElementById('toggleDate').checked);
+                        toggleColumn(3, document.getElementById('toggleTimeIn').checked);
+                        toggleColumn(4, document.getElementById('toggleTimeOut').checked);
+                        toggleColumn(5, document.getElementById('toggleTotalTime').checked);
+                    }
+                };
+
+                reader.readAsArrayBuffer(file);
+            });
+        });
+
+        // Enter edit mode for a specific table
+        function enterEditMode(fileIndex) {
+            const table = document.getElementById(`table-data-${fileIndex}`);
+            const rows = table.querySelectorAll('tr[data-row]');
+            const data = fileData[fileIndex].rows;
+
+            rows.forEach((row, rowIndex) => {
+                const cells = row.querySelectorAll('td');
+                cells.forEach((cell, colIndex) => {
+                    let value = data[rowIndex][colIndex] || '';
+                    // Use the formatted value for display in the input
+                    if (colIndex === 0) {
+                        value = formatExcelDateTime(value, false); // Date
+                    } else if (colIndex === 2 || colIndex === 3) {
+                        value = formatExcelDateTime(value, true, true); // Time In and Time Out (12-hour clock)
+                    } else if (colIndex === 4) {
+                        value = formatExcelDateTime(value, true, false); // Total Time (leave as-is)
+                    }
+                    cell.innerHTML = `<input type="text" class="edit-input" value="${value}" data-row="${rowIndex}" data-col="${colIndex}">`;
+                });
+            });
+
+            // Replace Edit button with Save button
+            const actionButtons = table.parentElement.querySelector('.action-buttons');
+            actionButtons.innerHTML = `<button onclick="saveEdits(${fileIndex})">Save</button>`;
+            actionButtons.innerHTML += `<button onclick="downloadExcel(${fileIndex})">Download</button>`;
+        }
+
+        // Save edits for a specific table
+        function saveEdits(fileIndex) {
+            const table = document.getElementById(`table-data-${fileIndex}`);
+            const inputs = table.querySelectorAll('input.edit-input');
+            const data = fileData[fileIndex].rows;
+
+            // Update the data with edited values
+            inputs.forEach(input => {
+                const rowIndex = parseInt(input.dataset.row);
+                const colIndex = parseInt(input.dataset.col);
+                let value = input.value;
+                // Convert 12-hour time back to 24-hour format for storage
+                if (colIndex === 2 || colIndex === 3) {
+                    value = parse12HourTime(value);
+                }
+                data[rowIndex][colIndex] = value;
+            });
+
+            // Recalculate total hours
+            fileData[fileIndex].totalHours = calculateTotalHours(data);
+
+            // Re-render the table with updated data
+            let html = '<table>';
+            html += '<tr>';
+            fileData[fileIndex].headers.forEach(header => html += `<th>${header}</th>`);
+            html += '</tr>';
+
+            data.forEach((row, rowIndex) => {
+                html += `<tr data-row="${rowIndex}">`;
+                row.forEach((cell, colIndex) => {
+                    // Format Date (index 0), Time In (index 2), Time Out (index 3), Total Time (index 4)
+                    if (colIndex === 0) {
+                        cell = formatExcelDateTime(cell, false); // Date
+                    } else if (colIndex === 2 || colIndex === 3) {
+                        cell = formatExcelDateTime(cell, true, true); // Time In and Time Out (12-hour clock)
+                    } else if (colIndex === 4) {
+                        cell = formatExcelDateTime(cell, true, false); // Total Time (leave as-is)
+                    }
+                    html += `<td data-col="${colIndex}">${cell}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            // Total Hours row
+            html += '<tr>';
+            html += '<td></td><td></td><td></td><td>Total Hours =</td>';
+            html += `<td>${fileData[fileIndex].totalHours}</td><td></td>`;
+            html += '</tr>';
+
+            html += '</table>';
+
+            table.innerHTML = html;
+
+            // Replace Save button with Edit button
+            const actionButtons = table.parentElement.querySelector('.action-buttons');
+            actionButtons.innerHTML = `<button onclick="enterEditMode(${fileIndex})">Edit</button>`;
+            actionButtons.innerHTML += `<button onclick="downloadExcel(${fileIndex})">Download</button>`;
+
+            // Re-apply toggle states
+            toggleColumn(1, document.getElementById('toggleDate').checked);
+            toggleColumn(3, document.getElementById('toggleTimeIn').checked);
+            toggleColumn(4, document.getElementById('toggleTimeOut').checked);
+            toggleColumn(5, document.getElementById('toggleTotalTime').checked);
+        }
+
+        // Download the edited data as an Excel file
+        function downloadExcel(fileIndex) {
+            const data = fileData[fileIndex];
+            const wsData = [
+                ['', data.employeeName, '', '', '', ''], // First row: Employee Name
+                data.headers, // Second row: Headers
+                ...data.rows // Data rows
+            ];
+
+            // Add "Total Hours" row
+            const totalHoursRow = ['', '', '', 'Total Hours =', data.totalHours, ''];
+            wsData.push(totalHoursRow);
+
+            // Create a new workbook and worksheet
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+            // Export the file
+            XLSX.writeFile(wb, `edited_${data.filename}`);
+        }
+    </script>
+</body>
+</html>
