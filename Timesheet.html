@@ -4,83 +4,158 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timesheet Creator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            padding: 1rem;
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
+            color: #e0e0e0;
+            padding: 1.5rem;
             max-width: 100%;
             overflow-x: hidden;
+            margin: 0;
         }
         h1, h2 {
-            font-size: clamp(1.5rem, 5vw, 2rem);
+            font-size: clamp(1.8rem, 6vw, 2.2rem);
+            color: #ff4500;
+            text-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
         }
         #form, #totalTime {
-            margin-bottom: 1.5rem;
+            background: rgba(30, 30, 30, 0.9);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.3);
+            margin-bottom: 2rem;
         }
         label {
             display: block;
             margin-bottom: 0.5rem;
             font-size: clamp(1rem, 3vw, 1.2rem);
+            color: #e0e0e0;
         }
-        input, select, textarea, button {
+        input, select, textarea {
             width: 100%;
-            padding: 0.5rem;
-            margin-bottom: 0.5rem;
+            padding: 0.6rem;
+            margin-bottom: 0.75rem;
             font-size: clamp(1rem, 3vw, 1.1rem);
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #ff4500;
+            border-radius: 0.3rem;
             box-sizing: border-box;
+            transition: box-shadow 0.3s ease;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            box-shadow: 0 0 8px rgba(255, 69, 0, 0.7);
         }
         textarea {
-            height: 5rem;
+            height: 6rem;
         }
         button {
-            background-color: #007bff;
-            color: white;
+            background: #ff4500;
+            color: #fff;
             border: none;
             border-radius: 0.3rem;
+            padding: 0.8rem 1.5rem;
+            font-size: clamp(1rem, 3vw, 1.1rem);
             cursor: pointer;
-            padding: 0.75rem;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
         button:hover {
-            background-color: #0056b3;
+            transform: scale(1.05);
+            box-shadow: 0 0 12px rgba(255, 69, 0, 0.8);
         }
         #cancelButton {
-            background-color: #dc3545;
+            background: #dc3545;
         }
         #cancelButton:hover {
-            background-color: #b02a37;
+            box-shadow: 0 0 12px rgba(220, 53, 69, 0.8);
         }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 1rem;
-            overflow-x: auto;
-            display: block;
+            background: rgba(30, 30, 30, 0.9);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.3);
         }
         th, td {
-            border: 1px solid black;
+            border: 1px solid #ff4500;
             padding: 0.5rem;
             text-align: left;
-            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            font-size: clamp(0.8rem, 2.5vw, 0.9rem);
         }
         th {
-            background-color: #f2f2f2;
+            background: linear-gradient(90deg, #ff4500, #e03c00);
+            color: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        td {
+            background: #2a2a2a;
+        }
+        tbody tr {
+            transition: background 0.3s, transform 0.3s;
+            animation: fadeIn 0.5s ease-in;
+        }
+        tbody tr:hover {
+            background: #3a3a3a;
+            transform: translateY(-2px);
         }
         tbody tr.dragging {
             opacity: 0.5;
-            background-color: #e0e0e0;
+            background: #ff4500;
         }
         .drag-handle {
             cursor: move;
+            color: #ff4500;
             padding-right: 0.5rem;
+            transition: transform 0.2s;
         }
-        .action-buttons button {
-            margin-right: 0.5rem;
-            padding: 0.3rem 0.6rem;
+        .drag-handle:hover {
+            transform: scale(1.2);
+        }
+        .action-select {
+            width: 100%;
+            padding: 0.3rem;
             font-size: clamp(0.8rem, 2vw, 0.9rem);
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #ff4500;
+            border-radius: 0.3rem;
         }
         #totalTime {
             font-weight: bold;
             font-size: clamp(1rem, 3vw, 1.2rem);
+            color: #ff4500;
+            text-shadow: 0 0 5px rgba(255, 69, 0, 0.5);
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+            color: #ff4500;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 69, 0, 0.3);
+            border-top: 4px solid #ff4500;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         @media (max-width: 600px) {
             table {
@@ -88,27 +163,31 @@
                 overflow-x: auto;
                 white-space: nowrap;
             }
+            th, td {
+                min-width: 70px;
+            }
+            .action-select {
+                max-width: 100px;
+            }
         }
     </style>
-    <!-- Load SheetJS library for Excel generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <h1>Timesheet Creator</h1>
     <div id="form">
-        <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
-        <label>Date: <input type="date" id="sessionDate"></label>
-        <h2>Add Job Entry</h2>
-        <label>Job Name: <input type="text" id="jobName"></label>
-        <label>Address: <input type="text" id="address"></label>
-        <label>Time In: <select id="timeIn"></select></label>
-        <label>Time Out: <select id="timeOut"></select></label>
-        <label>Job Description: <textarea id="description"></textarea></label>
+        <label><i class="fas fa-user"></i> Employee Name: <input type="text" id="employee" value="Lucas"></label>
+        <label><i class="fas fa-calendar"></i> Date: <input type="date" id="sessionDate"></label>
+        <h2><i class="fas fa-plus-circle"></i> Add Job Entry</h2>
+        <label><i class="fas fa-briefcase"></i> Job Name: <input type="text" id="jobName"></label>
+        <label><i class="fas fa-map-marker-alt"></i> Address: <input type="text" id="address"></label>
+        <label><i class="fas fa-clock"></i> Time In: <select id="timeIn"></select></label>
+        <label><i class="fas fa-clock"></i> Time Out: <select id="timeOut"></select></label>
+        <label><i class="fas fa-comment"></i> Job Description: <textarea id="description"></textarea></label>
         <input type="hidden" id="editIndex" value="-1">
-        <button id="actionButton">Add Entry</button>
-        <button id="cancelButton" style="display:none;">Cancel</button>
+        <button id="actionButton"><i class="fas fa-save"></i> Add Entry</button>
+        <button id="cancelButton" style="display:none;"><i class="fas fa-times"></i> Cancel</button>
     </div>
-    <div id="totalTime">Total Time: 0 hours 0 minutes</div>
+    <div id="totalTime"><i class="fas fa-hourglass"></i> Total Time: 0 hours 0 minutes</div>
     <table id="entriesTable">
         <thead>
             <tr>
@@ -123,8 +202,10 @@
         </thead>
         <tbody></tbody>
     </table>
-    <button id="generateExcel">Generate Excel</button>
+    <div id="loading"><span class="spinner"></span> Generating Excel...</div>
+    <button id="generateExcel"><i class="fas fa-file-excel"></i> Generate Excel</button>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         // Generate time options in 30-minute increments
         function generateTimeOptions() {
@@ -163,21 +244,26 @@
             return (hours + minutes / 60) / 24;
         }
 
-        // Format total time from decimal days to "H:MM"
-        function formatTotalTime(totalTimeDecimal) {
-            const totalHours = totalTimeDecimal * 24;
-            const hours = Math.floor(totalHours);
-            const minutes = Math.floor((totalHours - hours) * 60);
-            return `${hours}:${String(minutes).padStart(2, '0')}`;
-        }
-
-        // Convert 24-hour time to 12-hour format
-        function to12Hour(timeStr) {
+        // Convert 24-hour time to 12-hour string
+        function to12HourString(timeStr) {
             const [hours, minutes] = timeStr.split(':').map(Number);
             const period = hours < 12 ? 'AM' : 'PM';
             let hour12 = hours % 12;
             if (hour12 === 0) hour12 = 12;
             return `${hour12}:${String(minutes).padStart(2, '0')} ${period}`;
+        }
+
+        // Format total time from decimal days to "H:MM", rounded to 30 minutes
+        function formatTotalTime(totalTimeDecimal) {
+            let totalHours = totalTimeDecimal * 24;
+            const hours = Math.floor(totalHours);
+            let minutes = (totalHours - hours) * 60;
+            minutes = Math.round(minutes / 30) * 30;
+            if (minutes >= 60) {
+                minutes -= 60;
+                totalHours += 1;
+            }
+            return `${Math.floor(totalHours)}:${String(minutes).padStart(2, '0')}`;
         }
 
         // Render the table
@@ -192,16 +278,19 @@
                 tr.innerHTML = `
                     <td>${entry.date.toDateString()}</td>
                     <td>${jobAddress}</td>
-                    <td>${to12Hour(entry.timeIn)}</td>
-                    <td>${to12Hour(entry.timeOut)}</td>
+                    <td>${to12HourString(entry.timeIn)}</td>
+                    <td>${to12HourString(entry.timeOut)}</td>
                     <td>${formatTotalTime(entry.totalTimeDecimal)}</td>
                     <td>${entry.description}</td>
-                    <td class="action-buttons">
-                        <span class="drag-handle" title="Drag to reorder">☰</span>
-                        <button onclick="editRow(${index})">Edit</button>
-                        <button onclick="moveUp(${index})">Up</button>
-                        <button onclick="moveDown(${index})">Down</button>
-                        <button onclick="deleteRow(${index})">Delete</button>
+                    <td>
+                        <i class="fas fa-grip-lines drag-handle" title="Drag to reorder"></i>
+                        <select class="action-select" onchange="handleAction(${index}, this.value); this.value=''">
+                            <option value="" disabled selected><i class="fas fa-cog"></i> Actions</option>
+                            <option value="edit"><i class="fas fa-edit"></i> Edit</option>
+                            <option value="up"><i class="fas fa-arrow-up"></i> Move Up</option>
+                            <option value="down"><i class="fas fa-arrow-down"></i> Move Down</option>
+                            <option value="delete"><i class="fas fa-trash"></i> Delete</option>
+                        </select>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -217,6 +306,14 @@
             });
 
             updateTotalTime();
+        }
+
+        // Handle action dropdown
+        function handleAction(index, action) {
+            if (action === 'edit') editRow(index);
+            else if (action === 'up') moveUp(index);
+            else if (action === 'down') moveDown(index);
+            else if (action === 'delete') deleteRow(index);
         }
 
         // Drag-and-drop handlers
@@ -247,10 +344,15 @@
         // Update total time display
         function updateTotalTime() {
             const totalDecimal = entries.reduce((sum, entry) => sum + entry.totalTimeDecimal, 0);
-            const totalHours = totalDecimal * 24;
+            let totalHours = totalDecimal * 24;
             const hours = Math.floor(totalHours);
-            const minutes = Math.floor((totalHours - hours) * 60);
-            document.getElementById('totalTime').textContent = `Total Time: ${hours} hours ${minutes} minutes`;
+            let minutes = (totalHours - hours) * 60;
+            minutes = Math.round(minutes / 30) * 30;
+            if (minutes >= 60) {
+                minutes -= 60;
+                totalHours += 1;
+            }
+            document.getElementById('totalTime').innerHTML = `<i class="fas fa-hourglass"></i> Total Time: ${Math.floor(totalHours)} hours ${minutes} minutes`;
         }
 
         // Clear form fields
@@ -261,7 +363,7 @@
             document.getElementById('timeOut').selectedIndex = 0;
             document.getElementById('description').value = '';
             document.getElementById('editIndex').value = -1;
-            document.getElementById('actionButton').textContent = 'Add Entry';
+            document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Add Entry';
             document.getElementById('cancelButton').style.display = 'none';
         }
 
@@ -274,7 +376,7 @@
             document.getElementById('timeOut').value = entry.timeOut;
             document.getElementById('description').value = entry.description;
             document.getElementById('editIndex').value = index;
-            document.getElementById('actionButton').textContent = 'Save Changes';
+            document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Save Changes';
             document.getElementById('cancelButton').style.display = 'inline';
         }
 
@@ -348,66 +450,77 @@
 
         // Handle "Generate Excel" button click
         document.getElementById('generateExcel').addEventListener('click', function() {
-            const employee = document.getElementById('employee').value;
-            const dateStr = document.getElementById('sessionDate').value;
-            if (!dateStr) {
-                alert('Please select a date.');
-                return;
-            }
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            setTimeout(() => {
+                const employee = document.getElementById('employee').value;
+                const dateStr = document.getElementById('sessionDate').value;
+                if (!dateStr) {
+                    alert('Please select a date.');
+                    loading.style.display = 'none';
+                    return;
+                }
 
-            // Sort entries by time_in for Excel output
-            const sortedEntries = [...entries].sort((a, b) => timeStrToDecimal(a.timeIn) - timeStrToDecimal(b.timeIn));
+                // Sort entries by time_in for Excel output
+                const sortedEntries = [...entries].sort((a, b) => timeStrToDecimal(a.timeIn) - timeStrToDecimal(b.timeIn));
 
-            // Build data array for Excel
-            const data = [];
+                // Build data array for Excel
+                const data = [];
 
-            // First row: Employee Name
-            data.push([{ v: `Employee Name: ${employee}`, t: 's' }, null, null, null, null, null]);
+                // First row: Employee Name
+                data.push([{ v: `Employee Name: ${employee}`, t: 's' }, null, null, null, null, null]);
 
-            // Second row: Headers
-            data.push([
-                { v: 'Date', t: 's' },
-                { v: 'Job Name / Address', t: 's' },
-                { v: 'Time In', t: 's' },
-                { v: 'Time Out', t: 's' },
-                { v: 'Total Time', t: 's' },
-                { v: 'Job Description', t: 's' }
-            ]);
+                // Second row: Headers
+                data.push([
+                    { v: 'Date', t: 's' },
+                    { v: 'Job Name / Address', t: 's' },
+                    { v: 'Time In', t: 's' },
+                    { v: 'Time Out', t: 's' },
+                    { v: 'Total Time', t: 's' },
+                    { v: 'Job Description', t: 's' }
+                ]);
 
-            // Data rows
-            let prevDate = null;
-            sortedEntries.forEach(entry => {
-                const dateCell = entry.date.getTime() !== prevDate ? { v: entry.date, t: 'd', z: 'm/d/yyyy' } : null;
-                prevDate = entry.date.getTime();
-                const jobAddress = entry.address ? `${entry.jobName}\n${entry.address}` : entry.jobName;
-                const row = [
-                    dateCell,
-                    { v: jobAddress, t: 's' },
-                    { v: timeStrToDecimal(entry.timeIn), t: 'n', z: 'hh:mm:ss' },
-                    { v: timeStrToDecimal(entry.timeOut), t: 'n', z: 'hh:mm:ss' },
-                    { v: entry.totalTimeDecimal, t: 'n', z: 'hh:mm:ss' },
-                    { v: entry.description, t: 's' }
-                ];
-                data.push(row);
-            });
+                // Data rows
+                let prevDate = null;
+                sortedEntries.forEach(entry => {
+                    const dateCell = entry.date.getTime() !== prevDate ? { v: entry.date, t: 'd', z: 'm/d/yyyy' } : null;
+                    prevDate = entry.date.getTime();
+                    const jobAddress = entry.address ? `${entry.jobName}\n${entry.address}` : entry.jobName;
+                    const row = [
+                        dateCell,
+                        { v: jobAddress, t: 's' },
+                        { v: to12HourString(entry.timeIn), t: 's' },
+                        { v: to12HourString(entry.timeOut), t: 's' },
+                        { v: formatTotalTime(entry.totalTimeDecimal), t: 's' },
+                        { v: entry.description, t: 's' }
+                    ];
+                    data.push(row);
+                });
 
-            // Calculate total hours
-            const sumTotalTime = sortedEntries.reduce((sum, entry) => sum + entry.totalTimeDecimal, 0);
-            const totalHours = Math.floor(sumTotalTime * 24);
-            const totalMinutes = Math.floor((sumTotalTime * 24 - totalHours) * 60);
-            const formattedTotal = `${totalHours}:${String(totalMinutes).padStart(2, '0')} hours`;
+                // Calculate total hours
+                const sumTotalTime = sortedEntries.reduce((sum, entry) => sum + entry.totalTimeDecimal, 0);
+                const totalHours = Math.floor(sumTotalTime * 24);
+                let totalMinutes = (sumTotalTime * 24 - totalHours) * 60;
+                totalMinutes = Math.round(totalMinutes / 30) * 30;
+                if (totalMinutes >= 60) {
+                    totalMinutes -= 60;
+                    totalHours += 1;
+                }
+                const formattedTotal = `${totalHours}:${String(totalMinutes).padStart(2, '0')} hours`;
 
-            // Total hours row
-            data.push([null, null, null, { v: 'Total Hours =', t: 's' }, { v: formattedTotal, t: 's' }, null]);
+                // Total hours row
+                data.push([null, null, null, { v: 'Total Hours =', t: 's' }, { v: formattedTotal, t: 's' }, null]);
 
-            // Create worksheet and workbook
-            const ws = XLSX.utils.aoa_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
+                // Create worksheet and workbook
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
 
-            // Download the Excel file with date as filename
-            const filename = dateStr ? `${dateStr}.xlsx` : 'timesheet.xlsx';
-            XLSX.writeFile(wb, filename);
+                // Download the Excel file with date as filename
+                const filename = dateStr ? `${dateStr}.xlsx` : 'timesheet.xlsx';
+                XLSX.writeFile(wb, filename);
+                loading.style.display = 'none';
+            }, 500);
         });
     </script>
 </body>
