@@ -452,7 +452,7 @@
         document.getElementById('generateExcel').addEventListener('click', function() {
             const loading = document.getElementById('loading');
             loading.style.display = 'block';
-            setTimeout(() => {
+            try {
                 const employee = document.getElementById('employee').value;
                 const dateStr = document.getElementById('sessionDate').value;
                 if (!dateStr) {
@@ -516,11 +516,14 @@
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
 
-                // Download the Excel file with date as filename
+                // Download the Excel file
                 const filename = dateStr ? `${dateStr}.xlsx` : 'timesheet.xlsx';
                 XLSX.writeFile(wb, filename);
                 loading.style.display = 'none';
-            }, 500);
+            } catch (error) {
+                loading.style.display = 'none';
+                alert('Failed to generate Excel file. Please ensure pop-ups are allowed and try again. Error: ' + error.message);
+            }
         });
     </script>
 </body>
