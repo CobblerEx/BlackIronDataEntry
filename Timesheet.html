@@ -62,15 +62,21 @@
             font-size: clamp(1rem, 3vw, 1.1rem);
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
+            margin: 0.5rem 0.5rem 0 0;
         }
         button:hover {
             transform: scale(1.05);
             box-shadow: 0 0 12px rgba(255, 69, 0, 0.8);
         }
-        #cancelButton {
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        #cancelButton, #clearAllButton {
             background: #dc3545;
         }
-        #cancelButton:hover {
+        #cancelButton:hover, #clearAllButton:hover {
             box-shadow: 0 0 12px rgba(220, 53, 69, 0.8);
         }
         table {
@@ -237,6 +243,7 @@
     </table>
     <div id="loading"><span class="spinner"></span> Generating Excel...</div>
     <button id="generateExcel"><i class="fas fa-file-excel"></i> Generate Excel</button>
+    <button id="clearAllButton"><i class="fas fa-trash-alt"></i> Clear All</button>
     <div id="overlay"></div>
     <div id="actionModal">
         <h3>Actions</h3>
@@ -277,8 +284,61 @@
             timeOutSelect.add(opt.cloneNode(true));
         });
 
+        // Set default Time In to 8:00 AM
+        timeInSelect.value = '08:00';
+        timeOutSelect.value = '08:30';
+
         // Array to store timesheet entries
         let entries = [];
+
+        // Save to localStorage
+        function saveToLocalStorage() {
+            const data = {
+                employee: document.getElementById('employee').value,
+                sessionDate: document.getElementById('sessionDate').value,
+                entries: entries.map(entry => ({
+                    ...entry,
+                    date: entry.date.toISOString()
+                }))
+            };
+            localStorage.setItem('timesheetData', JSON.stringify(data));
+        }
+
+        // Load from localStorage
+        function loadFromLocalStorage() {
+            const data = localStorage.getItem('timesheetData');
+            if (data) {
+                const parsed = JSON.parse(data);
+                document.getElementById('employee').value = parsed.employee || 'Lucas';
+                document.getElementById('sessionDate').value = parsed.sessionDate || '';
+                entries = parsed.entries.map(entry => ({
+                    ...entry,
+                    date: new Date(entry.date)
+                }));
+                renderTable();
+            }
+        }
+
+        // Clear localStorage and reset state
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all entries? This cannot be undone.')) {
+                entries = [];
+                localStorage.removeItem('timesheetData');
+                document.getElementById('employee').value = 'Lucas';
+                document.getElementById('sessionDate').value = '';
+                clearForm();
+                renderTable();
+            }
+        }
+
+        // Prevent accidental data loss
+        window.addEventListener('beforeunload', function(e) {
+            if (entries.length > 0) {
+                const confirmationMessage = 'Are you sure you want to leave? You may lose unsaved changes.';
+                (e || window.event).returnValue = confirmationMessage;
+                return confirmationMessage;
+            }
+        });
 
         // Convert time string (HH:MM) to decimal (fraction of a day)
         function timeStrToDecimal(timeStr) {
@@ -363,6 +423,7 @@
             });
 
             updateTotalTime();
+            saveToLocalStorage();
         }
 
         // Show action modal for long-press
@@ -376,8 +437,8 @@
             modal.innerHTML = `
                 <h3>Actions</h3>
                 <button class="edit"><i class="fas fa-edit"></i> Edit</button>
-                <button class="up"><i class="fas fa-arrow-up"></i> Move Up</button>
-                <button class="down"><i class="fas fa-arrow-down"></i> Move Down</button>
+                <button class="up" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i> Move Up</button>
+                <button class="down" ${index === entries.length - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i> Move Down</button>
                 <button class="delete"><i class="fas fa-trash"></i> Delete</button>
                 <button class="cancel"><i class="fas fa-times"></i> Cancel</button>
             `;
@@ -464,15 +525,14 @@
             document.getElementById('editIndex').value = -1;
             document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Add Entry';
             document.getElementById('cancelButton').style.display = 'none';
-            // Set Time In to the last entry's Time Out, if available
+            // Set Time In and Time Out defaults
             if (entries.length > 0) {
                 const lastEntry = entries[entries.length - 1];
                 document.getElementById('timeIn').value = lastEntry.timeOut;
-                // Set Time Out to 30 minutes after Time Out of last entry
                 document.getElementById('timeOut').value = getNextTimeOption(lastEntry.timeOut);
             } else {
-                document.getElementById('timeIn').selectedIndex = 0;
-                document.getElementById('timeOut').selectedIndex = 1; // Default to 12:30 AM
+                document.getElementById('timeIn').value = '08:00'; // Default to 8:00 AM
+                document.getElementById('timeOut').value = '08:30'; // Default to 8:30 AM
             }
         }
 
@@ -494,6 +554,7 @@
             if (index > 0) {
                 [entries[index - 1], entries[index]] = [entries[index], entries[index - 1]];
                 renderTable();
+                scrollToRow(index - 1);
             }
         }
 
@@ -502,6 +563,15 @@
             if (index < entries.length - 1) {
                 [entries[index], entries[index + 1]] = [entries[index + 1], entries[index]];
                 renderTable();
+                scrollToRow(index + 1);
+            }
+        }
+
+        // Scroll to row after moving
+        function scrollToRow(index) {
+            const row = document.querySelector(`#entriesTable tbody tr[data-index="${index}"]`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
 
@@ -560,6 +630,9 @@
         document.getElementById('cancelButton').addEventListener('click', function() {
             clearForm();
         });
+
+        // Handle "Clear All" button
+        document.getElementById('clearAllButton').addEventListener('click', clearAll);
 
         // Handle "Generate Excel" button click
         document.getElementById('generateExcel').addEventListener('click', function() {
@@ -638,6 +711,9 @@
                 alert('Failed to generate Excel file. Please ensure pop-ups are allowed and try again. Error: ' + error.message);
             }
         });
+
+        // Load saved data on page load
+        loadFromLocalStorage();
     </script>
 </body>
 </html>
