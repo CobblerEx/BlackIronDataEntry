@@ -1,146 +1,897 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIDE Black Iron Data Entry</title>
+    <title>Timesheet Creator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
-        /* Reset default styles */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #1a1a1a, #3d2b1f);
-            color: #ffffff;
-            line-height: 1.6;
-            min-height: 100vh;
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
+            color: #e0e0e0;
+            padding: 1.5rem;
+            max-width: 100%;
+            overflow-x: hidden;
+            margin: 0;
         }
-
-        /* Header styles */
-        header {
-            background: #ff5722;
-            padding: 2rem;
-            text-align: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        h1, h2 {
+            font-size: clamp(1.8rem, 6vw, 2.2rem);
+            color: #ff4500;
+            text-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
         }
-
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 600;
-            letter-spacing: 1px;
+        #form, #totalTime {
+            background: rgba(30, 30, 30, 0.9);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.3);
+            margin-bottom: 2rem;
         }
-
-        h2 {
-            font-size: 1.8rem;
-            margin-bottom: 1rem;
-            color: #ff8a50;
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            color: #e0e0e0;
         }
-
-        /* Section styles */
-        .section {
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            transition: transform 0.3s ease;
+        input, select, textarea {
+            width: 100%;
+            padding: 0.6rem;
+            margin-bottom: 0.75rem;
+            font-size: clamp(1rem, 3vw, 1.1rem);
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #ff4500;
+            border-radius: 0.3rem;
+            box-sizing: border-box;
+            transition: box-shadow 0.3s ease;
         }
-
-        .section:hover {
-            transform: translateY(-5px);
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            box-shadow: 0 0 8px rgba(255, 69, 0, 0.7);
         }
-
-        p {
-            font-size: 1.1rem;
-            margin-bottom: 1rem;
-            color: #d0d0d0;
+        textarea {
+            height: 6rem;
         }
-
-        /* Link styles */
-        a {
-            display: inline-block;
+        button {
+            background: #ff4500;
+            color: #fff;
+            border: none;
+            border-radius: 0.3rem;
             padding: 0.8rem 1.5rem;
-            background: #ff5722;
-            color: white;
-            text-decoration: none;
-            font-weight: 600;
-            border-radius: 8px;
-            transition: background 0.3s ease, transform 0.2s ease;
+            font-size: clamp(1rem, 3vw, 1.1rem);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 0.5rem 0.5rem 0 0;
         }
-
-        a:hover {
-            background: #e64a19;
+        button:hover {
             transform: scale(1.05);
+            box-shadow: 0 0 12px rgba(255, 69, 0, 0.8);
         }
-
-        /* Specific button tweak */
-        .button2 {
-            background: #ff8a50;
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            box-shadow: none;
         }
-
-        .button2:hover {
-            background: #f4511e;
+        #cancelButton, #clearAllButton, #restoreExcelButton {
+            background: #dc3545;
         }
-
-        /* Responsive design */
+        #cancelButton:hover, #clearAllButton:hover, #restoreExcelButton:hover {
+            box-shadow: 0 0 12px rgba(220, 53, 69, 0.8);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: rgba(30, 30, 30, 0.9);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.3);
+        }
+        th, td {
+            border: 1px solid #ff4500;
+            padding: 0.5rem;
+            text-align: left;
+            font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+        }
+        th {
+            background: linear-gradient(90deg, #ff4500, #e03c00);
+            color: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        td {
+            background: #2a2a2a;
+        }
+        tbody tr {
+            transition: background 0.3s, transform 0.3s;
+            animation: fadeIn 0.5s ease-in;
+        }
+        tbody tr:hover {
+            background: #3a3a3a;
+            transform: translateY(-2px);
+        }
+        tbody tr.dragging {
+            opacity: 0.5;
+            background: #ff4500;
+        }
+        .drag-handle {
+            cursor: move;
+            color: #ff4500;
+            padding-right: 0.5rem;
+            transition: transform 0.2s;
+        }
+        .drag-handle:hover {
+            transform: scale(1.2);
+        }
+        .action-select {
+            width: 100%;
+            padding: 0.3rem;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #ff4500;
+            border-radius: 0.3rem;
+        }
+        #totalTime {
+            font-weight: bold;
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            color: #ff4500;
+            text-shadow: 0 0 5px rgba(255, 69, 0, 0.5);
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+            color: #ff4500;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 69, 0, 0.3);
+            border-top: 4px solid #ff4500;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        #actionModal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 30, 0.95);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0 20px rgba(255, 69, 0, 0.5);
+            z-index: 1000;
+            text-align: center;
+        }
+        #actionModal button {
+            display: block;
+            width: 100%;
+            margin: 0.5rem 0;
+            padding: 0.8rem;
+            font-size: 1rem;
+        }
+        #actionModal .cancel {
+            background: #dc3545;
+        }
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+        #offlineIndicator {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(220, 53, 69, 0.9);
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 0.3rem;
+            font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         @media (max-width: 600px) {
-            h1 {
-                font-size: 1.8rem;
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
             }
-
-            h2 {
-                font-size: 1.5rem;
+            th, td {
+                min-width: 70px;
             }
-
-            .section {
-                margin: 1rem;
-                padding: 1.5rem;
-            }
-
-            a {
-                padding: 0.6rem 1.2rem;
+            .action-select {
+                max-width: 100px;
             }
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Welcome to Black Iron Data Entry</h1>
-    </header>
-    
-    <section class="section">
-        <p>Access the Black Iron with Edit page:</p>
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit.html">Go to Black Iron with Edit</a>
-    </section>
+    <h1>Timesheet Creator</h1>
+    <div id="offlineIndicator"><i class="fas fa-wifi"></i> Offline Mode</div>
+    <div id="form">
+        <label><i class="fas fa-user"></i> Employee Name: <input type="text" id="employee" value="Lucas"></label>
+        <label><i class="fas fa-calendar"></i> Date: <input type="date" id="sessionDate"></label>
+        <h2><i class="fas fa-plus-circle"></i> Add Job Entry</h2>
+        <label><i class="fas fa-briefcase"></i> Job Name: <input type="text" id="jobName"></label>
+        <label><i class="fas fa-map-marker-alt"></i> Address: <input type="text" id="address"></label>
+        <label><i class="fas fa-clock"></i> Time In: <select id="timeIn"></select></label>
+        <label><i class="fas fa-clock"></i> Time Out: <select id="timeOut"></select></label>
+        <label><i class="fas fa-comment"></i> Job Description: <textarea id="description"></textarea></label>
+        <input type="hidden" id="editIndex" value="-1">
+        <button id="actionButton"><i class="fas fa-save"></i> Add Entry</button>
+        <button id="cancelButton" style="display:none;"><i class="fas fa-times"></i> Cancel</button>
+    </div>
+    <div id="totalTime"><i class="fas fa-hourglass"></i> Total Time: 0 hours 0 minutes</div>
+    <table id="entriesTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Job Name / Address</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Total Time</th>
+                <th>Job Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div id="loading"><span class="spinner"></span> Generating Excel...</div>
+    <button id="generateExcel"><i class="fas fa-file-excel"></i> Generate Excel</button>
+    <button id="restoreExcelButton"><i class="fas fa-undo"></i> Restore Last Excel</button>
+    <button id="clearAllButton"><i class="fas fa-trash-alt"></i> Clear All</button>
+    <div id="overlay"></div>
+    <div id="actionModal">
+        <h3>Actions</h3>
+        <button class="edit"><i class="fas fa-edit"></i> Edit</button>
+        <button class="up"><i class="fas fa-arrow-up"></i> Move Up</button>
+        <button class="down"><i class="fas fa-arrow-down"></i> Move Down</button>
+        <button class="delete"><i class="fas fa-trash"></i> Delete</button>
+        <button class="cancel"><i class="fas fa-times"></i> Cancel</button>
+    </div>
 
-    <section class="section">
-        <h2>Newer Version</h2>
-        <p>Try the updated Black Iron with Edit page (v1):</p>
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit3.html">Go to Black Iron with Edit v1</a>
-    </section>
-   
-    <section class="section">
-        <h2>Black Iron Calculator</h2>
-        <p>Explore the Black Iron Calculator:</p>
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironcal2.html" class="button2">Go to Calculator</a>
-    </section>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker registered:', reg))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
 
-    <section class="section">
-        <h2>Upload CSV</h2>
-        <p>Upload and edit your CSV files here:</p>
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html">Go to Upload CSV</a>
-    </section>
+        // Offline indicator
+        const offlineIndicator = document.getElementById('offlineIndicator');
+        function updateOfflineIndicator() {
+            offlineIndicator.style.display = navigator.onLine ? 'none' : 'block';
+        }
+        window.addEventListener('online', updateOfflineIndicator);
+        window.addEventListener('offline', updateOfflineIndicator);
+        updateOfflineIndicator();
 
-    <section class="section">
-        <h2>Timesheet</h2>
-        <p>Track your time with the Timesheet tool:</p>
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Timesheet.html">Go to Timesheet</a>
-    </section>
+        // Generate time options in 30-minute increments
+        function generateTimeOptions() {
+            const options = [];
+            for (let hour = 0; hour < 24; hour++) {
+                for (let minute of [0, 30]) {
+                    const time24 = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+                    const period = hour < 12 ? 'AM' : 'PM';
+                    let hour12 = hour % 12;
+                    if (hour12 === 0) hour12 = 12;
+                    const time12 = `${hour12}:${String(minute).padStart(2, '0')} ${period}`;
+                    options.push({ value: time24, text: time12 });
+                }
+            }
+            return options;
+        }
+
+        // Populate time dropdowns
+        const timeOptions = generateTimeOptions();
+        const timeInSelect = document.getElementById('timeIn');
+        const timeOutSelect = document.getElementById('timeOut');
+        timeOptions.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option.value;
+            opt.text = option.text;
+            timeInSelect.add(opt);
+            timeOutSelect.add(opt.cloneNode(true));
+        });
+
+        // Set default Time In to 8:00 AM
+        timeInSelect.value = '08:00';
+        timeOutSelect.value = '08:30';
+
+        // Array to store timesheet entries
+        let entries = [];
+
+        // Save to localStorage
+        function saveToLocalStorage() {
+            const data = {
+                employee: document.getElementById('employee').value,
+                sessionDate: document.getElementById('sessionDate').value,
+                entries: entries.map(entry => ({
+                    ...entry,
+                    date: entry.date.toISOString()
+                }))
+            };
+            localStorage.setItem('timesheetData', JSON.stringify(data));
+        }
+
+        // Load from localStorage
+        function loadFromLocalStorage() {
+            const data = localStorage.getItem('timesheetData');
+            if (data) {
+                const parsed = JSON.parse(data);
+                document.getElementById('employee').value = parsed.employee || 'Lucas';
+                document.getElementById('sessionDate').value = parsed.sessionDate || '';
+                entries = parsed.entries.map(entry => ({
+                    ...entry,
+                    date: new Date(entry.date)
+                }));
+                renderTable();
+            }
+        }
+
+        // Excel generation queue
+        function queueExcelGeneration(type) {
+            if (navigator.onLine) {
+                if (type === 'manual') generateExcel();
+                else autoSaveExcel();
+            } else {
+                const queue = JSON.parse(localStorage.getItem('excelQueue') || '[]');
+                queue.push(type);
+                localStorage.setItem('excelQueue', JSON.stringify(queue));
+                alert('You are offline. Excel generation has been queued and will complete when you are back online.');
+            }
+        }
+
+        // Process Excel queue when online
+        window.addEventListener('online', () => {
+            const queue = JSON.parse(localStorage.getItem('excelQueue') || '[]');
+            if (queue.length > 0) {
+                queue.forEach(type => {
+                    if (type === 'manual') generateExcel();
+                    else autoSaveExcel();
+                });
+                localStorage.setItem('excelQueue', '[]');
+            }
+        });
+
+        // Auto-save Excel to localStorage
+        function autoSaveExcel() {
+            try {
+                const employee = document.getElementById('employee').value;
+                const dateStr = document.getElementById('sessionDate').value;
+                if (!dateStr || entries.length === 0) return;
+
+                const sortedEntries = [...entries].sort((a, b) => timeStrToDecimal(a.timeIn) - timeStrToDecimal(b.timeIn));
+                const data = [];
+                data.push([{ v: `Employee Name: ${employee}`, t: 's' }, null, null, null, null, null]);
+                data.push([
+                    { v: 'Date', t: 's' },
+                    { v: 'Job Name / Address', t: 's' },
+                    { v: 'Time In', t: 's' },
+                    { v: 'Time Out', t: 's' },
+                    { v: 'Total Time', t: 's' },
+                    { v: 'Job Description', t: 's' }
+                ]);
+
+                let prevDate = null;
+                sortedEntries.forEach(entry => {
+                    const dateCell = entry.date.getTime() !== prevDate ? { v: entry.date, t: 'd', z: 'm/d/yyyy' } : null;
+                    prevDate = entry.date.getTime();
+                    const jobAddress = entry.address ? `${entry.jobName}\n${entry.address}` : entry.jobName;
+                    const row = [
+                        dateCell,
+                        { v: jobAddress, t: 's' },
+                        { v: to12HourString(entry.timeIn), t: 's' },
+                        { v: to12HourString(entry.timeOut), t: 's' },
+                        { v: formatTotalTime(entry.totalTimeDecimal), t: 's' },
+                        { v: entry.description, t: 's' }
+                    ];
+                    data.push(row);
+                });
+
+                const sumTotalTime = sortedEntries.reduce((sum, entry) => sum + entry.totalTimeDecimal, 0);
+                const totalHours = Math.floor(sumTotalTime * 24);
+                let totalMinutes = (sumTotalTime * 24 - totalHours) * 60;
+                totalMinutes = Math.round(totalMinutes / 30) * 30;
+                if (totalMinutes >= 60) {
+                    totalMinutes -= 60;
+                    totalHours += 1;
+                }
+                const formattedTotal = `${totalHours}:${String(totalMinutes).padStart(2, '0')} hours`;
+                data.push([null, null, null, { v: 'Total Hours =', t: 's' }, { v: formattedTotal, t: 's' }, null]);
+
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
+
+                const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                const base64 = arrayBufferToBase64(excelBuffer);
+                localStorage.setItem('lastExcel', JSON.stringify({
+                    filename: dateStr ? `${dateStr}.xlsx` : 'timesheet.xlsx',
+                    data: base64
+                }));
+            } catch (error) {
+                console.error('Auto-save Excel failed:', error);
+            }
+        }
+
+        // Convert array buffer to Base64
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        // Restore last Excel
+        function restoreLastExcel() {
+            const saved = localStorage.getItem('lastExcel');
+            if (!saved) {
+                alert('No saved Excel file found.');
+                return;
+            }
+            const { filename, data } = JSON.parse(saved);
+            const binary = atob(data);
+            const array = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                array[i] = binary.charCodeAt(i);
+            }
+            const blob = new Blob([array], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Clear localStorage and reset state
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all entries? This cannot be undone.')) {
+                entries = [];
+                localStorage.removeItem('timesheetData');
+                localStorage.removeItem('lastExcel');
+                localStorage.setItem('excelQueue', '[]');
+                document.getElementById('employee').value = 'Lucas';
+                document.getElementById('sessionDate').value = '';
+                clearForm();
+                renderTable();
+            }
+        }
+
+        // Prevent accidental data loss
+        window.addEventListener('beforeunload', function(e) {
+            if (entries.length > 0) {
+                const confirmationMessage = 'Are you sure you want to leave? You may lose unsaved changes.';
+                (e || window.event).returnValue = confirmationMessage;
+                return confirmationMessage;
+            }
+        });
+
+        // Convert time string (HH:MM) to decimal (fraction of a day)
+        function timeStrToDecimal(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return (hours + minutes / 60) / 24;
+        }
+
+        // Convert 24-hour time to 12-hour string
+        function to12HourString(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const period = hours < 12 ? 'AM' : 'PM';
+            let hour12 = hours % 12;
+            if (hour12 === 0) hour12 = 12;
+            return `${hour12}:${String(minutes).padStart(2, '0')} ${period}`;
+        }
+
+        // Format total time from decimal days to "H:MM", rounded to 30 minutes
+        function formatTotalTime(totalTimeDecimal) {
+            let totalHours = totalTimeDecimal * 24;
+            const hours = Math.floor(totalHours);
+            let minutes = (totalHours - hours) * 60;
+            minutes = Math.round(minutes / 30) * 30;
+            if (minutes >= 60) {
+                minutes -= 60;
+                totalHours += 1;
+            }
+            return `${Math.floor(totalHours)}:${String(minutes).padStart(2, '0')}`;
+        }
+
+        // Get next time option (30 minutes later)
+        function getNextTimeOption(currentTime) {
+            const index = timeOptions.findIndex(opt => opt.value === currentTime);
+            return index + 1 < timeOptions.length ? timeOptions[index + 1].value : timeOptions[0].value;
+        }
+
+        // Render the table
+        function renderTable() {
+            const tbody = document.querySelector('#entriesTable tbody');
+            tbody.innerHTML = '';
+            entries.forEach((entry, index) => {
+                const jobAddress = entry.address ? `${entry.jobName}\n${entry.address}` : entry.jobName;
+                const tr = document.createElement('tr');
+                tr.setAttribute('draggable', 'true');
+                tr.dataset.index = index;
+                tr.innerHTML = `
+                    <td>${entry.date.toDateString()}</td>
+                    <td>${jobAddress}</td>
+                    <td>${to12HourString(entry.timeIn)}</td>
+                    <td>${to12HourString(entry.timeOut)}</td>
+                    <td>${formatTotalTime(entry.totalTimeDecimal)}</td>
+                    <td>${entry.description}</td>
+                    <td>
+                        <i class="fas fa-grip-lines drag-handle" title="Drag to reorder"></i>
+                        <select class="action-select" onchange="handleAction(${index}, this.value); this.value=''">
+                            <option value="" disabled selected><i class="fas fa-cog"></i> Actions</option>
+                            <option value="edit"><i class="fas fa-edit"></i> Edit</option>
+                            <option value="up"><i class="fas fa-arrow-up"></i> Move Up</option>
+                            <option value="down"><i class="fas fa-arrow-down"></i> Move Down</option>
+                            <option value="delete"><i class="fas fa-trash"></i> Delete</option>
+                        </select>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+                row.addEventListener('dragstart', handleDragStart);
+                row.addEventListener('dragover', handleDragOver);
+                row.addEventListener('drop', handleDrop);
+                row.addEventListener('dragend', handleDragEnd);
+                let timer;
+                row.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    timer = setTimeout(() => showActionModal(row.dataset.index), 500);
+                    if ('vibrate' in navigator) navigator.vibrate(50);
+                });
+                row.addEventListener('touchend', () => clearTimeout(timer));
+                row.addEventListener('touchcancel', () => clearTimeout(timer));
+            });
+
+            updateTotalTime();
+            saveToLocalStorage();
+            queueExcelGeneration('auto');
+        }
+
+        // Show action modal for long-press
+        function showActionModal(index) {
+            const modal = document.getElementById('actionModal');
+            const overlay = document.getElementById('overlay');
+            modal.style.display = 'block';
+            overlay.style.display = 'block';
+
+            modal.innerHTML = `
+                <h3>Actions</h3>
+                <button class="edit"><i class="fas fa-edit"></i> Edit</button>
+                <button class="up" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i> Move Up</button>
+                <button class="down" ${index === entries.length - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i> Move Down</button>
+                <button class="delete"><i class="fas fa-trash"></i> Delete</button>
+                <button class="cancel"><i class="fas fa-times"></i> Cancel</button>
+            `;
+
+            modal.querySelector('.edit').addEventListener('click', () => {
+                handleAction(index, 'edit');
+                closeModal();
+            });
+            modal.querySelector('.up').addEventListener('click', () => {
+                handleAction(index, 'up');
+                closeModal();
+            });
+            modal.querySelector('.down').addEventListener('click', () => {
+                handleAction(index, 'down');
+                closeModal();
+            });
+            modal.querySelector('.delete').addEventListener('click', () => {
+                handleAction(index, 'delete');
+                closeModal();
+            });
+            modal.querySelector('.cancel').addEventListener('click', closeModal);
+            overlay.addEventListener('click', closeModal);
+        }
+
+        // Close action modal
+        function closeModal() {
+            document.getElementById('actionModal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        // Handle action dropdown
+        function handleAction(index, action) {
+            if (action === 'edit') editRow(index);
+            else if (action === 'up') moveUp(index);
+            else if (action === 'down') moveDown(index);
+            else if (action === 'delete') deleteRow(index);
+        }
+
+        // Drag-and-drop handlers
+        function handleDragStart(e) {
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', e.target.dataset.index);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const targetIndex = parseInt(e.target.closest('tr').dataset.index);
+            if (draggedIndex !== targetIndex) {
+                const [draggedEntry] = entries.splice(draggedIndex, 1);
+                entries.splice(targetIndex, 0, draggedEntry);
+                renderTable();
+            }
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        // Update total time display
+        function updateTotalTime() {
+            const totalDecimal = entries.reduce((sum, entry) => sum + entry.totalTimeDecimal, 0);
+            let totalHours = totalDecimal * 24;
+            const hours = Math.floor(totalHours);
+            let minutes = (totalHours - hours) * 60;
+            minutes = Math.round(minutes / 30) * 30;
+            if (minutes >= 60) {
+                minutes -= 60;
+                totalHours += 1;
+            }
+            document.getElementById('totalTime').innerHTML = `<i class="fas fa-hourglass"></i> Total Time: ${Math.floor(totalHours)} hours ${minutes} minutes`;
+        }
+
+        // Clear form fields
+        function clearForm() {
+            document.getElementById('jobName').value = '';
+            document.getElementById('address').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('editIndex').value = -1;
+            document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Add Entry';
+            document.getElementById('cancelButton').style.display = 'none';
+            if (entries.length > 0) {
+                const lastEntry = entries[entries.length - 1];
+                document.getElementById('timeIn').value = lastEntry.timeOut;
+                document.getElementById('timeOut').value = getNextTimeOption(lastEntry.timeOut);
+            } else {
+                document.getElementById('timeIn').value = '08:00';
+                document.getElementById('timeOut').value = '08:30';
+            }
+        }
+
+        // Edit row
+        function editRow(index) {
+            const entry = entries[index];
+            document.getElementById('jobName').value = entry.jobName;
+            document.getElementById('address').value = entry.address;
+            document.getElementById('timeIn').value = entry.timeIn;
+            document.getElementById('timeOut').value = entry.timeOut;
+            document.getElementById('description').value = entry.description;
+            document.getElementById('editIndex').value = index;
+            document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Save Changes';
+            document.getElementById('cancelButton').style.display = 'inline';
+        }
+
+        // Move row up
+        function moveUp(index) {
+            if (index > 0) {
+                [entries[index - 1], entries[index]] = [entries[index], entries[index - 1]];
+                renderTable();
+                scrollToRow(index - 1);
+            }
+        }
+
+        // Move row down
+        function moveDown(index) {
+            if (index < entries.length - 1) {
+                [entries[index], entries[index + 1]] = [entries[index + 1], entries[index]];
+                renderTable();
+                scrollToRow(index + 1);
+            }
+        }
+
+        // Scroll to row after moving
+        function scrollToRow(index) {
+            const row = document.querySelector(`#entriesTable tbody tr[data-index="${index}"]`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Delete row
+        function deleteRow(index) {
+            if (confirm('Are you sure you want to delete this entry?')) {
+                entries.splice(index, 1);
+                renderTable();
+            }
+        }
+
+        // Handle "Add Entry" or "Save Changes"
+        document.getElementById('actionButton').addEventListener('click', function() {
+            const editIndex = parseInt(document.getElementById('editIndex').value);
+            const dateStr = document.getElementById('sessionDate').value;
+            if (!dateStr) {
+                alert('Please select a date.');
+                return;
+            }
+            const date = new Date(dateStr);
+            const jobName = document.getElementById('jobName').value;
+            const address = document.getElementById('address').value;
+            const timeIn = document.getElementById('timeIn').value;
+            const timeOut = document.getElementById('timeOut').value;
+            const description = document.getElementById('description').value;
+
+            const timeInDecimal = timeStrToDecimal(timeIn);
+            let timeOutDecimal = timeStrToDecimal(timeOut);
+            if (timeOutDecimal < timeInDecimal) {
+                timeOutDecimal += 1;
+            }
+            const totalTimeDecimal = timeOutDecimal - timeInDecimal;
+
+            if (editIndex === -1) {
+                const entry = { date, jobName, address, timeIn, timeOut, totalTimeDecimal, description };
+                entries.push(entry);
+            } else {
+                const entry = entries[editIndex];
+                entry.date = date;
+                entry.jobName = jobName;
+                entry.address = address;
+                entry.timeIn = timeIn;
+                entry.timeOut = timeOut;
+                entry.totalTimeDecimal = totalTimeDecimal;
+                entry.description = description;
+            }
+            renderTable();
+            clearForm();
+        });
+
+        // Handle "Cancel" button
+        document.getElementById('cancelButton').addEventListener('click', function() {
+            clearForm();
+        });
+
+        // Handle "Clear All" button
+        document.getElementById('clearAllButton').addEventListener('click', clearAll);
+
+        // Handle "Restore Last Excel" button
+        document.getElementById('restoreExcelButton').addEventListener('click', restoreLastExcel);
+
+        // Handle "Generate Excel" button click
+        document.getElementById('generateExcel').addEventListener('click', function() {
+            queueExcelGeneration('manual');
+        });
+
+        // Generate Excel
+        function generateExcel() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            try {
+                const employee = document.getElementById('employee').value;
+                const dateStr = document.getElementById('sessionDate').value;
+                if (!dateStr) {
+                    alert('Please select a date.');
+                    loading.style.display = 'none';
+                    return;
+                }
+
+                const sortedEntries = [...entries].sort((a, b) => timeStrToDecimal(a.timeIn) - timeStrToDecimal(b.timeIn));
+                const data = [];
+                data.push([{ v: `Employee Name: ${employee}`, t: 's' }, null, null, null, null, null]);
+                data.push([
+                    { v: 'Date', t: 's' },
+                    { v: 'Job Name / Address', t: 's' },
+                    { v: 'Time In', t: 's' },
+                    { v: 'Time Out', t: 's' },
+                    { v: 'Total Time', t: 's' },
+                    { v: 'Job Description', t: 's' }
+                ]);
+
+                let prevDate = null;
+                sortedEntries.forEach(entry => {
+                    const dateCell = entry.date.getTime() !== prevDate ? { v: entry.date, t: 'd', z: 'm/d/yyyy' } : null;
+                    prevDate = entry.date.getTime();
+                    const jobAddress = entry.address ? `${entry.jobName}\n${entry.address}` : entry.jobName;
+                    const row = [
+                        dateCell,
+                        { v: jobAddress, t: 's' },
+                        { v: to12HourString(entry.timeIn), t: 's' },
+                        { v: to12HourString(entry.timeOut), t: 's' },
+                        { v: formatTotalTime(entry.totalTimeDecimal), t: 's' },
+                        { v: entry.description, t: 's' }
+                    ];
+                    data.push(row);
+                });
+
+                const sumTotalTime = sortedEntries.reduce((sum, entry) => sum + entry.totalTimeDecimal, 0);
+                const totalHours = Math.floor(sumTotalTime * 24);
+                let totalMinutes = (sumTotalTime * 24 - totalHours) * 60;
+                totalMinutes = Math.round(totalMinutes / 30) * 30;
+                if (totalMinutes >= 60) {
+                    totalMinutes -= 60;
+                    totalHours += 1;
+                }
+                const formattedTotal = `${totalHours}:${String(totalMinutes).padStart(2, '0')} hours`;
+                data.push([null, null, null, { v: 'Total Hours =', t: 's' }, { v: formattedTotal, t: 's' }, null]);
+
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
+
+                const filename = dateStr ? `${dateStr}.xlsx` : 'timesheet.xlsx';
+                XLSX.writeFile(wb, filename);
+                loading.style.display = 'none';
+            } catch (error) {
+                loading.style.display = 'none';
+                alert('Failed to generate Excel file. Please ensure pop-ups are allowed and try again. Error: ' + error.message);
+            }
+        }
+
+        // Load saved data on page load
+        loadFromLocalStorage();
+    </script>
 </body>
 </html>
