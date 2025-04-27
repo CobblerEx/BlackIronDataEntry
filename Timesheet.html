@@ -647,16 +647,9 @@
                     return;
                 }
 
-                // Sort entries by time_in for Excel output
                 const sortedEntries = [...entries].sort((a, b) => timeStrToDecimal(a.timeIn) - timeStrToDecimal(b.timeIn));
-
-                // Build data array for Excel
                 const data = [];
-
-                // First row: Employee Name
                 data.push([{ v: `Employee Name: ${employee}`, t: 's' }, null, null, null, null, null]);
-
-                // Second row: Headers
                 data.push([
                     { v: 'Date', t: 's' },
                     { v: 'Job Name / Address', t: 's' },
@@ -666,10 +659,9 @@
                     { v: 'Job Description', t: 's' }
                 ]);
 
-                // Data rows
                 let prevDate = null;
                 sortedEntries.forEach(entry => {
-                    const dateCell = entry.date.getTime() !== prevDate ? { v: entry.date, t: 'd', z: 'm/d/yyyy' } : null;
+                    const dateCell = { v: entry.date, t: 'd', z: 'm/d/yyyy' }; // Always include date
                     prevDate = entry.date.getTime();
                     const jobAddress = entry.address ? `${entry.jobName}\n${entry.address}` : entry.jobName;
                     const row = [
@@ -683,7 +675,6 @@
                     data.push(row);
                 });
 
-                // Calculate total hours
                 const sumTotalTime = sortedEntries.reduce((sum, entry) => sum + entry.totalTimeDecimal, 0);
                 const totalHours = Math.floor(sumTotalTime * 24);
                 let totalMinutes = (sumTotalTime * 24 - totalHours) * 60;
@@ -693,18 +684,24 @@
                     totalHours += 1;
                 }
                 const formattedTotal = `${totalHours}:${String(totalMinutes).padStart(2, '0')} hours`;
-
-                // Total hours row
                 data.push([null, null, null, { v: 'Total Hours =', t: 's' }, { v: formattedTotal, t: 's' }, null]);
 
-                // Create worksheet and workbook
                 const ws = XLSX.utils.aoa_to_sheet(data);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
 
-                // Download the Excel file
+                // Create Blob for download
                 const filename = dateStr ? `${dateStr}.xlsx` : 'timesheet.xlsx';
-                XLSX.writeFile(wb, filename);
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                const blob = new Blob([wbout], { type: 'application/octet-stream' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
                 loading.style.display = 'none';
             } catch (error) {
                 loading.style.display = 'none';
