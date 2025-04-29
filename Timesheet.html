@@ -16,10 +16,72 @@
             overflow-x: hidden;
             margin: 0;
         }
+        /* Navigation buttons */
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+        .nav-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: #2a2a2a;
+            border: 2px solid #ff4500;
+            border-radius: 50%;
+            color: #ff4500;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .nav-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(255, 69, 0, 0.8);
+        }
+        .nav-button i {
+            font-size: 1.2rem;
+        }
+        .nav-button::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff4500;
+            color: #fff;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+        .nav-button:hover::after {
+            opacity: 1;
+        }
+        @media (max-width: 600px) {
+            .nav-buttons {
+                gap: 0.5rem;
+            }
+            .nav-button {
+                width: 36px;
+                height: 36px;
+            }
+            .nav-button i {
+                font-size: 1rem;
+            }
+        }
         h1, h2 {
             font-size: clamp(1.8rem, 6vw, 2.2rem);
             color: #ff4500;
             text-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
+            text-align: center;
         }
         #form, #totalTime {
             background: rgba(30, 30, 30, 0.9);
@@ -212,6 +274,13 @@
     </style>
 </head>
 <body>
+    <div class="nav-buttons">
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit.html" class="nav-button" data-tooltip="Black Iron with Edit"><i class="fas fa-edit"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit3.html" class="nav-button" data-tooltip="Black Iron with Edit v1"><i class="fas fa-file-alt"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironcal2.html" class="nav-button" data-tooltip="Black Iron Calculator"><i class="fas fa-calculator"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html" class="nav-button" data-tooltip="Upload CSV"><i class="fas fa-upload"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Timesheet.html" class="nav-button" data-tooltip="Timesheet"><i class="fas fa-clock"></i></a>
+    </div>
     <h1>Timesheet Creator</h1>
     <div id="form">
         <label><i class="fas fa-user"></i> Employee Name: <input type="text" id="employee" value="Lucas"></label>
@@ -298,7 +367,7 @@
                 sessionDate: document.getElementById('sessionDate').value,
                 entries: entries.map(entry => ({
                     ...entry,
-                    dateStr: entry.dateStr // Store date string
+                    dateStr: entry.dateStr
                 }))
             };
             localStorage.setItem('timesheetData', JSON.stringify(data));
@@ -313,8 +382,7 @@
                 document.getElementById('sessionDate').value = parsed.sessionDate || '';
                 entries = parsed.entries.map(entry => ({
                     ...entry,
-                    date: new Date(entry.dateStr),
-                    dateStr: entry.dateStr // Restore date string
+                    dateStr: entry.dateStr
                 }));
                 renderTable();
             }
@@ -375,6 +443,13 @@
             return index + 1 < timeOptions.length ? timeOptions[index + 1].value : timeOptions[0].value;
         }
 
+        // Format date string to MM/DD/YYYY
+        function formatDateString(dateStr) {
+            if (!dateStr) return '';
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`;
+        }
+
         // Render the table
         function renderTable() {
             const tbody = document.querySelector('#entriesTable tbody');
@@ -385,7 +460,7 @@
                 tr.setAttribute('draggable', 'true');
                 tr.dataset.index = index;
                 tr.innerHTML = `
-                    <td>${entry.dateStr}</td>
+                    <td>${formatDateString(entry.dateStr)}</td>
                     <td>${jobAddress}</td>
                     <td>${to12HourString(entry.timeIn)}</td>
                     <td>${to12HourString(entry.timeOut)}</td>
@@ -532,8 +607,8 @@
                 document.getElementById('timeIn').value = lastEntry.timeOut;
                 document.getElementById('timeOut').value = getNextTimeOption(lastEntry.timeOut);
             } else {
-                document.getElementById('timeIn').value = '08:00'; // Default to 8:00 AM
-                document.getElementById('timeOut').value = '08:30'; // Default to 8:30 AM
+                document.getElementById('timeIn').value = '08:00';
+                document.getElementById('timeOut').value = '08:30';
             }
         }
 
@@ -592,7 +667,6 @@
                 alert('Please select a date.');
                 return;
             }
-            const date = new Date(dateStr);
             const jobName = document.getElementById('jobName').value;
             const address = document.getElementById('address').value;
             const timeIn = document.getElementById('timeIn').value;
@@ -602,20 +676,16 @@
             // Calculate decimals
             const timeInDecimal = timeStrToDecimal(timeIn);
             let timeOutDecimal = timeStrToDecimal(timeOut);
-            // Handle case where timeOut is before timeIn (e.g., crossing midnight)
             if (timeOutDecimal < timeInDecimal) {
-                timeOutDecimal += 1; // Add one day
+                timeOutDecimal += 1;
             }
             const totalTimeDecimal = timeOutDecimal - timeInDecimal;
 
             if (editIndex === -1) {
-                // Add new entry
-                const entry = { date, dateStr, jobName, address, timeIn, timeOut, totalTimeDecimal, description };
+                const entry = { dateStr, jobName, address, timeIn, timeOut, totalTimeDecimal, description };
                 entries.push(entry);
             } else {
-                // Update existing entry
                 const entry = entries[editIndex];
-                entry.date = date;
                 entry.dateStr = dateStr;
                 entry.jobName = jobName;
                 entry.address = address;
@@ -661,13 +731,10 @@
                     { v: 'Job Description', t: 's' }
                 ]);
 
-                let prevDate = null;
                 sortedEntries.forEach(entry => {
-                    // Normalize date to UTC to prevent timezone shift
-                    const localDate = entry.date;
-                    const utcDate = new Date(Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()));
-                    const dateCell = { v: utcDate, t: 'd', z: 'm/d/yyyy' }; // Use UTC date
-                    prevDate = entry.date.getTime();
+                    const [year, month, day] = entry.dateStr.split('-').map(Number);
+                    const excelDate = new Date(Date.UTC(year, month - 1, day));
+                    const dateCell = { v: excelDate, t: 'd', z: 'm/d/yyyy' };
                     const jobAddress = entry.address ? `${entry.jobName}\n${entry.address}` : entry.jobName;
                     const row = [
                         dateCell,
@@ -695,7 +762,6 @@
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
 
-                // Create Blob for download
                 const filename = dateStr ? `${dateStr}.xlsx` : 'timesheet.xlsx';
                 const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
                 const blob = new Blob([wbout], { type: 'application/octet-stream' });
