@@ -298,7 +298,7 @@
                 sessionDate: document.getElementById('sessionDate').value,
                 entries: entries.map(entry => ({
                     ...entry,
-                    date: entry.date.toISOString()
+                    dateStr: entry.dateStr // Store date string
                 }))
             };
             localStorage.setItem('timesheetData', JSON.stringify(data));
@@ -313,7 +313,8 @@
                 document.getElementById('sessionDate').value = parsed.sessionDate || '';
                 entries = parsed.entries.map(entry => ({
                     ...entry,
-                    date: new Date(entry.date)
+                    date: new Date(entry.dateStr),
+                    dateStr: entry.dateStr // Restore date string
                 }));
                 renderTable();
             }
@@ -384,7 +385,7 @@
                 tr.setAttribute('draggable', 'true');
                 tr.dataset.index = index;
                 tr.innerHTML = `
-                    <td>${entry.date.toDateString()}</td>
+                    <td>${entry.dateStr}</td>
                     <td>${jobAddress}</td>
                     <td>${to12HourString(entry.timeIn)}</td>
                     <td>${to12HourString(entry.timeOut)}</td>
@@ -609,12 +610,13 @@
 
             if (editIndex === -1) {
                 // Add new entry
-                const entry = { date, jobName, address, timeIn, timeOut, totalTimeDecimal, description };
+                const entry = { date, dateStr, jobName, address, timeIn, timeOut, totalTimeDecimal, description };
                 entries.push(entry);
             } else {
                 // Update existing entry
                 const entry = entries[editIndex];
                 entry.date = date;
+                entry.dateStr = dateStr;
                 entry.jobName = jobName;
                 entry.address = address;
                 entry.timeIn = timeIn;
@@ -661,7 +663,10 @@
 
                 let prevDate = null;
                 sortedEntries.forEach(entry => {
-                    const dateCell = { v: entry.date, t: 'd', z: 'm/d/yyyy' }; // Always include date
+                    // Normalize date to UTC to prevent timezone shift
+                    const localDate = entry.date;
+                    const utcDate = new Date(Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()));
+                    const dateCell = { v: utcDate, t: 'd', z: 'm/d/yyyy' }; // Use UTC date
                     prevDate = entry.date.getTime();
                     const jobAddress = entry.address ? `${entry.jobName}\n${entry.address}` : entry.jobName;
                     const row = [
