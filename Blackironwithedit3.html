@@ -3,286 +3,521 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Black Iron Gas Fittings Data Entry</title>
+    <title>Black Iron Gas Fittings</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            background-color: #f2f2f2;
         }
 
-        #entry-frame {
-            background-color: #ecdcdc;
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+            color: #1f2937;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin: 20px auto;
-            max-width: 70%;
-            box-sizing: border-box;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            text-align: center;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px;
         }
 
         label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 5px;
             display: block;
-            font-weight: bold;
+        }
+
+        select, input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: #f9fafb;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .toggle-switch input {
+            display: none;
+        }
+
+        .toggle-switch label {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #d1d5db;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch label::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch input:checked + label {
+            background: #f97316;
+        }
+
+        .toggle-switch input:checked + label::after {
+            transform: translateX(26px);
+        }
+
+        .toggle-switch span {
+            font-size: 0.9rem;
+            color: #374151;
+        }
+
+        .fitting-carousel {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 10px 0;
+            margin-bottom: 15px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .fitting-card {
+            flex: 0 0 120px;
+            background: #e5e7eb;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, background 0.3s ease;
+            scroll-snap-align: start;
+        }
+
+        .fitting-card.selected {
+            background: #f97316;
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        .fitting-card:hover {
+            transform: scale(1.05);
+        }
+
+        .fitting-card span.material-icons {
+            font-size: 1.5rem;
             margin-bottom: 5px;
         }
 
-        select,
-        input[type="text"],
-        input[type="number"] {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 14px;
+        .collapsible-section {
+            display: none;
+            animation: slideDown 0.3s ease;
         }
 
-        button {
-            padding: 10px 15px;
-            background-color: #007bff;
-            color: #fff;
+        .collapsible-section.active {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
             cursor: pointer;
-            margin: 5px;
+            transition: background 0.3s ease, transform 0.2s ease;
         }
 
-        button:hover {
-            background-color: #0056b3;
+        .button-primary {
+            background: #f97316;
+            color: #fff;
         }
 
-        .delete-button {
-            background-color: #e74c3c;
+        .button-primary:hover {
+            background: #ea580c;
+            transform: translateY(-2px);
         }
 
-        .edit-button {
-            background-color: #3498db;
+        .button-secondary {
+            background: #1e3a8a;
+            color: #fff;
         }
 
-        ul {
-            list-style-type: none;
-            padding: 0;
+        .button-secondary:hover {
+            background: #1e40af;
+            transform: translateY(-2px);
         }
 
-        li {
+        .button-voice {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .button-voice:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .button-voice.active {
+            background: #dc2626;
+        }
+
+        .sticky-buttons {
+            position: sticky;
+            bottom: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
             padding: 10px;
-            background-color: #f9f9f9;
-            border: 1px solid #ccc;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        .item-card {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 15px;
             margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            animation: fadeIn 0.3s ease;
+            transition: transform 0.3s ease;
         }
 
-        h1 {
-            font-family: "Comic Sans MS", sans-serif;
-            font-weight: bold;
-            font-size: 16px;
-            color: #333;
-            text-align: center;
+        .item-card.swiped {
+            transform: translateX(-100%);
+            opacity: 0;
         }
 
-        p {
-            font-family: "Comic Sans MS", sans-serif;
-            font-weight: bold;
-            font-size: 12px;
-            color: #333;
-            text-align: center;
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
-        .center {
+        .item-card .fitting-type {
+            font-weight: 500;
+            color: #1e3a8a;
+        }
+
+        .item-card .actions {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 60px;
-        }
-
-        .button1 {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #0078d4;
-            color: #fff;
-            text-decoration: none;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-
-        .button1:hover {
-            background-color: #005ea2;
-        }
-
-        .button2 {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #ff5733;
-            color: #fff;
-            text-decoration: none;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-        }
-
-        .button2:hover {
-            background-color: #e64c22;
-        }
-
-        /* Fitting type buttons container */
-        #fitting-buttons {
-            display: flex;
-            flex-wrap: wrap;
             gap: 10px;
-            margin-bottom: 15px;
         }
 
-        /* General button styles for fitting buttons */
-        #fitting-buttons button {
-            padding: 12px 20px;
-            font-size: 16px;
-            min-width: 120px;
-            min-height: 48px;
-            border: 2px solid transparent;
-            border-radius: 6px;
-            transition: all 0.2s ease;
+        .item-card .action-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
         }
 
-        /* Hover effect */
-        #fitting-buttons button:hover {
-            background-color: #0056b3;
-            transform: scale(1.05);
+        .item-card .action-button.delete {
+            color: #dc2626;
         }
 
-        /* Selected button state */
-        #fitting-buttons button.selected {
-            background-color: #28a745;
-            border-color: #218838;
-            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+        .item-card .action-button.edit {
+            color: #2563eb;
+        }
+
+        .item-card .action-button:hover {
+            transform: scale(1.2);
+        }
+
+        .edit-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+
+        .edit-modal.active {
+            display: flex;
+        }
+
+        .edit-modal .card {
+            max-width: 90%;
+            padding: 20px;
+        }
+
+        .edit-modal input {
+            margin-bottom: 10px;
+        }
+
+        .voice-transcript {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
             color: #fff;
-        }
-
-        /* Toggle container */
-        .toggle-container {
-            margin-bottom: 15px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            max-width: 90%;
+            text-align: center;
+            z-index: 15;
             display: none;
         }
 
-        .toggle-container label {
+        .voice-transcript.active {
+            display: block;
+        }
+
+        .links-section {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .links-section a {
             display: inline-flex;
             align-items: center;
-            font-weight: normal;
+            gap: 8px;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.3s ease;
         }
 
-        .toggle-container input[type="checkbox"] {
-            width: auto;
-            margin-right: 8px;
+        .links-section a.main {
+            background: #f97316;
+            color: #fff;
         }
 
-        /* Tee sizes container */
-        #tee-sizes-container {
-            display: none;
-            margin-bottom: 15px;
+        .links-section a.main:hover {
+            background: #ea580c;
         }
 
-        #tee-sizes-container select {
-            width: 32%;
-            margin-right: 2%;
+        .links-section a.upload {
+            background: #1e3a8a;
+            color: #fff;
         }
 
-        #tee-sizes-container select:last-child {
-            margin-right: 0;
+        .links-section a.upload:hover {
+            background: #1e40af;
+        }
+
+        /* Desktop styles */
+        @media (min-width: 601px) {
+            .container {
+                max-width: 800px;
+            }
+
+            .fitting-carousel {
+                display: none;
+            }
+
+            #fitting-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
+            #fitting-buttons button {
+                flex: 1 1 calc(25% - 10px);
+                padding: 12px;
+                background: #e5e7eb;
+                border: none;
+                border-radius: 8px;
+                font-size: 1rem;
+                cursor: pointer;
+                transition: background 0.3s ease, transform 0.2s ease;
+            }
+
+            #fitting-buttons button.selected {
+                background: #f97316;
+                color: #fff;
+                transform: scale(1.05);
+            }
+
+            #fitting-buttons button:hover {
+                background: #d1d5db;
+                transform: scale(1.05);
+            }
+
+            .tee-sizes-container {
+                display: flex;
+                gap: 10px;
+            }
+
+            .tee-sizes-container select {
+                flex: 1;
+                margin-bottom: 0;
+            }
         }
 
         /* Mobile-specific styles */
         @media (max-width: 600px) {
             #fitting-buttons {
-                justify-content: center;
+                display: none;
             }
 
-            #fitting-buttons button {
-                padding: 10px 15px;
-                font-size: 14px;
-                min-width: 100px;
-                flex: 1 1 calc(50% - 10px);
-                box-sizing: border-box;
-            }
-
-            #tee-sizes-container select {
-                width: 100%;
-                margin-right: 0;
+            .tee-sizes-container select {
                 margin-bottom: 10px;
             }
-        }
-
-        /* Ensure buttons are accessible */
-        #fitting-buttons button:focus {
-            outline: 3px solid #007bff;
-            outline-offset: 2px;
         }
     </style>
 </head>
 <body>
-    <div id="entry-frame">
-        <form id="fitting-form">
-            <label>Fitting Type:</label>
-            <div id="fitting-buttons" role="radiogroup" aria-label="Select fitting type">
-                <button type="button" onclick="selectFittingType('Nipple')" aria-label="Select Nipple fitting" data-fitting="Nipple">Nipple</button>
-                <button type="button" onclick="selectFittingType('90 degree elbow')" aria-label="Select 90 degree elbow fitting" data-fitting="90 degree elbow">90 degree elbow</button>
-                <button type="button" onclick="selectFittingType('Tee')" aria-label="Select Tee fitting" data-fitting="Tee">Tee</button>
-                <button type="button" onclick="selectFittingType('Union')" aria-label="Select Union fitting" data-fitting="Union">Union</button>
-                <button type="button" onclick="selectFittingType('45 degree elbow')" aria-label="Select 45 degree elbow fitting" data-fitting="45 degree elbow">45 degree elbow</button>
-                <button type="button" onclick="selectFittingType('Shut-off')" aria-label="Select Shut-off fitting" data-fitting="Shut-off">Shut-off</button>
-                <button type="button" onclick="selectFittingType('Reducer')" aria-label="Select Reducer fitting" data-fitting="Reducer">Reducer</button>
-                <button type="button" onclick="selectFittingType('Cap')" aria-label="Select Cap fitting" data-fitting="Cap">Cap</button>
-                <button type="button" onclick="selectFittingType('Plug')" aria-label="Select Plug fitting" data-fitting="Plug">Plug</button>
-                <button type="button" onclick="selectFittingType('Coupling')" aria-label="Select Coupling fitting" data-fitting="Coupling">Coupling</button>
-                <button type="button" onclick="selectFittingType('Bushing')" aria-label="Select Bushing fitting" data-fitting="Bushing">Bushing</button>
-                <button type="button" onclick="selectFittingType('Flexconnector')" aria-label="Select Flex Connector fitting" data-fitting="Flexconnector">Flex Connector</button>
-                <button type="button" onclick="selectFittingType('Gastiite')" aria-label="Select Gastiite fitting" data-fitting="Gastiite">Gastiite</button>
-                <button type="button" onclick="selectFittingType('Stand Off (Long)')" aria-label="Select Stand Off Long fitting" data-fitting="Stand Off (Long)">Stand off L</button>
-                <button type="button" onclick="selectFittingType('Stand Off (Short)')" aria-label="Select Stand Off Short fitting" data-fitting="Stand Off (Short)">Stand off S</button>
-                <button type="button" onclick="selectFittingType('Paint')" aria-label="Select Paint fitting" data-fitting="Paint">Paint</button>
-            </div>
+    <div class="container">
+        <h1>Black Iron Gas Fittings</h1>
+        <div class="card">
+            <form id="fitting-form">
+                <label>Fitting Type</label>
+                <div class="fitting-carousel" role="radiogroup" aria-label="Select fitting type">
+                    <div class="fitting-card" data-fitting="Nipple" onclick="selectFittingType('Nipple')">
+                        <span class="material-icons">build</span>
+                        <div>Nipple</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="90 degree elbow" onclick="selectFittingType('90 degree elbow')">
+                        <span class="material-icons">trending_flat</span>
+                        <div>90° Elbow</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Tee" onclick="selectFittingType('Tee')">
+                        <span class="material-icons">call_split</span>
+                        <div>Tee</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Union" onclick="selectFittingType('Union')">
+                        <span class="material-icons">link</span>
+                        <div>Union</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="45 degree elbow" onclick="selectFittingType('45 degree elbow')">
+                        <span class="material-icons">trending_up</span>
+                        <div>45° Elbow</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Shut-off" onclick="selectFittingType('Shut-off')">
+                        <span class="material-icons">valve</span>
+                        <div>Shut-off</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Reducer" onclick="selectFittingType('Reducer')">
+                        <span class="material-icons">compress</span>
+                        <div>Reducer</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Cap" onclick="selectFittingType('Cap')">
+                        <span class="material-icons">stop_circle</span>
+                        <div>Cap</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Plug" onclick="selectFittingType('Plug')">
+                        <span class="material-icons">lock</span>
+                        <div>Plug</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Coupling" onclick="selectFittingType('Coupling')">
+                        <span class="material-icons">join_inner</span>
+                        <div>Coupling</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Bushing" onclick="selectFittingType('Bushing')">
+                        <span class="material-icons">settings</span>
+                        <div>Bushing</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Flexconnector" onclick="selectFittingType('Flexconnector')">
+                        <span class="material-icons">swap_horiz</span>
+                        <div>Flex Connector</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Gastiite" onclick="selectFittingType('Gastiite')">
+                        <span class="material-icons">tune</span>
+                        <div>Gastiite</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Stand Off (Long)" onclick="selectFittingType('Stand Off (Long)')">
+                        <span class="material-icons">height</span>
+                        <div>Stand off L</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Stand Off (Short)" onclick="selectFittingType('Stand Off (Short)')">
+                        <span class="material-icons">vertical_align_bottom</span>
+                        <div>Stand off S</div>
+                    </div>
+                    <div class="fitting-card" data-fitting="Paint" onclick="selectFittingType('Paint')">
+                        <span class="material-icons">brush</span>
+                        <div>Paint</div>
+                    </div>
+                </div>
 
-            <label for="od-size">Outer Diameter (OD) Size (inches):</label>
-            <select id="od-size" name="od-size" required>
-                <option value="3/8">3/8</option>
-                <option value="1/2">1/2</option>
-                <option value="3/4">3/4</option>
-                <option value="1">1</option>
-                <option value="1 1/4">1 1/4</option>
-                <option value="1 1/2">1 1/2</option>
-                <option value="2">2</option>
-                <option value="2 1/2">2 1/2</option>
-            </select>
+                <div id="fitting-buttons" role="radiogroup" aria-label="Select fitting type">
+                    <button type="button" data-fitting="Nipple" onclick="selectFittingType('Nipple')">Nipple</button>
+                    <button type="button" data-fitting="90 degree elbow" onclick="selectFittingType('90 degree elbow')">90 degree elbow</button>
+                    <button type="button" data-fitting="Tee" onclick="selectFittingType('Tee')">Tee</button>
+                    <button type="button" data-fitting="Union" onclick="selectFittingType('Union')">Union</button>
+                    <button type="button" data-fitting="45 degree elbow" onclick="selectFittingType('45 degree elbow')">45 degree elbow</button>
+                    <button type="button" data-fitting="Shut-off" onclick="selectFittingType('Shut-off')">Shut-off</button>
+                    <button type="button" data-fitting="Reducer" onclick="selectFittingType('Reducer')">Reducer</button>
+                    <button type="button" data-fitting="Cap" onclick="selectFittingType('Cap')">Cap</button>
+                    <button type="button" data-fitting="Plug" onclick="selectFittingType('Plug')">Plug</button>
+                    <button type="button" data-fitting="Coupling" onclick="selectFittingType('Coupling')">Coupling</button>
+                    <button type="button" data-fitting="Bushing" onclick="selectFittingType('Bushing')">Bushing</button>
+                    <button type="button" data-fitting="Flexconnector" onclick="selectFittingType('Flexconnector')">Flex Connector</button>
+                    <button type="button" data-fitting="Gastiite" onclick="selectFittingType('Gastiite')">Gastiite</button>
+                    <button type="button" data-fitting="Stand Off (Long)" onclick="selectFittingType('Stand Off (Long)')">Stand off L</button>
+                    <button type="button" data-fitting="Stand Off (Short)" onclick="selectFittingType('Stand Off (Short)')">Stand off S</button>
+                    <button type="button" data-fitting="Paint" onclick="selectFittingType('Paint')">Paint</button>
+                </div>
 
-            <div class="toggle-container" id="reducer-toggle-container">
-                <label><input type="checkbox" id="reducer-90-degree" name="reducer-90-degree"> 90 Degree Reducer</label>
-            </div>
-
-            <label id="reducer-size-label" style="display: none" for="reducer-size">Reducer Size (inches):</label>
-            <select id="reducer-size" name="reducer-size" style="display: none">
-                <option value="">Select Reducer Size</option>
-                <option value="3/8">3/8</option>
-                <option value="1/2">1/2</option>
-                <option value="3/4">3/4</option>
-                <option value="1">1</option>
-                <option value="1 1/4">1 1/4</option>
-                <option value="1 1/2">1 1/2</option>
-                <option value="2">2</option>
-                <option value="2 1/2">2 1/2</option>
-            </select>
-
-            <div class="toggle-container" id="tee-toggle-container">
-                <label><input type="checkbox" id="tee-custom-sizes" name="tee-custom-sizes" onchange="toggleTeeSizes()"> Custom Tee Sizes</label>
-            </div>
-
-            <div id="tee-sizes-container">
-                <label for="tee-branch1">Branch 1 Size:</label>
-                <select id="tee-branch1" name="tee-branch1">
-                    <option value="">Select Size</option>
+                <label for="od-size">Outer Diameter (OD) Size (inches)</label>
+                <select id="od-size" name="od-size" required>
                     <option value="3/8">3/8</option>
                     <option value="1/2">1/2</option>
                     <option value="3/4">3/4</option>
@@ -293,83 +528,160 @@
                     <option value="2 1/2">2 1/2</option>
                 </select>
 
-                <label for="tee-branch2">Branch 2 Size:</label>
-                <select id="tee-branch2" name="tee-branch2">
-                    <option value="">Select Size</option>
-                    <option value="3/8">3/8</option>
-                    <option value="1/2">1/2</option>
-                    <option value="3/4">3/4</option>
-                    <option value="1">1</option>
-                    <option value="1 1/4">1 1/4</option>
-                    <option value="1 1/2">1 1/2</option>
-                    <option value="2">2</option>
-                    <option value="2 1/2">2 1/2</option>
-                </select>
+                <div class="toggle-switch" id="reducer-toggle-container">
+                    <input type="checkbox" id="reducer-90-degree" name="reducer-90-degree">
+                    <label for="reducer-90-degree"></label>
+                    <span>90 Degree Reducer</span>
+                </div>
 
-                <label for="tee-branch3">Branch 3 Size:</label>
-                <select id="tee-branch3" name="tee-branch3">
-                    <option value="">Select Size</option>
-                    <option value="3/8">3/8</option>
-                    <option value="1/2">1/2</option>
-                    <option value="3/4">3/4</option>
-                    <option value="1">1</option>
-                    <option value="1 1/4">1 1/4</option>
-                    <option value="1 1/2">1 1/2</option>
-                    <option value="2">2</option>
-                    <option value="2 1/2">2 1/2</option>
-                </select>
+                <div class="collapsible-section" id="reducer-size-section">
+                    <label for="reducer-size">Reducer Size (inches)</label>
+                    <select id="reducer-size" name="reducer-size">
+                        <option value="">Select Reducer Size</option>
+                        <option value="3/8">3/8</option>
+                        <option value="1/2">1/2</option>
+                        <option value="3/4">3/4</option>
+                        <option value="1">1</option>
+                        <option value="1 1/4">1 1/4</option>
+                        <option value="1 1/2">1 1/2</option>
+                        <option value="2">2</option>
+                        <option value="2 1/2">2 1/2</option>
+                    </select>
+                </div>
+
+                <div class="toggle-switch" id="tee-toggle-container">
+                    <input type="checkbox" id="tee-custom-sizes" name="tee-custom-sizes" onchange="toggleTeeSizes()">
+                    <label for="tee-custom-sizes"></label>
+                    <span>Custom Tee Sizes</span>
+                </div>
+
+                <div class="collapsible-section tee-sizes-container" id="tee-sizes-container">
+                    <label for="tee-branch1">Branch 1 Size</label>
+                    <select id="tee-branch1" name="tee-branch1">
+                        <option value="">Select Size</option>
+                        <option value="3/8">3/8</option>
+                        <option value="1/2">1/2</option>
+                        <option value="3/4">3/4</option>
+                        <option value="1">1</option>
+                        <option value="1 1/4">1 1/4</option>
+                        <option value="1 1/2">1 1/2</option>
+                        <option value="2">2</option>
+                        <option value="2 1/2">2 1/2</option>
+                    </select>
+
+                    <label for="tee-branch2">Branch 2 Size</label>
+                    <select id="tee-branch2" name="tee-branch2">
+                        <option value="">Select Size</option>
+                        <option value="3/8">3/8</option>
+                        <option value="1/2">1/2</option>
+                        <option value="3/4">3/4</option>
+                        <option value="1">1</option>
+                        <option value="1 1/4">1 1/4</option>
+                        <option value="1 1/2">1 1/2</option>
+                        <option value="2">2</option>
+                        <option value="2 1/2">2 1/2</option>
+                    </select>
+
+                    <label for="tee-branch3">Branch 3 Size</label>
+                    <select id="tee-branch3" name="tee-branch3">
+                        <option value="">Select Size</option>
+                        <option value="3/8">3/8</option>
+                        <option value="1/2">1/2</option>
+                        <option value="3/4">3/4</option>
+                        <option value="1">1</option>
+                        <option value="1 1/4">1 1/4</option>
+                        <option value="1 1/2">1 1/2</option>
+                        <option value="2">2</option>
+                        <option value="2 1/2">2 1/2</option>
+                    </select>
+                </div>
+
+                <div class="collapsible-section" id="nipple-size-section">
+                    <label for="nipple-size">Nipple Size (inches)</label>
+                    <select id="nipple-size" name="nipple-size">
+                        <option value="">Select Nipple Size</option>
+                        <option value="1 1/2">1 1/2"</option>
+                        <option value="2">2"</option>
+                        <option value="2 1/2">2 1/2"</option>
+                        <option value="3">3"</option>
+                        <option value="3 1/2">3 1/2"</option>
+                        <option value="4">4"</option>
+                        <option value="4 1/2">4 1/2"</option>
+                        <option value="5">5"</option>
+                        <option value="5 1/2">5 1/2"</option>
+                        <option value="6">6"</option>
+                        <option value="7">7"</option>
+                        <option value="8">8"</option>
+                        <option value="9">9"</option>
+                        <option value="10">10"</option>
+                        <option value="12">12"</option>
+                        <option value="18">18"</option>
+                        <option value="24">24"</option>
+                    </select>
+                </div>
+
+                <label for="quantity">Quantity</label>
+                <input type="number" id="quantity" name="quantity" min="1" required value="1" />
+            </form>
+
+            <div class="sticky-buttons">
+                <button type="submit" form="fitting-form" class="button button-primary">
+                    <span class="material-icons">add</span> Add Item
+                </button>
+                <button id="voice-input" class="button button-voice" aria-label="Start voice input">
+                    <span class="material-icons">mic</span> Voice
+                </button>
+                <button id="exportData" class="button button-secondary">
+                    <span class="material-icons">file_download</span> Export
+                </button>
             </div>
+        </div>
 
-            <label id="nipple-size-label" for="nipple-size">Nipple Size (inches):</label>
-            <select id="nipple-size" name="nipple-size" style="display: none">
-                <option value="">Select Nipple Size</option>
-                <option value="1 1/2">1 1/2"</option>
-                <option value="2">2"</option>
-                <option value="2 1/2">2 1/2"</option>
-                <option value="3">3"</option>
-                <option value="3 1/2">3 1/2"</option>
-                <option value="4">4"</option>
-                <option value="4 1/2">4 1/2"</option>
-                <option value="5">5"</option>
-                <option value="5 1/2">5 1/2"</option>
-                <option value="6">6"</option>
-                <option value="7">7"</option>
-                <option value="8">8"</option>
-                <option value="9">9"</option>
-                <option value="10">10"</option>
-                <option value="12">12"</option>
-                <option value="18">18"</option>
-                <option value="24">24"</option>
-            </select>
+        <div class="card">
+            <label for="jobName">Job Name</label>
+            <input type="text" id="jobName" name="jobName" placeholder="Enter job name">
+        </div>
 
-            <label for="quantity">Quantity:</label>
-            <input type="number" id="quantity" name="quantity" min="1" required />
+        <div class="card" id="items-list" aria-live="polite"></div>
 
-            <button type="submit" id="add-button">Add Item</button>
-        </form>
+        <div class="voice-transcript" id="voice-transcript" aria-live="polite"></div>
 
-        <label for="jobName">Job Name:</label>
-        <input type="text" id="jobName" name="jobName" placeholder="Enter job name">
-
-        <button id="exportData">Export Data</button>
-
-        <ul id="items-list"></ul>
+        <div class="links-section">
+            <a href="https://cobblerex.github.io/BlackIronDataEntry/index.html" class="main">
+                <span class="material-icons">home</span> Main Page
+            </a>
+            <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html" class="upload">
+                <span class="material-icons">upload</span> Upload Page
+            </a>
+        </div>
     </div>
 
-    <h1>Go to Main Page</h1>
-    <p>Click the link below to go to the Main page:</p>
-    <div class="center">
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/index.html" class="button1">Go Main page</a>
-    </div>
-    <h1>Go to Upload Page</h1>
-    <p>Click the link below to go to the Upload page:</p>
-    <div class="center">
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html" class="button2">Go Upload page</a>
+    <div class="edit-modal" id="edit-modal">
+        <div class="card">
+            <form id="edit-form">
+                <label for="edit-fitting">Fitting Type</label>
+                <input type="text" id="edit-fitting" required>
+                <label for="edit-od">OD Size</label>
+                <input type="text" id="edit-od" required>
+                <label for="edit-nipple">Size Details</label>
+                <input type="text" id="edit-nipple">
+                <label for="edit-quantity">Quantity</label>
+                <input type="number" id="edit-quantity" min="1" required>
+                <div class="sticky-buttons">
+                    <button type="submit" class="button button-primary">
+                        <span class="material-icons">save</span> Save
+                    </button>
+                    <button type="button" class="button button-secondary" onclick="closeEditModal()">
+                        <span class="material-icons">close</span> Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
         const odSize = document.getElementById('od-size');
-        const reducerSizeLabel = document.getElementById('reducer-size-label');
+        const reducerSizeSection = document.getElementById('reducer-size-section');
         const reducerSize = document.getElementById('reducer-size');
         const reducerToggleContainer = document.getElementById('reducer-toggle-container');
         const reducer90Degree = document.getElementById('reducer-90-degree');
@@ -379,50 +691,102 @@
         const teeBranch1 = document.getElementById('tee-branch1');
         const teeBranch2 = document.getElementById('tee-branch2');
         const teeBranch3 = document.getElementById('tee-branch3');
-        const nippleSizeLabel = document.getElementById('nipple-size-label');
+        const nippleSizeSection = document.getElementById('nipple-size-section');
         const nippleSize = document.getElementById('nipple-size');
         const quantity = document.getElementById('quantity');
         const jobName = document.getElementById('jobName');
         const itemsList = document.getElementById('items-list');
         const fittingForm = document.getElementById('fitting-form');
+        const editModal = document.getElementById('edit-modal');
+        const editForm = document.getElementById('edit-form');
+        const voiceButton = document.getElementById('voice-input');
+        const voiceTranscript = document.getElementById('voice-transcript');
 
         let selectedFittingType = '';
         const addedItems = [];
+        let recognition = null;
+
+        // Initialize Speech Recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                voiceButton.classList.add('active');
+                voiceButton.querySelector('.material-icons').textContent = 'mic_off';
+                voiceTranscript.classList.add('active');
+                voiceTranscript.textContent = 'Listening...';
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+                voiceTranscript.textContent = transcript;
+                if (event.results[0].isFinal) {
+                    processVoiceCommand(transcript.toLowerCase().trim());
+                }
+            };
+
+            recognition.onend = () => {
+                voiceButton.classList.remove('active');
+                voiceButton.querySelector('.material-icons').textContent = 'mic';
+                voiceTranscript.classList.remove('active');
+            };
+
+            recognition.onerror = (event) => {
+                voiceTranscript.textContent = `Error: ${event.error}`;
+                setTimeout(() => voiceTranscript.classList.remove('active'), 2000);
+                voiceButton.classList.remove('active');
+                voiceButton.querySelector('.material-icons').textContent = 'mic';
+            };
+        } else {
+            voiceButton.disabled = true;
+            voiceButton.title = 'Voice input not supported in this browser';
+        }
 
         function selectFittingType(fittingType) {
             selectedFittingType = fittingType;
 
-            // Update button styles
+            // Update carousel styles (mobile)
+            const cards = document.querySelectorAll('.fitting-card');
+            cards.forEach(card => {
+                card.classList.toggle('selected', card.getAttribute('data-fitting') === fittingType);
+            });
+
+            // Update button styles (desktop)
             const buttons = document.querySelectorAll('#fitting-buttons button');
             buttons.forEach(button => {
-                if (button.getAttribute('data-fitting') === fittingType) {
-                    button.classList.add('selected');
-                    button.setAttribute('aria-pressed', 'true');
-                } else {
-                    button.classList.remove('selected');
-                    button.setAttribute('aria-pressed', 'false');
-                }
+                button.classList.toggle('selected', button.getAttribute('data-fitting') === fittingType);
             });
 
             // Show/hide relevant fields
-            reducerSizeLabel.style.display = fittingType === 'Reducer' ? 'block' : 'none';
-            reducerSize.style.display = fittingType === 'Reducer' ? 'block' : 'none';
-            reducerToggleContainer.style.display = fittingType === 'Reducer' ? 'block' : 'none';
-            teeToggleContainer.style.display = fittingType === 'Tee' ? 'block' : 'none';
-            teeSizesContainer.style.display = fittingType === 'Tee' && teeCustomSizes.checked ? 'block' : 'none';
-            nippleSizeLabel.style.display = fittingType === 'Nipple' ? 'block' : 'none';
-            nippleSize.style.display = fittingType === 'Nipple' ? 'block' : 'none';
+            reducerSizeSection.classList.toggle('active', fittingType === 'Reducer');
+            reducerToggleContainer.style.display = fittingType === 'Reducer' ? 'flex' : 'none';
+            teeToggleContainer.style.display = fittingType === 'Tee' ? 'flex' : 'none';
+            teeSizesContainer.classList.toggle('active', fittingType === 'Tee' && teeCustomSizes.checked);
+            nippleSizeSection.classList.toggle('active', fittingType === 'Nipple');
 
-            // Reset toggles and dependent fields when switching fitting types
+            // Reset toggles and dependent fields
             reducer90Degree.checked = false;
             teeCustomSizes.checked = false;
             teeBranch1.value = '';
             teeBranch2.value = '';
             teeBranch3.value = '';
+            nippleSize.value = '';
+            reducerSize.value = '';
         }
 
         function toggleTeeSizes() {
-            teeSizesContainer.style.display = teeCustomSizes.checked ? 'block' : 'none';
+            teeSizesContainer.classList.toggle('active', teeCustomSizes.checked);
+            if (teeCustomSizes.checked) {
+                teeBranch1.value = odSize.value;
+                teeBranch2.value = odSize.value;
+                teeBranch3.value = odSize.value;
+            }
         }
 
         function validateItem() {
@@ -476,98 +840,84 @@
             const item = { fittingType: fitting, odSize: od, nippleSize: nipple, quantity: qty };
             addedItems.push(item);
 
-            const listItem = document.createElement('li');
-            if (fitting === 'Tee' && teeCustomSizes.checked) {
-                listItem.innerHTML = `${fitting}, ${nipple}, Quantity: ${qty}`;
-            } else {
-                listItem.innerHTML = `${fitting}, ${od}", ${nipple}, Quantity: ${qty}`;
-            }
+            const listItem = document.createElement('div');
+            listItem.className = 'item-card';
             listItem.dataset.index = addedItems.length - 1;
+            const displayText = fitting === 'Tee' && teeCustomSizes.checked
+                ? `${fitting}, ${nipple}, Qty: ${qty}`
+                : `${fitting}, ${od}", ${nipple}, Qty: ${qty}`;
+            listItem.innerHTML = `
+                <div>
+                    <span class="fitting-type">${displayText}</span>
+                </div>
+                <div class="actions">
+                    <button class="action-button edit" aria-label="Edit item">
+                        <span class="material-icons">edit</span>
+                    </button>
+                    <button class="action-button delete" aria-label="Delete item">
+                        <span class="material-icons">delete</span>
+                    </button>
+                </div>
+            `;
+            itemsList.prepend(listItem);
 
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Delete';
-            deleteButton.className = 'delete-button';
-
-            const editButton = document.createElement('button');
-            editButton.textContent = 'Edit';
-            editButton.className = 'edit-button';
-
-            listItem.appendChild(deleteButton);
-            listItem.appendChild(editButton);
-            itemsList.appendChild(listItem);
-
-            // Preserve OD size for Nipple fitting
+            // Preserve OD size for Nipple
             const isNipple = fitting === 'Nipple';
             const preservedOdSize = isNipple ? odSize.value : null;
 
-            // Reset only nipple size, reducer size, and tee sizes
+            // Reset fields
             nippleSize.value = '';
             reducerSize.value = '';
             teeBranch1.value = '';
             teeBranch2.value = '';
             teeBranch3.value = '';
-
-            // Restore OD size if Nipple is selected
-            if (isNipple && preservedOdSize) {
-                odSize.value = preservedOdSize;
-            } else {
-                odSize.value = '3/8'; // Reset to default for non-Nipple fittings
-            }
-
-            // Maintain visibility of relevant fields based on current fitting type
-            reducerSizeLabel.style.display = selectedFittingType === 'Reducer' ? 'block' : 'none';
-            reducerSize.style.display = selectedFittingType === 'Reducer' ? 'block' : 'none';
-            reducerToggleContainer.style.display = selectedFittingType === 'Reducer' ? 'block' : 'none';
-            teeToggleContainer.style.display = selectedFittingType === 'Tee' ? 'block' : 'none';
-            teeSizesContainer.style.display = selectedFittingType === 'Tee' && teeCustomSizes.checked ? 'block' : 'none';
-            nippleSizeLabel.style.display = selectedFittingType === 'Nipple' ? 'block' : 'none';
-            nippleSize.style.display = selectedFittingType === 'Nipple' ? 'block' : 'none';
+            odSize.value = isNipple && preservedOdSize ? preservedOdSize : '3/8';
         }
 
-        function editItem(listItem, index) {
+        function openEditModal(index) {
             const item = addedItems[index];
-            listItem.innerHTML = `
-                <input type="text" class="edit-fitting" value="${item.fittingType}" />
-                <input type="text" class="edit-od" value="${item.odSize}" />
-                <input type="text" class="edit-nipple" value="${item.nippleSize}" />
-                <input type="number" class="edit-quantity" value="${item.quantity}" min="1" />
-                <button class="save-button">Save</button>
-            `;
+            document.getElementById('edit-fitting').value = item.fittingType;
+            document.getElementById('edit-od').value = item.odSize;
+            document.getElementById('edit-nipple').value = item.nippleSize;
+            document.getElementById('edit-quantity').value = item.quantity;
+            editModal.classList.add('active');
+            editForm.onsubmit = (e) => {
+                e.preventDefault();
+                saveEdit(index);
+            };
+        }
 
-            listItem.querySelector('.save-button').addEventListener('click', () => {
-                const fitting = listItem.querySelector('.edit-fitting').value;
-                const od = listItem.querySelector('.edit-od').value;
-                const nipple = listItem.querySelector('.edit-nipple').value;
-                const quantity = parseInt(listItem.querySelector('.edit-quantity').value, 10);
+        function closeEditModal() {
+            editModal.classList.remove('active');
+        }
 
-                if (!fitting || !od || quantity <= 0) {
-                    alert('Please fill in all fields with valid values.');
-                    return;
-                }
+        function saveEdit(index) {
+            const fitting = document.getElementById('edit-fitting').value;
+            const od = document.getElementById('edit-od').value;
+            const nipple = document.getElementById('edit-nipple').value;
+            const quantity = parseInt(document.getElementById('edit-quantity').value, 10);
 
-                addedItems[index] = { fittingType: fitting, odSize: od, nippleSize: nipple, quantity };
-                const isCustomTee = fitting === 'Tee' && nipple.includes(' x ');
-                listItem.innerHTML = isCustomTee ? `${fitting}, ${nipple}, Quantity: ${quantity}` : `${fitting}, ${od}", ${nipple}, Quantity: ${quantity}`;
-                listItem.dataset.index = index;
+            if (!fitting || !od || quantity <= 0) {
+                alert('Please fill in all fields with valid values.');
+                return;
+            }
 
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Delete';
-                deleteButton.className = 'delete-button';
-
-                const editButton = document.createElement('button');
-                editButton.textContent = 'Edit';
-                editButton.className = 'edit-button';
-
-                listItem.appendChild(deleteButton);
-                listItem.appendChild(editButton);
-            });
+            addedItems[index] = { fittingType: fitting, odSize: od, nippleSize: nipple, quantity };
+            const listItem = itemsList.querySelector(`[data-index="${index}"]`);
+            const isCustomTee = fitting === 'Tee' && nipple.includes(' x ');
+            listItem.querySelector('.fitting-type').textContent = isCustomTee
+                ? `${fitting}, ${nipple}, Qty: ${quantity}`
+                : `${fitting}, ${od}", ${nipple}, Qty: ${quantity}`;
+            closeEditModal();
         }
 
         function deleteItem(listItem, index) {
-            itemsList.removeChild(listItem);
-            addedItems.splice(index, 1);
-            // Update indices of remaining items
-            Array.from(itemsList.children).forEach((item, i) => (item.dataset.index = i));
+            listItem.classList.add('swiped');
+            setTimeout(() => {
+                itemsList.removeChild(listItem);
+                addedItems.splice(index, 1);
+                Array.from(itemsList.children).forEach((item, i) => (item.dataset.index = i));
+            }, 300);
         }
 
         function exportData() {
@@ -595,18 +945,161 @@
             downloadLink.click();
         }
 
+        function processVoiceCommand(transcript) {
+            // Normalize transcript
+            const words = transcript.toLowerCase().replace(/['"]/g, '').split(/\s+/);
+
+            // Extract action
+            if (!words.includes('add')) {
+                alert('Please start with "add" to add an item.');
+                return;
+            }
+
+            // Extract fitting type
+            const fittingTypes = [
+                'nipple', '90 degree elbow', 'tee', 'union', '45 degree elbow', 'shut-off', 'reducer',
+                'cap', 'plug', 'coupling', 'bushing', 'flexconnector', 'gastiite', 'stand off long',
+                'stand off short', 'paint'
+            ];
+            let fittingType = '';
+            for (const type of fittingTypes) {
+                if (transcript.includes(type.replace('stand off ', ''))) {
+                    fittingType = type.replace('stand off long', 'Stand Off (Long)').replace('stand off short', 'Stand Off (Short)');
+                    break;
+                }
+            }
+            if (!fittingType) {
+                alert('Please specify a valid fitting type (e.g., Tee, Nipple, Reducer).');
+                return;
+            }
+            selectFittingType(fittingType);
+
+            // Extract OD size
+            const odSizes = ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'];
+            let odSizeValue = '';
+            for (const size of odSizes) {
+                if (transcript.includes(size.replace('/', ' ').replace('1 1/4', 'one and a quarter').replace('1 1/2', 'one and a half'))) {
+                    odSizeValue = size;
+                    break;
+                }
+            }
+            if (odSizeValue) {
+                odSize.value = odSizeValue;
+            } else {
+                alert('Please specify a valid OD size (e.g., 1 inch, half inch).');
+                return;
+            }
+
+            // Extract quantity
+            const qtyMatch = transcript.match(/quantity\s*(\d+)/);
+            const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
+            if (qty <= 0) {
+                alert('Please specify a valid quantity greater than 0.');
+                return;
+            }
+            quantity.value = qty;
+
+            // Handle fitting-specific fields
+            if (fittingType === 'Nipple') {
+                const nippleSizes = ['1 1/2', '2', '2 1/2', '3', '3 1/2', '4', '4 1/2', '5', '5 1/2', '6', '7', '8', '9', '10', '12', '18', '24'];
+                let nippleSizeValue = '';
+                for (const size of nippleSizes) {
+                    if (transcript.includes(size.replace('/', ' ').replace('1 1/2', 'one and a half'))) {
+                        nippleSizeValue = size;
+                        break;
+                    }
+                }
+                if (nippleSizeValue) {
+                    nippleSize.value = nippleSizeValue;
+                } else {
+                    alert('Please specify a valid nipple size (e.g., 6 inch).');
+                    return;
+                }
+            } else if (fittingType === 'Reducer') {
+                let reducerSizeValue = '';
+                const toIndex = words.indexOf('to');
+                if (toIndex !== -1) {
+                    const reducerWords = words.slice(toIndex + 1).join(' ');
+                    for (const size of odSizes) {
+                        if (reducerWords.includes(size.replace('/', ' ').replace('1 1/4', 'one and a quarter').replace('1 1/2', 'one and a half'))) {
+                            reducerSizeValue = size;
+                            break;
+                        }
+                    }
+                }
+                if (reducerSizeValue) {
+                    reducerSize.value = reducerSizeValue;
+                } else {
+                    alert('Please specify a valid reducer size (e.g., to half inch).');
+                    return;
+                }
+                if (transcript.includes('90 degree')) {
+                    reducer90Degree.checked = true;
+                }
+            } else if (fittingType === 'Tee' && transcript.includes('custom')) {
+                teeCustomSizes.checked = true;
+                toggleTeeSizes();
+                const sizesMatch = transcript.match(/(\d\/\d|\d\s*(?:and\s*a\s*quarter|and\s*a\s*half)?|\d)\s*x\s*(\d\/\d|\d\s*(?:and\s*a\s*quarter|and\s*a\s*half)?|\d)\s*x\s*(\d\/\d|\d\s*(?:and\s*a\s*quarter|and\s*a\s*half)?|\d)/);
+                if (sizesMatch) {
+                    const sizes = sizesMatch.slice(1).map(s => {
+                        return s.replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('half', '1/2');
+                    });
+                    if (odSizes.includes(sizes[0])) teeBranch1.value = sizes[0];
+                    if (odSizes.includes(sizes[1])) teeBranch2.value = sizes[1];
+                    if (odSizes.includes(sizes[2])) teeBranch3.value = sizes[2];
+                } else {
+                    alert('Please specify valid tee branch sizes (e.g., 1 x 1 x half inch).');
+                    return;
+                }
+            }
+
+            // Add item if valid
+            if (validateItem()) {
+                fittingForm.dispatchEvent(new Event('submit'));
+            }
+        }
+
         // Event Listeners
         fittingForm.addEventListener('submit', addItem);
         document.getElementById('exportData').addEventListener('click', exportData);
 
+        if (recognition) {
+            voiceButton.addEventListener('click', () => {
+                if (voiceButton.classList.contains('active')) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+        }
+
         itemsList.addEventListener('click', (event) => {
-            const listItem = event.target.parentElement;
+            const listItem = event.target.closest('.item-card');
+            if (!listItem) return;
             const index = parseInt(listItem.dataset.index, 10);
 
-            if (event.target.classList.contains('delete-button')) {
+            if (event.target.closest('.delete')) {
                 deleteItem(listItem, index);
-            } else if (event.target.classList.contains('edit-button')) {
-                editItem(listItem, index);
+            } else if (event.target.closest('.edit')) {
+                openEditModal(index);
+            }
+        });
+
+        // Swipe to delete
+        let touchstartX = 0;
+        let touchendX = 0;
+
+        itemsList.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+        });
+
+        itemsList.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            const listItem = e.target.closest('.item-card');
+            if (!listItem) return;
+            const index = parseInt(listItem.dataset.index, 10);
+            if (touchstartX - touchendX > 50) {
+                deleteItem(listItem, index);
             }
         });
     </script>
