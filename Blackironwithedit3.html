@@ -946,8 +946,12 @@
         }
 
         function processVoiceCommand(transcript) {
-            // Normalize transcript
-            const normalizedTranscript = transcript.toLowerCase().replace(/['"]/g, '').replace(/inches|inch/g, '').trim();
+            // Normalize transcript: remove quotes, extra spaces, and inch markers
+            const normalizedTranscript = transcript.toLowerCase()
+                .replace(/['"]/g, '') // Remove quotation marks
+                .replace(/inches|inch/g, '')
+                .replace(/\s+/g, ' ') // Normalize spaces
+                .trim();
             const words = normalizedTranscript.split(/\s+/);
 
             // Extract action
@@ -1007,8 +1011,9 @@
                 let odSizeValue = '';
                 let nippleSizeValue = '';
 
-                // Try explicit separator patterns (e.g., "1 by 3", "1 x 3", "1 length 3")
-                const separatorMatch = normalizedTranscript.match(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*(?:by|x|length|times)\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/);
+                // Try explicit separator patterns (e.g., "1 by 3", "1 x 3", "1"x3"", "1x3")
+                const separatorMatch = normalizedTranscript.match(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*(?:by|x|length|times)\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/) ||
+                                      normalizedTranscript.match(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)x(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/);
                 if (separatorMatch) {
                     let [_, od, nipple] = separatorMatch;
                     od = od.replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
