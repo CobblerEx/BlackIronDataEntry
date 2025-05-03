@@ -947,7 +947,8 @@
 
         function processVoiceCommand(transcript) {
             // Normalize transcript
-            const words = transcript.toLowerCase().replace(/['"]/g, '').split(/\s+/);
+            const normalizedTranscript = transcript.toLowerCase().replace(/['"]/g, '').replace(/inches|inch/g, '').trim();
+            const words = normalizedTranscript.split(/\s+/);
 
             // Extract action
             if (!words.includes('add')) {
@@ -963,7 +964,7 @@
             ];
             let fittingType = '';
             for (const type of fittingTypes) {
-                if (transcript.includes(type.replace('stand off ', ''))) {
+                if (normalizedTranscript.includes(type.replace('stand off ', ''))) {
                     fittingType = type.replace('stand off long', 'Stand Off (Long)').replace('stand off short', 'Stand Off (Short)');
                     break;
                 }
@@ -974,55 +975,165 @@
             }
             selectFittingType(fittingType);
 
-            // Extract OD size
-            const odSizes = ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'];
-            let odSizeValue = '';
-            for (const size of odSizes) {
-                if (transcript.includes(size.replace('/', ' ').replace('1 1/4', 'one and a quarter').replace('1 1/2', 'one and a half'))) {
-                    odSizeValue = size;
-                    break;
+            // Size normalization lookup
+            const sizeMap = {
+                'three eighths': '3/8', 'three eighth': '3/8', 'half': '1/2', 'one half': '1/2',
+                'three quarter': '3/4', 'three quarters': '3/4', 'three fourth': '3/4', 'three fourths': '3/4',
+                'one': '1', 'one point zero': '1', '1 point zero': '1', '1 point 0': '1',
+                'one and a quarter': '1 1/4', 'one point two five': '1 1/4', '1 point two five': '1 1/4', '1 point 25': '1 1/4',
+                'one and a half': '1 1/2', 'one point five': '1 1/2', '1 point five': '1 1/2', '1 point 5': '1 1/2',
+                'two': '2', 'two point zero': '2', '2 point zero': '2', '2 point 0': '2',
+                'two and a half': '2 1/2', 'two point five': '2 1/2', '2 point five': '2 1/2', '2 point 5': '2 1/2',
+                'three': '3', 'three point zero': '3', '3 point zero': '3', '3 point 0': '3',
+                'three and a half': '3 1/2', 'three point five': '3 1/2', '3 point five': '3 1/2', '3 point 5': '3 1/2',
+                'four': '4', 'four point zero': '4', '4 point zero': '4', '4 point 0': '4',
+                'four and a half': '4 1/2', 'four point five': '4 1/2', '4 point five': '4 1/2', '4 point 5': '4 1/2',
+                'five': '5', 'five point zero': '5', '5 point zero': '5', '5 point 0': '5',
+                'five and a half': '5 1/2', 'five point five': '5 1/2', '5 point five': '5 1/2', '5 point 5': '5 1/2',
+                'six': '6', 'six point zero': '6', '6 point zero': '6', '6 point 0': '6',
+                'seven': '7', 'seven point zero': '7', '7 point zero': '7', '7 point 0': '7',
+                'eight': '8', 'eight point zero': '8', '8 point zero': '8', '8 point 0': '8',
+                'nine': '9', 'nine point zero': '9', '9 point zero': '9', '9 point 0': '9',
+                'ten': '10', 'ten point zero': '10', '10 point zero': '10', '10 point 0': '10',
+                'twelve': '12', 'twelve point zero': '12', '12 point zero': '12', '12 point 0': '12',
+                'eighteen': '18', 'eighteen point zero': '18', '18 point zero': '18', '18 point 0': '18',
+                'twenty four': '24', 'twenty-four': '24', '24 point zero': '24', '24 point 0': '24'
+            };
+
+            // Extract OD size and nipple size for Nipple
+            if (fittingType === 'Nipple') {
+                const odSizes = ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'];
+                const nippleSizes = ['1 1/2', '2', '2 1/2', '3', '3 1/2', '4', '4 1/2', '5', '5 1/2', '6', '7', '8', '9', '10', '12', '18', '24'];
+                let odSizeValue = '';
+                let nippleSizeValue = '';
+
+                // Try explicit separator patterns (e.g., "1 by 3", "1 x 3", "1 length 3")
+                const separatorMatch = normalizedTranscript.match(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*(?:by|x|length|times)\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/);
+                if (separatorMatch) {
+                    let [_, od, nipple] = separatorMatch;
+                    od = od.replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                    nipple = nipple.replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                    if (odSizes.includes(od)) odSizeValue = od;
+                    if (nippleSizes.includes(nipple)) nippleSizeValue = nipple;
+                }
+
+                // Fallback to sequential size parsing
+                if (!odSizeValue || !nippleSizeValue) {
+                    const sizeMatches = normalizedTranscript.matchAll(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/g);
+                    const sizes = Array.from(sizeMatches).map(match => {
+                        let size = match[0].replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                        return size;
+                    });
+
+                    // Assign first valid OD size and second valid nipple size
+                    for (const size of sizes) {
+                        if (!odSizeValue && odSizes.includes(size)) {
+                            odSizeValue = size;
+                        } else if (!nippleSizeValue && nippleSizes.includes(size)) {
+                            nippleSizeValue = size;
+                        }
+                    }
+
+                    // Check sizeMap for natural language sizes
+                    for (const key of Object.keys(sizeMap)) {
+                        if (normalizedTranscript.includes(key)) {
+                            const mappedSize = sizeMap[key];
+                            if (!odSizeValue && odSizes.includes(mappedSize)) {
+                                odSizeValue = mappedSize;
+                            } else if (!nippleSizeValue && nippleSizes.includes(mappedSize)) {
+                                nippleSizeValue = mappedSize;
+                            }
+                        }
+                    }
+                }
+
+                if (odSizeValue) {
+                    odSize.value = odSizeValue;
+                } else {
+                    alert('Please specify a valid OD size (e.g., 1, half, 3/4).');
+                    return;
+                }
+
+                if (nippleSizeValue) {
+                    nippleSize.value = nippleSizeValue;
+                } else {
+                    alert('Please specify a valid nipple size (e.g., 3, 6, 12).');
+                    return;
                 }
             }
-            if (odSizeValue) {
-                odSize.value = odSizeValue;
-            } else {
-                alert('Please specify a valid OD size (e.g., 1 inch, half inch).');
-                return;
+            // Extract OD size for other fittings
+            else {
+                const odSizes = ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'];
+                let odSizeValue = '';
+
+                // Check for explicit sizes
+                const sizeMatches = normalizedTranscript.matchAll(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/g);
+                const sizes = Array.from(sizeMatches).map(match => {
+                    return match[0].replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                });
+
+                for (const size of sizes) {
+                    if (odSizes.includes(size)) {
+                        odSizeValue = size;
+                        break;
+                    }
+                }
+
+                // Check sizeMap for natural language
+                if (!odSizeValue) {
+                    for (const key of Object.keys(sizeMap)) {
+                        if (normalizedTranscript.includes(key) && odSizes.includes(sizeMap[key])) {
+                            odSizeValue = sizeMap[key];
+                            break;
+                        }
+                    }
+                }
+
+                if (odSizeValue) {
+                    odSize.value = odSizeValue;
+                } else {
+                    alert('Please specify a valid OD size (e.g., 1, half, 3/4).');
+                    return;
+                }
             }
 
             // Extract quantity
-            const qtyMatch = transcript.match(/quantity\s*(\d+)/);
-            const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
+            const qtyMatch = normalizedTranscript.match(/quantity\s*(\d+)/);
+            let qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
+            // Check for spoken numbers in sizeMap
+            for (const key of Object.keys(sizeMap)) {
+                if (normalizedTranscript.includes(key) && ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'].includes(key)) {
+                    qty = parseInt(sizeMap[key], 10);
+                    break;
+                }
+            }
             if (qty <= 0) {
                 alert('Please specify a valid quantity greater than 0.');
                 return;
             }
             quantity.value = qty;
 
-            // Handle fitting-specific fields
-            if (fittingType === 'Nipple') {
-                const nippleSizes = ['1 1/2', '2', '2 1/2', '3', '3 1/2', '4', '4 1/2', '5', '5 1/2', '6', '7', '8', '9', '10', '12', '18', '24'];
-                let nippleSizeValue = '';
-                for (const size of nippleSizes) {
-                    if (transcript.includes(size.replace('/', ' ').replace('1 1/2', 'one and a half'))) {
-                        nippleSizeValue = size;
-                        break;
-                    }
-                }
-                if (nippleSizeValue) {
-                    nippleSize.value = nippleSizeValue;
-                } else {
-                    alert('Please specify a valid nipple size (e.g., 6 inch).');
-                    return;
-                }
-            } else if (fittingType === 'Reducer') {
+            // Handle Reducer-specific fields
+            if (fittingType === 'Reducer') {
                 let reducerSizeValue = '';
                 const toIndex = words.indexOf('to');
                 if (toIndex !== -1) {
                     const reducerWords = words.slice(toIndex + 1).join(' ');
-                    for (const size of odSizes) {
-                        if (reducerWords.includes(size.replace('/', ' ').replace('1 1/4', 'one and a quarter').replace('1 1/2', 'one and a half'))) {
+                    const sizeMatches = reducerWords.matchAll(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/g);
+                    const sizes = Array.from(sizeMatches).map(match => {
+                        return match[0].replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                    });
+
+                    for (const size of sizes) {
+                        if (['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'].includes(size)) {
                             reducerSizeValue = size;
+                            break;
+                        }
+                    }
+
+                    for (const key of Object.keys(sizeMap)) {
+                        if (reducerWords.includes(key) && ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'].includes(sizeMap[key])) {
+                            reducerSizeValue = sizeMap[key];
                             break;
                         }
                     }
@@ -1030,25 +1141,29 @@
                 if (reducerSizeValue) {
                     reducerSize.value = reducerSizeValue;
                 } else {
-                    alert('Please specify a valid reducer size (e.g., to half inch).');
+                    alert('Please specify a valid reducer size (e.g., half, 3/4).');
                     return;
                 }
-                if (transcript.includes('90 degree')) {
+                if (normalizedTranscript.includes('90 degree')) {
                     reducer90Degree.checked = true;
                 }
-            } else if (fittingType === 'Tee' && transcript.includes('custom')) {
+            }
+
+            // Handle Tee-specific fields
+            if (fittingType === 'Tee' && normalizedTranscript.includes('custom')) {
                 teeCustomSizes.checked = true;
                 toggleTeeSizes();
-                const sizesMatch = transcript.match(/(\d\/\d|\d\s*(?:and\s*a\s*quarter|and\s*a\s*half)?|\d)\s*x\s*(\d\/\d|\d\s*(?:and\s*a\s*quarter|and\s*a\s*half)?|\d)\s*x\s*(\d\/\d|\d\s*(?:and\s*a\s*quarter|and\s*a\s*half)?|\d)/);
+                const sizesMatch = normalizedTranscript.match(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*x\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*x\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/);
                 if (sizesMatch) {
                     const sizes = sizesMatch.slice(1).map(s => {
-                        return s.replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('half', '1/2');
+                        return s.replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
                     });
-                    if (odSizes.includes(sizes[0])) teeBranch1.value = sizes[0];
-                    if (odSizes.includes(sizes[1])) teeBranch2.value = sizes[1];
-                    if (odSizes.includes(sizes[2])) teeBranch3.value = sizes[2];
+                    const validSizes = ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'];
+                    if (validSizes.includes(sizes[0])) teeBranch1.value = sizes[0];
+                    if (validSizes.includes(sizes[1])) teeBranch2.value = sizes[1];
+                    if (validSizes.includes(sizes[2])) teeBranch3.value = sizes[2];
                 } else {
-                    alert('Please specify valid tee branch sizes (e.g., 1 x 1 x half inch).');
+                    alert('Please specify valid tee branch sizes (e.g., 1 x 1 x half).');
                     return;
                 }
             }
