@@ -6,6 +6,8 @@
     <title>Black Iron Gas Fittings</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fuzzball@2.0.0/dist/fuzzball.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -926,32 +928,34 @@
                 return;
             }
 
-            const data = ['Fitting Type,OD Size,Nipple Size,Quantity'];
-            addedItems.forEach(item => {
-                const isCustomTee = item.fittingType === 'Tee' && item.nippleSize.includes(' x ');
-                const odSize = isCustomTee ? 'N/A' : item.odSize;
-                data.push(`${item.fittingType},${odSize},${item.nippleSize || 'N/A'},${item.quantity}`);
-            });
+            // Prepare data for Excel
+            const data = [
+                ['Fitting Type', 'OD Size', 'Nipple Size', 'Quantity'],
+                ...addedItems.map(item => {
+                    const isCustomTee = item.fittingType === 'Tee' && item.nippleSize.includes(' x ');
+                    const odSize = isCustomTee ? 'N/A' : item.odSize;
+                    return [item.fittingType, odSize, item.nippleSize || 'N/A', item.quantity];
+                })
+            ];
 
+            // Create workbook and worksheet
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Fittings');
+
+            // Generate filename
             const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
             let filename = jobName.value.trim() || 'Untitled';
             filename = filename.replace(/[^a-zA-Z0-9-_]/g, '_');
-            filename = `${filename}_nipple_data_${timestamp}.csv`;
+            filename = `${filename}_nipple_data_${timestamp}.xlsx`;
 
-            const dataBlob = new Blob([data.join('\n')], { type: 'text/csv' });
-            const downloadLink = document.createElement('a');
-            downloadLink.href = URL.createObjectURL(dataBlob);
-            downloadLink.download = filename;
-            downloadLink.click();
+            // Export to Excel
+            XLSX.write(wb, filename);
         }
 
         function processVoiceCommand(transcript) {
-            // Normalize transcript: remove quotes, extra spaces, and inch markers
-            const normalizedTranscript = transcript.toLowerCase()
-                .replace(/['"]/g, '') // Remove quotation marks
-                .replace(/inches|inch/g, '')
-                .replace(/\s+/g, ' ') // Normalize spaces
-                .trim();
+            // Normalize transcript
+            const normalizedTranscript = transcript.toLowerCase().replace(/\\"/g, '"').replace(/['"]/g, '').replace(/inches|inch/g, '').replace(/\s+/g, ' ').trim();
             const words = normalizedTranscript.split(/\s+/);
 
             // Extract action
@@ -960,17 +964,19 @@
                 return;
             }
 
-            // Extract fitting type
+            // Fuzzy matching for fitting type
             const fittingTypes = [
                 'nipple', '90 degree elbow', 'tee', 'union', '45 degree elbow', 'shut-off', 'reducer',
                 'cap', 'plug', 'coupling', 'bushing', 'flexconnector', 'gastiite', 'stand off long',
                 'stand off short', 'paint'
             ];
             let fittingType = '';
+            let maxScore = 0;
             for (const type of fittingTypes) {
-                if (normalizedTranscript.includes(type.replace('stand off ', ''))) {
+                const score = fuzzball.ratio(normalizedTranscript, type);
+                if (score > maxScore && score > 70) {
+                    maxScore = score;
                     fittingType = type.replace('stand off long', 'Stand Off (Long)').replace('stand off short', 'Stand Off (Short)');
-                    break;
                 }
             }
             if (!fittingType) {
@@ -1011,9 +1017,10 @@
                 let odSizeValue = '';
                 let nippleSizeValue = '';
 
-                // Try explicit separator patterns (e.g., "1 by 3", "1 x 3", "1"x3"", "1x3")
-                const separatorMatch = normalizedTranscript.match(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*(?:by|x|length|times)\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/) ||
-                                      normalizedTranscript.match(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)x(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/);
+                // Try explicit separator patterns, including quoted sizes and fuzzy matches
+                const separatorMatch = normalizedTranscript.match(/(?:\d+\")?\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*(?:by|x|length|times)\s*(?:\d+\")?\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/) ||
+                                      normalizedTranscript.match(/(\d+)x(\d+)/) ||
+                                      normalizedTranscript.match(/(\d+)\s*x\s*(\d+)/);
                 if (separatorMatch) {
                     let [_, od, nipple] = separatorMatch;
                     od = od.replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
@@ -1022,9 +1029,9 @@
                     if (nippleSizes.includes(nipple)) nippleSizeValue = nipple;
                 }
 
-                // Fallback to sequential size parsing
+                // Fuzzy matching for sizes if no exact match
                 if (!odSizeValue || !nippleSizeValue) {
-                    const sizeMatches = normalizedTranscript.matchAll(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/g);
+                    const sizeMatches = normalizedTranscript.matchAll(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?|\d+)/g);
                     const sizes = Array.from(sizeMatches).map(match => {
                         let size = match[0].replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
                         return size;
@@ -1039,9 +1046,9 @@
                         }
                     }
 
-                    // Check sizeMap for natural language sizes
+                    // Fuzzy match against sizeMap
                     for (const key of Object.keys(sizeMap)) {
-                        if (normalizedTranscript.includes(key)) {
+                        if (fuzzball.ratio(normalizedTranscript, key) > 80) {
                             const mappedSize = sizeMap[key];
                             if (!odSizeValue && odSizes.includes(mappedSize)) {
                                 odSizeValue = mappedSize;
@@ -1084,10 +1091,10 @@
                     }
                 }
 
-                // Check sizeMap for natural language
+                // Fuzzy match for OD size
                 if (!odSizeValue) {
                     for (const key of Object.keys(sizeMap)) {
-                        if (normalizedTranscript.includes(key) && odSizes.includes(sizeMap[key])) {
+                        if (fuzzball.ratio(normalizedTranscript, key) > 80 && odSizes.includes(sizeMap[key])) {
                             odSizeValue = sizeMap[key];
                             break;
                         }
@@ -1105,9 +1112,9 @@
             // Extract quantity
             const qtyMatch = normalizedTranscript.match(/quantity\s*(\d+)/);
             let qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
-            // Check for spoken numbers in sizeMap
+            // Fuzzy match for spoken numbers
             for (const key of Object.keys(sizeMap)) {
-                if (normalizedTranscript.includes(key) && ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'].includes(key)) {
+                if (fuzzball.ratio(normalizedTranscript, key) > 80 && ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'].includes(key)) {
                     qty = parseInt(sizeMap[key], 10);
                     break;
                 }
@@ -1137,7 +1144,7 @@
                     }
 
                     for (const key of Object.keys(sizeMap)) {
-                        if (reducerWords.includes(key) && ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'].includes(sizeMap[key])) {
+                        if (fuzzball.ratio(reducerWords, key) > 80 && ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'].includes(sizeMap[key])) {
                             reducerSizeValue = sizeMap[key];
                             break;
                         }
@@ -1149,13 +1156,13 @@
                     alert('Please specify a valid reducer size (e.g., half, 3/4).');
                     return;
                 }
-                if (normalizedTranscript.includes('90 degree')) {
+                if (fuzzball.ratio(normalizedTranscript, '90 degree') > 80) {
                     reducer90Degree.checked = true;
                 }
             }
 
             // Handle Tee-specific fields
-            if (fittingType === 'Tee' && normalizedTranscript.includes('custom')) {
+            if (fittingType === 'Tee' && fuzzball.ratio(normalizedTranscript, 'custom') > 80) {
                 teeCustomSizes.checked = true;
                 toggleTeeSizes();
                 const sizesMatch = normalizedTranscript.match(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*x\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*x\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/);
