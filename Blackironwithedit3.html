@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fuzzball@2.0.0/dist/fuzzball.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -922,35 +921,64 @@
             }, 300);
         }
 
+        function escapeCsvValue(value) {
+            if (!value) return '';
+            const stringValue = String(value).trim();
+            if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                return `"${stringValue.replace(/"/g, '""')}"`;
+            }
+            return stringValue;
+        }
+
         function exportData() {
             if (!addedItems.length) {
                 alert('No items to export.');
                 return;
             }
 
-            // Prepare data for Excel
-            const data = [
-                ['Fitting Type', 'OD Size', 'Nipple Size', 'Quantity'],
+            const headers = ['Fitting Type', 'OD Size', 'Nipple Size', 'Quantity'];
+            const csvRows = [
+                headers.map(escapeCsvValue).join(','),
                 ...addedItems.map(item => {
-                    const isCustomTee = item.fittingType === 'Tee' && item.nippleSize.includes(' x ');
-                    const odSize = isCustomTee ? 'N/A' : item.odSize;
-                    return [item.fittingType, odSize, item.nippleSize || 'N/A', item.quantity];
+                    let odSize = item.odSize;
+                    let nippleSize = item.nippleSize || 'N/A';
+
+                    // Handle custom Tee sizes
+                    if (item.fittingType === 'Tee' && item.nippleSize.includes(' x ')) {
+                        odSize = 'N/A';
+                    }
+
+                    // Clean up Nipple Size for Reducer and Nipple
+                    if (item.fittingType === 'Reducer' || item.fittingType === '90 Degree Reducer') {
+                        nippleSize = nippleSize.replace('Reduced to: ', '').replace('"', '');
+                    } else if (item.fittingType === 'Nipple') {
+                        nippleSize = nippleSize.replace('"', '');
+                    }
+
+                    return [
+                        item.fittingType,
+                        odSize,
+                        nippleSize,
+                        item.quantity
+                    ].map(escapeCsvValue).join(',');
                 })
             ];
 
-            // Create workbook and worksheet
-            const ws = XLSX.utils.aoa_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Fittings');
-
-            // Generate filename
+            const csvContent = '\uFEFF' + csvRows.join('\n');
             const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
             let filename = jobName.value.trim() || 'Untitled';
             filename = filename.replace(/[^a-zA-Z0-9-_]/g, '_');
-            filename = `${filename}_nipple_data_${timestamp}.xlsx`;
+            filename = `${filename}_nipple_data_${timestamp}.csv`;
 
-            // Export to Excel
-            XLSX.write(wb, filename);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function processVoiceCommand(transcript) {
