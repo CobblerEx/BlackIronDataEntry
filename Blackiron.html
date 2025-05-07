@@ -3,77 +3,1523 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>90-Degree Angle</title>
-    <!-- Add your CSS links or styles here -->
+    <title>Black Iron Gas Fittings Manager</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fuzzball@2.0.0/dist/fuzzball.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        /* Add your CSS styles here */
-        body {
-            font-family: Arial, sans-serif;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
-        /* Style the canvas */
-        canvas {
-            border: 1px solid #000;
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+            color: #1f2937;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            text-align: center;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1e3a8a;
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        select, input[type="text"], input[type="number"], input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: #f9fafb;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .toggle-switch input {
+            display: none;
+        }
+
+        .toggle-switch label {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #d1d5db;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch label::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch input:checked + label {
+            background: #f97316;
+        }
+
+        .toggle-switch input:checked + label::after {
+            transform: translateX(26px);
+        }
+
+        .toggle-switch span {
+            font-size: 0.9rem;
+            color: #374151;
+        }
+
+        .fitting-carousel {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 10px 0;
+            margin-bottom: 15px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .fitting-card {
+            flex: 0 0 120px;
+            background: #e5e7eb;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, background 0.3s ease;
+            scroll-snap-align: start;
+        }
+
+        .fitting-card.selected {
+            background: #f97316;
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        .fitting-card:hover {
+            transform: scale(1.05);
+        }
+
+        .fitting-card span.material-icons {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .collapsible-section {
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .collapsible-section.active {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+
+        .button-primary {
+            background: #f97316;
+            color: #fff;
+        }
+
+        .button-primary:hover {
+            background: #ea580c;
+            transform: translateY(-2px);
+        }
+
+        .button-secondary {
+            background: #1e3a8a;
+            color: #fff;
+        }
+
+        .button-secondary:hover {
+            background: #1e40af;
+            transform: translateY(-2px);
+        }
+
+        .button-voice {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .button-voice:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .button-voice.active {
+            background: #dc2626;
+        }
+
+        .sticky-buttons {
+            position: sticky;
+            bottom: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        .item-card {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+            transition: transform 0.3s ease;
+        }
+
+        .item-card.swiped {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .item-card .fitting-type {
+            font-weight: 500;
+            color: #1e3a8a;
+        }
+
+        .item-card .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .item-card .action-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+
+        .item-card .action-button.delete {
+            color: #dc2626;
+        }
+
+        .item-card .action-button.edit {
+            color: #2563eb;
+        }
+
+        .item-card .action-button:hover {
+            transform: scale(1.2);
+        }
+
+        .edit-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+
+        .edit-modal.active {
+            display: flex;
+        }
+
+        .edit-modal .card {
+            max-width: 90%;
+            padding: 20px;
+        }
+
+        .edit-modal input {
+            margin-bottom: 10px;
+        }
+
+        .voice-transcript {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            max-width: 90%;
+            text-align: center;
+            z-index: 15;
+            display: none;
+        }
+
+        .voice-transcript.active {
+            display: block;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+
+        .tab.active {
+            background: #f97316;
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        .tab:hover {
+            background: #d1d5db;
+            transform: scale(1.05);
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            text-align: left;
+        }
+
+        th {
+            background: #1e3a8a;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        td[contenteditable="true"] {
+            background: #f9fafb;
+            cursor: text;
+        }
+
+        .delete-button {
+            background: #dc2626;
+            color: #fff;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .delete-button:hover {
+            background: #b91c1c;
+        }
+
+        /* Desktop styles */
+        @media (min-width: 601px) {
+            .fitting-carousel {
+                display: none;
+            }
+
+            #fitting-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
+            #fitting-buttons button {
+                flex: 1 1 calc(25% - 10px);
+                padding: 12px;
+                background: #e5e7eb;
+                border: none;
+                border-radius: 8px;
+                font-size: 1rem;
+                cursor: pointer;
+                transition: background 0.3s ease, transform 0.2s ease;
+            }
+
+            #fitting-buttons button.selected {
+                background: #f97316;
+                color: #fff;
+                transform: scale(1.05);
+            }
+
+            #fitting-buttons button:hover {
+                background: #d1d5db;
+                transform: scale(1.05);
+            }
+
+            .tee-sizes-container {
+                display: flex;
+                gap: 10px;
+            }
+
+            .tee-sizes-container select {
+                flex: 1;
+                margin-bottom: 0;
+            }
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 600px) {
+            #fitting-buttons {
+                display: none;
+            }
+
+            .tee-sizes-container select {
+                margin-bottom: 10px;
+            }
+
+            .tabs {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .tab {
+                width: 100%;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>90-Degree Angle</h1>
+    <div class="container">
+        <h1>Black Iron Gas Fittings Manager</h1>
+        <div class="card">
+            <label for="jobName">Job Name</label>
+            <input type="text" id="jobName" name="jobName" placeholder="Enter job name">
+        </div>
 
-    <!-- Create a canvas element for drawing -->
-    <canvas id="angleCanvas" width="400" height="400"></canvas>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('data-entry')">Data Entry</div>
+            <div class="tab" onclick="switchTab('excel-upload')">Excel Upload/Edit</div>
+        </div>
 
-    <!-- Add your JavaScript code here -->
+        <!-- Data Entry Section -->
+        <div class="section active" id="data-entry">
+            <div class="card">
+                <form id="fitting-form">
+                    <label>Fitting Type</label>
+                    <div class="fitting-carousel" role="radiogroup" aria-label="Select fitting type">
+                        <div class="fitting-card" data-fitting="Nipple" onclick="selectFittingType('Nipple')">
+                            <span class="material-icons">build</span>
+                            <div>Nipple</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="90 degree elbow" onclick="selectFittingType('90 degree elbow')">
+                            <span class="material-icons">trending_flat</span>
+                            <div>90° Elbow</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Tee" onclick="selectFittingType('Tee')">
+                            <span class="material-icons">call_split</span>
+                            <div>Tee</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Union" onclick="selectFittingType('Union')">
+                            <span class="material-icons">link</span>
+                            <div>Union</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="45 degree elbow" onclick="selectFittingType('45 degree elbow')">
+                            <span class="material-icons">trending_up</span>
+                            <div>45° Elbow</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Shut-off" onclick="selectFittingType('Shut-off')">
+                            <span class="material-icons">valve</span>
+                            <div>Shut-off</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Reducer" onclick="selectFittingType('Reducer')">
+                            <span class="material-icons">compress</span>
+                            <div>Reducer</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Cap" onclick="selectFittingType('Cap')">
+                            <span class="material-icons">stop_circle</span>
+                            <div>Cap</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Plug" onclick="selectFittingType('Plug')">
+                            <span class="material-icons">lock</span>
+                            <div>Plug</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Coupling" onclick="selectFittingType('Coupling')">
+                            <span class="material-icons">join_inner</span>
+                            <div>Coupling</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Bushing" onclick="selectFittingType('Bushing')">
+                            <span class="material-icons">settings</span>
+                            <div>Bushing</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Flexconnector" onclick="selectFittingType('Flexconnector')">
+                            <span class="material-icons">swap_horiz</span>
+                            <div>Flex Connector</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Gastiite" onclick="selectFittingType('Gastiite')">
+                            <span class="material-icons">tune</span>
+                            <div>Gastiite</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Stand Off (Long)" onclick="selectFittingType('Stand Off (Long)')">
+                            <span class="material-icons">height</span>
+                            <div>Stand off L</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Stand Off (Short)" onclick="selectFittingType('Stand Off (Short)')">
+                            <span class="material-icons">vertical_align_bottom</span>
+                            <div>Stand off S</div>
+                        </div>
+                        <div class="fitting-card" data-fitting="Paint" onclick="selectFittingType('Paint')">
+                            <span class="material-icons">brush</span>
+                            <div>Paint</div>
+                        </div>
+                    </div>
+
+                    <div id="fitting-buttons" role="radiogroup" aria-label="Select fitting type">
+                        <button type="button" data-fitting="Nipple" onclick="selectFittingType('Nipple')">Nipple</button>
+                        <button type="button" data-fitting="90 degree elbow" onclick="selectFittingType('90 degree elbow')">90 degree elbow</button>
+                        <button type="button" data-fitting="Tee" onclick="selectFittingType('Tee')">Tee</button>
+                        <button type="button" data-fitting="Union" onclick="selectFittingType('Union')">Union</button>
+                        <button type="button" data-fitting="45 degree elbow" onclick="selectFittingType('45 degree elbow')">45 degree elbow</button>
+                        <button type="button" data-fitting="Shut-off" onclick="selectFittingType('Shut-off')">Shut-off</button>
+                        <button type="button" data-fitting="Reducer" onclick="selectFittingType('Reducer')">Reducer</button>
+                        <button type="button" data-fitting="Cap" onclick="selectFittingType('Cap')">Cap</button>
+                        <button type="button" data-fitting="Plug" onclick="selectFittingType('Plug')">Plug</button>
+                        <button type="button" data-fitting="Coupling" onclick="selectFittingType('Coupling')">Coupling</button>
+                        <button type="button" data-fitting="Bushing" onclick="selectFittingType('Bushing')">Bushing</button>
+                        <button type="button" data-fitting="Flexconnector" onclick="selectFittingType('Flexconnector')">Flex Connector</button>
+                        <button type="button" data-fitting="Gastiite" onclick="selectFittingType('Gastiite')">Gastiite</button>
+                        <button type="button" data-fitting="Stand Off (Long)" onclick="selectFittingType('Stand Off (Long)')">Stand off L</button>
+                        <button type="button" data-fitting="Stand Off (Short)" onclick="selectFittingType('Stand Off (Short)')">Stand off S</button>
+                        <button type="button" data-fitting="Paint" onclick="selectFittingType('Paint')">Paint</button>
+                    </div>
+
+                    <label for="od-size">Outer Diameter (OD) Size (inches)</label>
+                    <select id="od-size" name="od-size" required>
+                        <option value="3/8">3/8</option>
+                        <option value="1/2">1/2</option>
+                        <option value="3/4">3/4</option>
+                        <option value="1">1</option>
+                        <option value="1 1/4">1 1/4</option>
+                        <option value="1 1/2">1 1/2</option>
+                        <option value="2">2</option>
+                        <option value="2 1/2">2 1/2</option>
+                    </select>
+
+                    <div class="toggle-switch" id="reducer-toggle-container">
+                        <input type="checkbox" id="reducer-90-degree" name="reducer-90-degree">
+                        <label for="reducer-90-degree"></label>
+                        <span>90 Degree Reducer</span>
+                    </div>
+
+                    <div class="collapsible-section" id="reducer-size-section">
+                        <label for="reducer-size">Reducer Size (inches)</label>
+                        <select id="reducer-size" name="reducer-size">
+                            <option value="">Select Reducer Size</option>
+                            <option value="3/8">3/8</option>
+                            <option value="1/2">1/2</option>
+                            <option value="3/4">3/4</option>
+                            <option value="1">1</option>
+                            <option value="1 1/4">1 1/4</option>
+                            <option value="1 1/2">1 1/2</option>
+                            <option value="2">2</option>
+                            <option value="2 1/2">2 1/2</option>
+                        </select>
+                    </div>
+
+                    <div class="toggle-switch" id="tee-toggle-container">
+                        <input type="checkbox" id="tee-custom-sizes" name="tee-custom-sizes" onchange="toggleTeeSizes()">
+                        <label for="tee-custom-sizes"></label>
+                        <span>Custom Tee Sizes</span>
+                    </div>
+
+                    <div class="collapsible-section tee-sizes-container" id="tee-sizes-container">
+                        <label for="tee-branch1">Branch 1 Size</label>
+                        <select id="tee-branch1" name="tee-branch1">
+                            <option value="">Select Size</option>
+                            <option value="3/8">3/8</option>
+                            <option value="1/2">1/2</option>
+                            <option value="3/4">3/4</option>
+                            <option value="1">1</option>
+                            <option value="1 1/4">1 1/4</option>
+                            <option value="1 1/2">1 1/2</option>
+                            <option value="2">2</option>
+                            <option value="2 1/2">2 1/2</option>
+                        </select>
+
+                        <label for="tee-branch2">Branch 2 Size</label>
+                        <select id="tee-branch2" name="tee-branch2">
+                            <option value="">Select Size</option>
+                            <option value="3/8">3/8</option>
+                            <option value="1/2">1/2</option>
+                            <option value="3/4">3/4</option>
+                            <option value="1">1</option>
+                            <option value="1 1/4">1 1/4</option>
+                            <option value="1 1/2">1 1/2</option>
+                            <option value="2">2</option>
+                            <option value="2 1/2">2 1/2</option>
+                        </select>
+
+                        <label for="tee-branch3">Branch 3 Size</label>
+                        <select id="tee-branch3" name="tee-branch3">
+                            <option value="">Select Size</option>
+                            <option value="3/8">3/8</option>
+                            <option value="1/2">1/2</option>
+                            <option value="3/4">3/4</option>
+                            <option value="1">1</option>
+                            <option value="1 1/4">1 1/4</option>
+                            <option value="1 1/2">1 1/2</option>
+                            <option value="2">2</option>
+                            <option value="2 1/2">2 1/2</option>
+                        </select>
+                    </div>
+
+                    <div class="collapsible-section" id="nipple-size-section">
+                        <label for="nipple-size">Nipple Size (inches)</label>
+                        <select id="nipple-size" name="nipple-size">
+                            <option value="">Select Nipple Size</option>
+                            <option value="1 1/2">1 1/2"</option>
+                            <option value="2">2"</option>
+                            <option value="2 1/2">2 1/2"</option>
+                            <option value="3">3"</option>
+                            <option value="3 1/2">3 1/2"</option>
+                            <option value="4">4"</option>
+                            <option value="4 1/2">4 1/2"</option>
+                            <option value="5">5"</option>
+                            <option value="5 1/2">5 1/2"</option>
+                            <option value="6">6"</option>
+                            <option value="7">7"</option>
+                            <option value="8">8"</option>
+                            <option value="9">9"</option>
+                            <option value="10">10"</option>
+                            <option value="12">12"</option>
+                            <option value="18">18"</option>
+                            <option value="24">24"</option>
+                        </select>
+                    </div>
+
+                    <label for="quantity">Quantity</label>
+                    <input type="number" id="quantity" name="quantity" min="1" required value="1" />
+                </form>
+
+                <div class="sticky-buttons">
+                    <button type="submit" form="fitting-form" class="button button-primary">
+                        <span class="material-icons">add</span> Add Item
+                    </button>
+                    <button id="voice-input" class="button button-voice" aria-label="Start voice input">
+                        <span class="material-icons">mic</span> Voice
+                    </button>
+                    <button id="exportData" class="button button-secondary">
+                        <span class="material-icons">file_download</span> Export
+                    </button>
+                </div>
+            </div>
+
+            <div class="card" id="items-list" aria-live="polite"></div>
+        </div>
+
+        <!-- Excel Upload/Edit Section -->
+        <div class="section" id="excel-upload">
+            <div class="card">
+                <form id="upload-form">
+                    <label for="excel-file">Upload Excel File:</label>
+                    <input type="file" id="excel-file" accept=".xlsx">
+                    <button type="submit" class="button button-primary">
+                        <span class brunch="material-icons">upload</span> Upload
+                    </button>
+                </form>
+            </div>
+
+            <div class="card table-container" id="editable-table-container">
+                <table id="editable-table"></table>
+                <div class="sticky-buttons">
+                    <button id="save-changes" class="button button-secondary">
+                        <span class="material-icons">save</span> Save Changes
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <form id="add-data-form">
+                    <h2>Add New Data</h2>
+                    <label for="new-data-type">Type of Fitting:</label>
+                    <select id="new-data-type">
+                        <optgroup label="Nipple">
+                            <option value="Nipple">Nipple</option>
+                        </optgroup>
+                        <optgroup label="Fittings">
+                            <option value="90 degree elbow">90 degree elbow</option>
+                            <option value="Tee">Tee</option>
+                            <option value="Union">Union</option>
+                            <option value="45 degree elbow">45 degree elbow</option>
+                            <option value="Reducer">Reducer</option>
+                            <option value="Bushing">Bushing</option>
+                        </optgroup>
+                        <optgroup label="Accessories">
+                            <option value="Shut-off">Shut-off</option>
+                            <option value="Coupling">Coupling</option>
+                            <option value="Cap">Cap</option>
+                            <option value="Plug">Plug</option>
+                            <option value="Flexconnector">Flex Connector</option>
+                        </optgroup>
+                        <optgroup label="Stand offs">
+                            <option value="Stand Off (Long)">Stand off (Long)</option>
+                            <option value="Stand Off (Short)">Stand off (Short)</option>
+                        </optgroup>
+                        <optgroup label="Other">
+                            <option value="Paint">Paint</option>
+                        </optgroup>
+                    </select>
+                    <label for="new-data-OD">OD:</label>
+                    <select id="new-data-OD">
+                        <option value="3/8">3/8"</option>
+                        <option value="1/2">1/2"</option>
+                        <option value="3/4">3/4"</option>
+                        <option value="1">1"</option>
+                        <option value="1 1/4">1 1/4"</option>
+                        <option value="1 1/2">1 1/2"</option>
+                        <option value="2">2"</option>
+                        <option value="2 1/2">2 1/2"</option>
+                    </select>
+                    <label for="new-data-nipple-size">Nipple Size:</label>
+                    <input type="text" id="new-data-nipple-size">
+                    <label for="new-data-quantity">Quantity:</label>
+                    <input type="number" id="new-data-quantity" min="1">
+                    <button type="button" id="add-new-data" class="button button-primary">
+                        <span class="material-icons">add</span> Add
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="voice-transcript" id="voice-transcript" aria-live="polite"></div>
+
+        <div class="edit-modal" id="edit-modal">
+            <div class="card">
+                <form id="edit-form">
+                    <label for="edit-fitting">Fitting Type</label>
+                    <input type="text" id="edit-fitting" required>
+                    <label for="edit-od">OD Size</label>
+                    <input type="text" id="edit-od" required>
+                    <label for="edit-nipple">Size Details</label>
+                    <input type="text" id="edit-nipple">
+                    <label for="edit-quantity">Quantity</label>
+                    <input type="number" id="edit-quantity" min="1" required>
+                    <div class="sticky-buttons">
+                        <button type="submit" class="button button-primary">
+                            <span class="material-icons">save</span> Save
+                        </button>
+                        <button type="button" class="button button-secondary" onclick="closeEditModal()">
+                            <span class="material-icons">close</span> Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <a id="download-link" style="display: none" download="updated_data.xlsx"></a>
+    </div>
+
     <script>
-        // Get the canvas element and context
-        const canvas = document.getElementById("angleCanvas");
-        const ctx = canvas.getContext("2d");
+        // Data Entry Section Variables
+        const odSize = document.getElementById('od-size');
+        const reducerSizeSection = document.getElementById('reducer-size-section');
+        const reducerSize = document.getElementById('reducer-size');
+        const reducerToggleContainer = document.getElementById('reducer-toggle-container');
+        const reducer90Degree = document.getElementById('reducer-90-degree');
+        const teeToggleContainer = document.getElementById('tee-toggle-container');
+        const teeCustomSizes = document.getElementById('tee-custom-sizes');
+        const teeSizesContainer = document.getElementById('tee-sizes-container');
+        const teeBranch1 = document.getElementById('tee-branch1');
+        const teeBranch2 = document.getElementById('tee-branch2');
+        const teeBranch3 = document.getElementById('tee-branch3');
+        const nippleSizeSection = document.getElementById('nipple-size-section');
+        const nippleSize = document.getElementById('nipple-size');
+        const quantity = document.getElementById('quantity');
+        const jobName = document.getElementById('jobName');
+        const itemsList = document.getElementById('items-list');
+        const fittingForm = document.getElementById('fitting-form');
+        const editModal = document.getElementById('edit-modal');
+        const editForm = document.getElementById('edit-form');
+        const voiceButton = document.getElementById('voice-input');
+        const voiceTranscript = document.getElementById('voice-transcript');
 
-        const angles = [];
+        // Excel Upload/Edit Section Variables
+        const uploadForm = document.getElementById('upload-form');
+        const excelFileInput = document.getElementById('excel-file');
+        const editableTableContainer = document.getElementById('editable-table-container');
+        const editableTable = document.getElementById('editable-table');
+        const saveChangesButton = document.getElementById('save-changes');
+        const addDataForm = document.getElementById('add-data-form');
+        const addDataTypeInput = document.getElementById('new-data-type');
+        const addDataODInput = document.getElementById('new-data-OD');
+        const addDataNipplesizeInput = document.getElementById('new-data-nipple-size');
+        const addDataQuantityInput = document.getElementById('new-data-quantity');
+        const addDataButton = document.getElementById('add-new-data');
+        const downloadLink = document.getElementById('download-link');
 
-        let start = null;
+        let selectedFittingType = '';
+        const addedItems = [];
+        let excelData = [];
+        let recognition = null;
 
-        canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            start = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        });
+        // Tab Switching
+        function switchTab(sectionId) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            document.querySelector(`[onclick="switchTab('${sectionId}')"]`).classList.add('active');
+            document.getElementById(sectionId).classList.add('active');
+        }
 
-        canvas.addEventListener('mouseup', (e) => {
-            if (start) {
-                const rect = canvas.getBoundingClientRect();
-                const end = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        // Initialize Speech Recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
 
-                // Calculate perfect right-angle coordinates
-                const width = Math.abs(end.x - start.x);
-                const height = Math.abs(end.y - start.y);
-                const size = Math.min(width, height);
-                const angle = {
-                    x: start.x + size,
-                    y: start.y + size
-                };
+            recognition.onstart = () => {
+                voiceButton.classList.add('active');
+                voiceButton.querySelector('.material-icons').textContent = 'mic_off';
+                voiceTranscript.classList.add('active');
+                voiceTranscript.textContent = 'Listening...';
+            };
 
-                angles.push({ start, angle, end });
-                draw();
-                start = null;
-            }
-        });
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+                voiceTranscript.textContent = transcript;
+                if (event.results[0].isFinal) {
+                    processVoiceCommand(transcript.toLowerCase().trim());
+                }
+            };
 
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const angle of angles) {
-                ctx.strokeStyle = 'red';
-                ctx.beginPath();
-                ctx.arc(angle.start.x, angle.start.y, 5, 0, Math.PI * 2);
-                ctx.stroke();
+            recognition.onend = () => {
+                voiceButton.classList.remove('active');
+                voiceButton.querySelector('.material-icons').textContent = 'mic';
+                voiceTranscript.classList.remove('active');
+            };
 
-                ctx.strokeStyle = 'black';
-                ctx.beginPath();
-                ctx.moveTo(angle.start.x, angle.start.y);
-                ctx.lineTo(angle.angle.x, angle.angle.y);
-                ctx.lineTo(angle.end.x, angle.end.y);
-                ctx.stroke();
+            recognition.onerror = (event) => {
+                voiceTranscript.textContent = `Error: ${event.error}`;
+                setTimeout(() => voiceTranscript.classList.remove('active'), 2000);
+                voiceButton.classList.remove('active');
+                voiceButton.querySelector('.material-icons').textContent = 'mic';
+            };
+        } else {
+            voiceButton.disabled = true;
+            voiceButton.title = 'Voice input not supported in this browser';
+        }
+
+        // Data Entry Functions
+        function selectFittingType(fittingType) {
+            selectedFittingType = fittingType;
+
+            document.querySelectorAll('.fitting-card').forEach(card => {
+                card.classList.toggle('selected', card.getAttribute('data-fitting') === fittingType);
+            });
+
+            document.querySelectorAll('#fitting-buttons button').forEach(button => {
+                button.classList.toggle('selected', button.getAttribute('data-fitting') === fittingType);
+            });
+
+            reducerSizeSection.classList.toggle('active', fittingType === 'Reducer');
+            reducerToggleContainer.style.display = fittingType === 'Reducer' ? 'flex' : 'none';
+            teeToggleContainer.style.display = fittingType === 'Tee' ? 'flex' : 'none';
+            teeSizesContainer.classList.toggle('active', fittingType === 'Tee' && teeCustomSizes.checked);
+            nippleSizeSection.classList.toggle('active', fittingType === 'Nipple');
+
+            reducer90Degree.checked = false;
+            teeCustomSizes.checked = false;
+            teeBranch1.value = '';
+            teeBranch2.value = '';
+            teeBranch3.value = '';
+            nippleSize.value = '';
+            reducerSize.value = '';
+        }
+
+        function toggleTeeSizes() {
+            teeSizesContainer.classList.toggle('active', teeCustomSizes.checked);
+            if (teeCustomSizes.checked) {
+                teeBranch1.value = odSize.value;
+                teeBranch2.value = odSize.value;
+                teeBranch3.value = odSize.value;
             }
         }
+
+        function validateItem() {
+            if (!selectedFittingType) {
+                alert('Please select a fitting type.');
+                return false;
+            }
+            if (selectedFittingType === 'Nipple' && !nippleSize.value) {
+                alert('Please select a nipple size.');
+                return false;
+            }
+            if (selectedFittingType === 'Reducer' && !reducerSize.value) {
+                alert('Please select a reducer size.');
+                return false;
+            }
+            if (selectedFittingType === 'Tee' && teeCustomSizes.checked) {
+                if (!teeBranch1.value || !teeBranch2.value || !teeBranch3.value) {
+                    alert('Please select all tee branch sizes.');
+                    return false;
+                }
+            }
+            if (!quantity.value || quantity.value <= 0) {
+                alert('Please enter a valid quantity greater than 0.');
+                return false;
+            }
+            return true;
+        }
+
+        function addItem(event) {
+            event.preventDefault();
+            if (!validateItem()) return;
+
+            let fitting = selectedFittingType;
+            const od = odSize.value;
+            const qty = parseInt(quantity.value, 10);
+            let nipple = '';
+
+            if (fitting === 'Reducer') {
+                fitting = reducer90Degree.checked ? '90 Degree Reducer' : 'Reducer';
+                nipple = `Reduced to: ${reducerSize.value}"`;
+            } else if (fitting === 'Tee') {
+                if (teeCustomSizes.checked) {
+                    nipple = `${teeBranch1.value}" x ${teeBranch2.value}" x ${teeBranch3.value}"`;
+                } else {
+                    nipple = `${od}" x ${od}" x ${od}"`;
+                }
+            } else if (fitting === 'Nipple') {
+                nipple = `${nippleSize.value}"`;
+            }
+
+            const item = { fittingType: fitting, odSize: od, nippleSize: nipple, quantity: qty };
+            addedItems.push(item);
+
+            const listItem = document.createElement('div');
+            listItem.className = 'item-card';
+            listItem.dataset.index = addedItems.length - 1;
+            const displayText = fitting === 'Tee' && teeCustomSizes.checked
+                ? `${fitting}, ${nipple}, Qty: ${qty}`
+                : `${fitting}, ${od}", ${nipple}, Qty: ${qty}`;
+            listItem.innerHTML = `
+                <div>
+                    <span class="fitting-type">${displayText}</span>
+                </div>
+                <div class="actions">
+                    <button class="action-button edit" aria-label="Edit item">
+                        <span class="material-icons">edit</span>
+                    </button>
+                    <button class="action-button delete" aria-label="Delete item">
+                        <span class="material-icons">delete</span>
+                    </button>
+                </div>
+            `;
+            itemsList.prepend(listItem);
+
+            const preservedOdSize = odSize.value;
+            nippleSize.value = '';
+            reducerSize.value = '';
+            teeBranch1.value = '';
+            teeBranch2.value = '';
+            teeBranch3.value = '';
+            odSize.value = preservedOdSize;
+        }
+
+        function openEditModal(index) {
+            const item = addedItems[index];
+            document.getElementById('edit-fitting').value = item.fittingType;
+            document.getElementById('edit-od').value = item.odSize;
+            document.getElementById('edit-nipple').value = item.nippleSize;
+            document.getElementById('edit-quantity').value = item.quantity;
+            editModal.classList.add('active');
+            editForm.onsubmit = (e) => {
+                e.preventDefault();
+                saveEdit(index);
+            };
+        }
+
+        function closeEditModal() {
+            editModal.classList.remove('active');
+        }
+
+        function saveEdit(index) {
+            const fitting = document.getElementById('edit-fitting').value;
+            const od = document.getElementById('edit-od').value;
+            const nipple = document.getElementById('edit-nipple').value;
+            const quantity = parseInt(document.getElementById('edit-quantity').value, 10);
+
+            if (!fitting || !od || quantity <= 0) {
+                alert('Please fill in all fields with valid values.');
+                return;
+            }
+
+            addedItems[index] = { fittingType: fitting, odSize: od, nippleSize: nipple, quantity };
+            const listItem = itemsList.querySelector(`[data-index="${index}"]`);
+            const isCustomTee = fitting === 'Tee' && nipple.includes(' x ');
+            listItem.querySelector('.fitting-type').textContent = isCustomTee
+                ? `${fitting}, ${nipple}, Qty: ${quantity}`
+                : `${fitting}, ${od}", ${nipple}, Qty: ${quantity}`;
+            closeEditModal();
+        }
+
+        function deleteItem(listItem, index) {
+            listItem.classList.add('swiped');
+            setTimeout(() => {
+                itemsList.removeChild(listItem);
+                addedItems.splice(index, 1);
+                Array.from(itemsList.children).forEach((item, i) => (item.dataset.index = i));
+            }, 300);
+        }
+
+        function exportData() {
+            if (!addedItems.length) {
+                alert('No items to export.');
+                return;
+            }
+
+            const headers = ['Fitting Type', 'OD Size', 'Nipple Size', 'Quantity'];
+            const data = [
+                headers,
+                ...addedItems.map(item => {
+                    let odSize = item.odSize;
+                    let nippleSize = item.nippleSize || 'N/A';
+
+                    if (item.fittingType === 'Tee' && item.nippleSize.includes(' x ')) {
+                        odSize = 'N/A';
+                    }
+
+                    if (item.fittingType === 'Reducer' || item.fittingType === '90 Degree Reducer') {
+                        nippleSize = nippleSize.replace('Reduced to: ', '').replace('"', '');
+                    } else if (item.fittingType === 'Nipple') {
+                        nippleSize = nippleSize.replace('"', '');
+                    }
+
+                    return [
+                        item.fittingType,
+                        odSize,
+                        nippleSize,
+                        item.quantity
+                    ];
+                })
+            ];
+
+            const worksheet = XLSX.utils.aoa_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Fittings');
+
+            const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
+            let filename = jobName.value.trim() || 'Untitled';
+            filename = filename.replace(/[^a-zA-Z0-9-_]/g, '_');
+            filename = `${filename}_nipple_data_${timestamp}.xlsx`;
+
+            XLSX.writeFile(workbook, filename);
+        }
+
+        function processVoiceCommand(transcript) {
+            const normalizedTranscript = transcript.toLowerCase().replace(/\\"/g, '"').replace(/['"]/g, '').replace(/inches|inch/g, '').replace(/\s+/g, ' ').trim();
+            const words = normalizedTranscript.split(/\s+/);
+
+            if (!words.includes('add')) {
+                alert('Please start with "add" to add an item.');
+                return;
+            }
+
+            const fittingTypes = [
+                'nipple', '90 degree elbow', 'tee', 'union', '45 degree elbow', 'shut-off', 'reducer',
+                'cap', 'plug', 'coupling', 'bushing', 'flexconnector', 'gastiite', 'stand off long',
+                'stand off short', 'paint'
+            ];
+            let fittingType = '';
+            let maxScore = 0;
+            for (const type of fittingTypes) {
+                const score = fuzzball.ratio(normalizedTranscript, type);
+                if (score > maxScore && score > 70) {
+                    maxScore = score;
+                    fittingType = type.replace('stand off long', 'Stand Off (Long)').replace('stand off short', 'Stand Off (Short)');
+                }
+            }
+            if (!fittingType) {
+                alert('Please specify a valid fitting type (e.g., Tee, Nipple, Reducer).');
+                return;
+            }
+            selectFittingType(fittingType);
+
+            const sizeMap = {
+                'three eighths': '3/8', 'three eighth': '3/8', 'half': '1/2', 'one half': '1/2',
+                'three quarter': '3/4', 'three quarters': '3/4', 'three fourth': '3/4', 'three fourths': '3/4',
+                'one': '1', 'one point zero': '1', '1 point zero': '1', '1 point 0': '1',
+                'one and a quarter': '1 1/4', 'one point two five': '1 1/4', '1 point two five': '1 1/4', '1 point 25': '1 1/4',
+                'one and a half': '1 1/2', 'one point five': '1 1/2', '1 point five': '1 1/2', '1 point 5': '1 1/2',
+                'two': '2', 'two point zero': '2', '2 point zero': '2', '2 point 0': '2',
+                'two and a half': '2 1/2', 'two point five': '2 1/2', '2 point five': '2 1/2', '2 point 5': '2 1/2',
+                'three': '3', 'three point zero': '3', '3 point zero': '3', '3 point 0': '3',
+                'three and a half': '3 1/2', 'three point five': '3 1/2', '3 point five': '3 1/2', '3 point 5': '3 1/2',
+                'four': '4', 'four point zero': '4', '4 point zero': '4', '4 point 0': '4',
+                'four and a half': '4 1/2', 'four point five': '4 1/2', '4 point five': '4 1/2', '4 point 5': '4 1/2',
+                'five': '5', 'five point zero': '5', '5 point zero': '5', '5 point 0': '5',
+                'five and a half': '5 1/2', 'five point five': '5 1/2', '5 point five': '5 1/2', '5 point 5': '5 1/2',
+                'six': '6', 'six point zero': '6', '6 point zero': '6', '6 point 0': '6',
+                'seven': '7', 'seven point zero': '7', '7 point zero': '7', '7 point 0': '7',
+                'eight': '8', 'eight point zero': '8', '8 point zero': '8', '8 point 0': '8',
+                'nine': '9', 'nine point zero': '9', '9 point zero': '9', '9 point 0': '9',
+                'ten': '10', 'ten point zero': '10', '10 point zero': '10', '10 point 0': '10',
+                'twelve': '12', 'twelve point zero': '12', '12 point zero': '12', '12 point 0': '12',
+                'eighteen': '18', 'eighteen point zero': '18', '18 point zero': '18', '18 point 0': '18',
+                'twenty four': '24', 'twenty-four': '24', '24 point zero': '24', '24 point 0': '24'
+            };
+
+            if (fittingType === 'Nipple') {
+                const odSizes = ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'];
+                const nippleSizes = ['1 1/2', '2', '2 1/2', '3', '3 1/2', '4', '4 1/2', '5', '5 1/2', '6', '7', '8', '9', '10', '12', '18', '24'];
+                let odSizeValue = '';
+                let nippleSizeValue = '';
+
+                const separatorMatch = normalizedTranscript.match(/(?:\d+\")?\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*(?:by|x|length|times)\s*(?:\d+\")?\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/) ||
+                                      normalizedTranscript.match(/(\d+)x(\d+)/) ||
+                                      normalizedTranscript.match(/(\d+)\s*x\s*(\d+)/);
+                if (separatorMatch) {
+                    let [_, od, nipple] = separatorMatch;
+                    od = od.replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                    nipple = nipple.replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                    if (odSizes.includes(od)) odSizeValue = od;
+                    if (nippleSizes.includes(nipple)) nippleSizeValue = nipple;
+                }
+
+                if (!odSizeValue || !nippleSizeValue) {
+                    const sizeMatches = normalizedTranscript.matchAll(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?|\d+)/g);
+                    const sizes = Array.from(sizeMatches).map(match => {
+                        let size = match[0].replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                        return size;
+                    });
+
+                    for (const size of sizes) {
+                        if (!odSizeValue && odSizes.includes(size)) {
+                            odSizeValue = size;
+                        } else if (!nippleSizeValue && nippleSizes.includes(size)) {
+                            nippleSizeValue = size;
+                        }
+                    }
+
+                    for (const key of Object.keys(sizeMap)) {
+                        if (fuzzball.ratio(normalizedTranscript, key) > 80) {
+                            const mappedSize = sizeMap[key];
+                            if (!odSizeValue && odSizes.includes(mappedSize)) {
+                                odSizeValue = mappedSize;
+                            } else if (!nippleSizeValue && nippleSizes.includes(mappedSize)) {
+                                nippleSizeValue = mappedSize;
+                            }
+                        }
+                    }
+                }
+
+                if (odSizeValue) {
+                    odSize.value = odSizeValue;
+                } else {
+                    alert('Please specify a valid OD size (e.g., 1, half, 3/4).');
+                    return;
+                }
+
+                if (nippleSizeValue) {
+                    nippleSize.value = nippleSizeValue;
+                } else {
+                    alert('Please specify a valid nipple size (e.g., 3, 6, 12).');
+                    return;
+                }
+            } else {
+                const odSizes = ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'];
+                let odSizeValue = '';
+
+                const sizeMatches = normalizedTranscript.matchAll(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/g);
+                const sizes = Array.from(sizeMatches).map(match => {
+                    return match[0].replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                });
+
+                for (const size of sizes) {
+                    if (odSizes.includes(size)) {
+                        odSizeValue = size;
+                        break;
+                    }
+                }
+
+                if (!odSizeValue) {
+                    for (const key of Object.keys(sizeMap)) {
+                        if (fuzzball.ratio(normalizedTranscript, key) > 80 && odSizes.includes(sizeMap[key])) {
+                            odSizeValue = sizeMap[key];
+                            break;
+                        }
+                    }
+                }
+
+                if (odSizeValue) {
+                    odSize.value = odSizeValue;
+                } else {
+                    alert('Please specify a valid OD size (e.g., 1, half, 3/4).');
+                    return;
+                }
+            }
+
+            const qtyMatch = normalizedTranscript.match(/quantity\s*(\d+)/);
+            let qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
+            for (const key of Object.keys(sizeMap)) {
+                if (fuzzball.ratio(normalizedTranscript, key) > 80 && ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'].includes(key)) {
+                    qty = parseInt(sizeMap[key], 10);
+                    break;
+                }
+            }
+            if (qty <= 0) {
+                alert('Please specify a valid quantity greater than 0.');
+                return;
+            }
+            quantity.value = qty;
+
+            if (fittingType === 'Reducer') {
+                let reducerSizeValue = '';
+                const toIndex = words.indexOf('to');
+                if (toIndex !== -1) {
+                    const reducerWords = words.slice(toIndex + 1).join(' ');
+                    const sizeMatches = reducerWords.matchAll(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/g);
+                    const sizes = Array.from(sizeMatches).map(match => {
+                        return match[0].replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                    });
+
+                    for (const size of sizes) {
+                        if (['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'].includes(size)) {
+                            reducerSizeValue = size;
+                            break;
+                        }
+                    }
+
+                    for (const key of Object.keys(sizeMap)) {
+                        if (fuzzball.ratio(reducerWords, key) > 80 && ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'].includes(sizeMap[key])) {
+                            reducerSizeValue = sizeMap[key];
+                            break;
+                        }
+                    }
+                }
+                if (reducerSizeValue) {
+                    reducerSize.value = reducerSizeValue;
+                } else {
+                    alert('Please specify a valid reducer size (e.g., half, 3/4).');
+                    return;
+                }
+                if (fuzzball.ratio(normalizedTranscript, '90 degree') > 80) {
+                    reducer90Degree.checked = true;
+                }
+            }
+
+            if (fittingType === 'Tee' && fuzzball.ratio(normalizedTranscript, 'custom') > 80) {
+                teeCustomSizes.checked = true;
+                toggleTeeSizes();
+                const sizesMatch = normalizedTranscript.match(/(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*x\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)\s*x\s*(\d\/\d|\d\s*(?:and\s*a\s*(quarter|half))?|\d(?:\.\d)?)/);
+                if (sizesMatch) {
+                    const sizes = sizesMatch.slice(1).map(s => {
+                        return s.replace('half', '1/2').replace('one and a quarter', '1 1/4').replace('one and a half', '1 1/2').replace('point', '.');
+                    });
+                    const validSizes = ['3/8', '1/2', '3/4', '1', '1 1/4', '1 1/2', '2', '2 1/2'];
+                    if (validSizes.includes(sizes[0])) teeBranch1.value = sizes[0];
+                    if (validSizes.includes(sizes[1])) teeBranch2.value = sizes[1];
+                    if (validSizes.includes(sizes[2])) teeBranch3.value = sizes[2];
+                } else {
+                    alert('Please specify valid tee branch sizes (e.g., 1 x 1 x half).');
+                    return;
+                }
+            }
+
+            if (validateItem()) {
+                fittingForm.dispatchEvent(new Event('submit'));
+            }
+        }
+
+        // Excel Upload/Edit Functions
+        function renderEditableTable(data) {
+            if (data.length > 0) {
+                const headers = ['Fitting Type', 'OD Size', 'Nipple Size', 'Quantity'];
+                const thead = document.createElement('thead');
+                const tbody = document.createElement('tbody');
+
+                const headerRow = document.createElement('tr');
+                headers.forEach(header => {
+                    const th = document.createElement('th');
+                    th.textContent = header;
+                    headerRow.appendChild(th);
+                });
+                const deleteHeader = document.createElement('th');
+                deleteHeader.textContent = 'Delete';
+                headerRow.appendChild(deleteHeader);
+                thead.appendChild(headerRow);
+
+                data.forEach((rowData, index) => {
+                    const tr = document.createElement('tr');
+                    headers.forEach(header => {
+                        const td = document.createElement('td');
+                        td.contentEditable = true;
+                        td.textContent = rowData[header] || '';
+                        tr.appendChild(td);
+                    });
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.className = 'delete-button';
+                    deleteButton.onclick = () => {
+                        tbody.removeChild(tr);
+                        excelData.splice(index, 1);
+                        renderEditableTable(excelData);
+                    };
+                    const deleteCell = document.createElement('td');
+                    deleteCell.appendChild(deleteButton);
+                    tr.appendChild(deleteCell);
+
+                    tbody.appendChild(tr);
+                });
+
+                editableTable.innerHTML = '';
+                editableTable.appendChild(thead);
+                editableTable.appendChild(tbody);
+                editableTableContainer.style.display = 'block';
+            } else {
+                editableTableContainer.style.display = 'none';
+            }
+        }
+
+        // Event Listeners
+        fittingForm.addEventListener('submit', addItem);
+        document.getElementById('exportData').addEventListener('click', exportData);
+
+        if (recognition) {
+            voiceButton.addEventListener('click', () => {
+                if (voiceButton.classList.contains('active')) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+        }
+
+        itemsList.addEventListener('click', (event) => {
+            const listItem = event.target.closest('.item-card');
+            if (!listItem) return;
+            const index = parseInt(listItem.dataset.index, 10);
+
+            if (event.target.closest('.delete')) {
+                deleteItem(listItem, index);
+            } else if (event.target.closest('.edit')) {
+                openEditModal(index);
+            }
+        });
+
+        let touchstartX = 0;
+        let touchendX = 0;
+
+        itemsList.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+        });
+
+        itemsList.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            const listItem = e.target.closest('.item-card');
+            if (!listItem) return;
+            const index = parseInt(listItem.dataset.index, 10);
+            if (touchstartX - touchendX > 50) {
+                deleteItem(listItem, index);
+            }
+        });
+
+        uploadForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const file = excelFileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheet];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    // Convert to standardized format
+                    const headers = jsonData[0];
+                    const dataRows = jsonData.slice(1).filter(row => row.some(cell => cell != null));
+                    excelData = dataRows.map(row => {
+                        const rowData = {};
+                        headers.forEach((header, index) => {
+                            if (header === 'OD' && !rowData['OD Size']) {
+                                rowData['OD Size'] = row[index] || '';
+                            } else if (['Fitting Type', 'OD Size', 'Nipple Size', 'Quantity'].includes(header)) {
+                                rowData[header] = row[index] || '';
+                            }
+                        });
+                        return {
+                            'Fitting Type': rowData['Fitting Type'] || '',
+                            'OD Size': rowData['OD Size'] || '',
+                            'Nipple Size': rowData['Nipple Size'] || '',
+                            'Quantity': rowData['Quantity'] || ''
+                        };
+                    });
+
+                    renderEditableTable(excelData);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        saveChangesButton.addEventListener('click', function () {
+            if (excelData.length) {
+                const updatedData = [];
+                const tableRows = editableTable.querySelectorAll('tbody tr');
+                const headers = ['Fitting Type', 'OD Size', 'Nipple Size', 'Quantity'];
+
+                tableRows.forEach(row => {
+                    const updatedRow = {};
+                    const tableCells = row.querySelectorAll('td:not(:last-child)');
+                    tableCells.forEach((cell, index) => {
+                        updatedRow[headers[index]] = cell.textContent;
+                    });
+                    updatedData.push(updatedRow);
+                });
+
+                const worksheetData = [
+                    headers,
+                    ...updatedData.map(row => [
+                        row['Fitting Type'],
+                        row['OD Size'],
+                        row['Nipple Size'],
+                        row['Quantity']
+                    ])
+                ];
+
+                const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Fittings');
+
+                const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('T', '_').split('.')[0];
+                let filename = jobName.value.trim() || 'updated_data';
+                filename = filename.replace(/[^a-zA-Z0-9-_]/g, '_');
+                filename = `${filename}_${timestamp}.xlsx`;
+
+                XLSX.writeFile(workbook, filename);
+            }
+        });
+
+        addDataButton.addEventListener('click', function () {
+            const name = addDataTypeInput.value.trim();
+            const OD = addDataODInput.value.trim();
+            const nipple = addDataNipplesizeInput.value.trim();
+            const quantity = parseInt(addDataQuantityInput.value.trim()) || 1;
+
+            if (name && OD && quantity > 0) {
+                const newRow = {
+                    'Fitting Type': name,
+                    'OD Size': OD,
+                    'Nipple Size': nipple,
+                    'Quantity': quantity
+                };
+                excelData.push(newRow);
+                renderEditableTable(excelData);
+                addDataNipplesizeInput.value = '';
+                addDataQuantityInput.value = '';
+            } else {
+                alert('Please fill in all required fields with valid values.');
+            }
+        });
     </script>
 </body>
 </html>
