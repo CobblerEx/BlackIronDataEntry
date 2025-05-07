@@ -862,17 +862,16 @@
             `;
             itemsList.prepend(listItem);
 
-            // Preserve OD size for Nipple
-            const isNipple = fitting === 'Nipple';
-            const preservedOdSize = isNipple ? odSize.value : null;
+            // Preserve OD size for all fittings
+            const preservedOdSize = odSize.value;
 
-            // Reset fields
+            // Reset fields (keep OD size unless changed)
             nippleSize.value = '';
             reducerSize.value = '';
             teeBranch1.value = '';
             teeBranch2.value = '';
             teeBranch3.value = '';
-            odSize.value = isNipple && preservedOdSize ? preservedOdSize : '3/8';
+            odSize.value = preservedOdSize; // Preserve last selected OD size
         }
 
         function openEditModal(index) {
@@ -930,6 +929,10 @@
             return stringValue;
         }
 
+        function formatAsText(value) {
+            return value.startsWith("'") ? value : `'${value}`;
+        }
+
         function exportData() {
             if (!addedItems.length) {
                 alert('No items to export.');
@@ -957,8 +960,8 @@
 
                     return [
                         item.fittingType,
-                        odSize,
-                        nippleSize,
+                        formatAsText(odSize),
+                        formatAsText(nippleSize),
                         item.quantity
                     ].map(escapeCsvValue).join(',');
                 })
@@ -971,14 +974,14 @@
             filename = `${filename}_nipple_data_${timestamp}.csv`;
 
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', filename);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const link = document.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = link;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(link);
         }
 
         function processVoiceCommand(transcript) {
