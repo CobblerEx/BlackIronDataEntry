@@ -16,7 +16,6 @@
             overflow-x: hidden;
             margin: 0;
         }
-        /* Navigation buttons */
         .nav-buttons {
             display: flex;
             justify-content: center;
@@ -357,6 +356,9 @@
         timeInSelect.value = '08:00';
         timeOutSelect.value = '08:30';
 
+        // Set default session date to today
+        document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
+
         // Array to store timesheet entries
         let entries = [];
 
@@ -379,7 +381,7 @@
             if (data) {
                 const parsed = JSON.parse(data);
                 document.getElementById('employee').value = parsed.employee || 'Lucas';
-                document.getElementById('sessionDate').value = parsed.sessionDate || '';
+                document.getElementById('sessionDate').value = parsed.sessionDate || new Date().toISOString().split('T')[0];
                 entries = parsed.entries.map(entry => ({
                     ...entry,
                     dateStr: entry.dateStr
@@ -394,7 +396,7 @@
                 entries = [];
                 localStorage.removeItem('timesheetData');
                 document.getElementById('employee').value = 'Lucas';
-                document.getElementById('sessionDate').value = '';
+                document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
                 clearForm();
                 renderTable();
             }
@@ -413,6 +415,17 @@
         function timeStrToDecimal(timeStr) {
             const [hours, minutes] = timeStr.split(':').map(Number);
             return (hours + minutes / 60) / 24;
+        }
+
+        // Validate time inputs
+        function validateTimes(timeIn, timeOut) {
+            const timeInDecimal = timeStrToDecimal(timeIn);
+            let timeOutDecimal = timeStrToDecimal(timeOut);
+            if (timeOutDecimal <= timeInDecimal) {
+                alert('Time Out must be after Time In.');
+                return false;
+            }
+            return true;
         }
 
         // Convert 24-hour time to 12-hour string
@@ -487,7 +500,6 @@
                 row.addEventListener('dragover', handleDragOver);
                 row.addEventListener('drop', handleDrop);
                 row.addEventListener('dragend', handleDragEnd);
-                // Long-press events
                 let timer;
                 row.addEventListener('touchstart', (e) => {
                     e.preventDefault();
@@ -509,7 +521,6 @@
             modal.style.display = 'block';
             overlay.style.display = 'block';
 
-            // Clear existing event listeners to avoid duplicates
             modal.innerHTML = `
                 <h3>Actions</h3>
                 <button class="edit"><i class="fas fa-edit"></i> Edit</button>
@@ -519,7 +530,6 @@
                 <button class="cancel"><i class="fas fa-times"></i> Cancel</button>
             `;
 
-            // Add event listeners
             modal.querySelector('.edit').addEventListener('click', () => {
                 handleAction(index, 'edit');
                 closeModal();
@@ -601,7 +611,6 @@
             document.getElementById('editIndex').value = -1;
             document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Add Entry';
             document.getElementById('cancelButton').style.display = 'none';
-            // Set Time In and Time Out defaults
             if (entries.length > 0) {
                 const lastEntry = entries[entries.length - 1];
                 document.getElementById('timeIn').value = lastEntry.timeOut;
@@ -663,20 +672,29 @@
         document.getElementById('actionButton').addEventListener('click', function() {
             const editIndex = parseInt(document.getElementById('editIndex').value);
             const dateStr = document.getElementById('sessionDate').value;
-            if (!dateStr) {
-                alert('Please select a date.');
-                return;
-            }
-            const jobName = document.getElementById('jobName').value;
+            const jobName = document.getElementById('jobName').value.trim();
             const address = document.getElementById('address').value;
             const timeIn = document.getElementById('timeIn').value;
             const timeOut = document.getElementById('timeOut').value;
             const description = document.getElementById('description').value;
 
+            // Validation
+            if (!dateStr) {
+                alert('Please select a date.');
+                return;
+            }
+            if (!jobName) {
+                alert('Job Name is required.');
+                return;
+            }
+            if (!validateTimes(timeIn, timeOut)) {
+                return;
+            }
+
             // Calculate decimals
             const timeInDecimal = timeStrToDecimal(timeIn);
             let timeOutDecimal = timeStrToDecimal(timeOut);
-            if (timeOutDecimal < timeInDecimal) {
+            if (timeOutDecimal <= timeInDecimal) {
                 timeOutDecimal += 1;
             }
             const totalTimeDecimal = timeOutDecimal - timeInDecimal;
@@ -711,7 +729,7 @@
             const loading = document.getElementById('loading');
             loading.style.display = 'block';
             try {
-                const employee = document.getElementById('employee').value;
+                const employee = document.getElementById('employee').value || 'Employee';
                 const dateStr = document.getElementById('sessionDate').value;
                 if (!dateStr) {
                     alert('Please select a date.');
@@ -732,8 +750,17 @@
                 ]);
 
                 sortedEntries.forEach(entry => {
+                    if (!entry.dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(entry.dateStr)) {
+                        console.warn('Invalid date format for entry:', entry.dateStr);
+                        return;
+                    }
                     const [year, month, day] = entry.dateStr.split('-').map(Number);
-                    const excelDate = new Date(Date.UTC(year, month - 1, day));
+                    if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                        console.warn('Invalid date components:', entry.dateStr);
+                        return;
+                    }
+                    // Use local timezone instead of UTC
+                    const excelDate = new Date(year, month - 1, day);
                     const dateCell = { v: excelDate, t: 'd', z: 'm/d/yyyy' };
                     const jobAddress = entry.address ? `${entry.jobName}\n${entry.address}` : entry.jobName;
                     const row = [
@@ -762,7 +789,7 @@
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
 
-                const filename = dateStr ? `${dateStr}.xlsx` : 'timesheet.xlsx';
+                const filename = `${employee}_${dateStr || 'timesheet'}.xlsx`;
                 const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
                 const blob = new Blob([wbout], { type: 'application/octet-stream' });
                 const url = window.URL.createObjectURL(blob);
