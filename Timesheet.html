@@ -16,7 +16,7 @@
             overflow-x: hidden;
             margin: 0;
         }
-        /* ---------- Navigation ---------- */
+        /* Navigation */
         .nav-buttons {display:flex;justify-content:center;gap:1rem;margin:1rem 0;flex-wrap:wrap;}
         .nav-button {display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#2a2a2a;border:2px solid #ff4500;border-radius:50%;color:#ff4500;text-decoration:none;transition:transform .2s,box-shadow .2s;position:relative;}
         .nav-button:hover{transform:scale(1.1);box-shadow:0 0 10px rgba(255,69,0,.8);}
@@ -24,9 +24,9 @@
         .nav-button::after{content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:.3rem .6rem;border-radius:4px;font-size:.8rem;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;}
         .nav-button:hover::after{opacity:1;}
         @media (max-width:600px){.nav-buttons{gap:.5rem;}.nav-button{width:36px;height:36px;}.nav-button i{font-size:1rem;}}
-        /* ---------- Typography ---------- */
+        /* Typography */
         h1,h2{font-size:clamp(1.8rem,6vw,2.2rem);color:#ff4500;text-shadow:0 0 10px rgba(255,69,0,.5);text-align:center;}
-        /* ---------- Form & Controls ---------- */
+        /* Form & Controls */
         #form,#totalTime{background:rgba(30,30,30,.9);padding:1.5rem;border-radius:.5rem;box-shadow:0 0 15px rgba(255,69,0,.3);margin-bottom:2rem;}
         label{display:block;margin-bottom:.5rem;font-size:clamp(1rem,3vw,1.2rem);color:#e0e0e0;}
         input,select,textarea{width:100%;padding:.6rem;margin-bottom:.75rem;font-size:clamp(1rem,3vw,1.1rem);background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:.3rem;box-sizing:border-box;transition:box-shadow .3s ease;}
@@ -37,18 +37,18 @@
         button:disabled{background:#555;cursor:not-allowed;box-shadow:none;}
         #cancelButton,#clearAllButton{background:#dc3545;}
         #cancelButton:hover,#clearAllButton:hover{box-shadow:0 0 12px rgba(220,53,69,.8);}
-        /* ---------- Voice UI ---------- */
+        /* Voice UI */
         #voiceControl{margin-top:1rem;display:flex;align-items:center;gap:.5rem;}
-        #voiceBtn{background:#ff4500;padding:.6rem 1rem;border-radius:.3rem;color:#fff;cursor:pointer;}
+        #voiceBtn,#commandsBtn{background:#ff4500;padding:.6rem 1rem;border-radius:.3rem;color:#fff;cursor:pointer;}
         #voiceBtn.listening{background:#28a745;}
         #voiceStatus{font-size:.9rem;color:#ff4500;}
-        /* ---------- Table ---------- */
+        /* Table */
         table{width:100%;border-collapse:collapse;margin-top:1rem;background:rgba(30,30,30,.9);border-radius:.5rem;overflow:hidden;box-shadow:0 0 15px rgba(255,69,0,.3);}
         th,td{border:1px solid #ff4500;padding:.5rem;text-align:left;font-size:clamp(.8rem,2.5vw,.9rem);}
         th{background:linear-gradient(90deg,#ff4500,#e03c00);color:#fff;position:sticky;top:0;z-index:10;}
         td{background:#2a2a2a;}
         tbody tr{transition:background .3s,transform .3s;animation:fadeIn .5s ease-in;}
-        tbody tr:hover{background:#3a3a2a;transform:translateY(-2px);}
+        tbody tr:hover{background:#3a3a3a;transform:translateY(-2px);}
         tbody tr.dragging{opacity:.5;background:#ff4500;}
         .drag-handle{cursor:move;color:#ff4500;padding-right:.5rem;transition:transform .2s;}
         .drag-handle:hover{transform:scale(1.2);}
@@ -56,11 +56,15 @@
         #totalTime{font-weight:bold;font-size:clamp(1rem,3vw,1.2rem);color:#ff4500;text-shadow:0 0 5px rgba(255,69,0,.5);}
         #loading{display:none;text-align:center;padding:1rem;color:#ff4500;}
         .spinner{border:4px solid rgba(255,69,0,.3);border-top:4px solid #ff4500;border-radius:50%;width:24px;height:24px;animation:spin 1s linear infinite;display:inline-block;}
-        /* ---------- Modal ---------- */
-        #actionModal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(30,30,30,.95);padding:1.5rem;border-radius:.5rem;box-shadow:0 0 20px rgba(255,69,0,.5);z-index:1000;text-align:center;}
-        #actionModal button{display:block;width:100%;margin:.5rem 0;padding:.8rem;font-size:1rem;}
-        #actionModal .cancel{background:#dc3545;}
+        /* Modals */
+        #actionModal,#commandsModal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(30,30,30,.95);padding:1.5rem;border-radius:.5rem;box-shadow:0 0 20px rgba(255,69,0,.5);z-index:1000;text-align:center;}
+        #actionModal button,#commandsModal button{display:block;width:100%;margin:.5rem 0;padding:.8rem;font-size:1rem;}
+        #actionModal .cancel,#commandsModal .cancel{background:#dc3545;}
         #overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:999;}
+        #commandsModal table{width:100%;border-collapse:collapse;margin-top:1rem;}
+        #commandsModal th,#commandsModal td{border:1px solid #ff4500;padding:.5rem;font-size:.9rem;}
+        #commandsModal th{background:linear-gradient(90deg,#ff4500,#e03c00);color:#fff;}
+        #commandsModal td{background:#2a2a2a;}
         @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @media (max-width:600px){
@@ -78,46 +82,43 @@
         <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html" class="nav-button" data-tooltip="Upload CSV"><i class="fas fa-upload"></i></a>
         <a href="https://cobblerex.github.io/BlackIronDataEntry/Timesheet.html" class="nav-button" data-tooltip="Timesheet"><i class="fas fa-clock"></i></a>
     </div>
-
     <h1>Timesheet Creator</h1>
-
     <div id="form">
         <label><i class="fas fa-user"></i> Employee Name: <input type="text" id="employee" value="Lucas"></label>
         <label><i class="fas fa-calendar"></i> Date: <input type="date" id="sessionDate"></label>
-
         <h2><i class="fas fa-plus-circle"></i> Add Job Entry</h2>
         <label><i class="fas fa-briefcase"></i> Job Name: <input type="text" id="jobName"></label>
         <label><i class="fas fa-map-marker-alt"></i> Address: <input type="text" id="address"></label>
         <label><i class="fas fa-clock"></i> Time In: <select id="timeIn"></select></label>
         <label><i class="fas fa-clock"></i> Time Out: <select id="timeOut"></select></label>
         <label><i class="fas fa-comment"></i> Job Description: <textarea id="description"></textarea></label>
-
         <input type="hidden" id="editIndex" value="-1">
         <button id="actionButton"><i class="fas fa-save"></i> Add Entry</button>
         <button id="cancelButton" style="display:none;"><i class="fas fa-times"></i> Cancel</button>
     </div>
-
-    <!-- Voice control UI -->
     <div id="voiceControl">
         <button id="voiceBtn"><i class="fas fa-microphone"></i> Start Voice</button>
+        <button id="commandsBtn"><i class="fas fa-list"></i> List Commands</button>
         <span id="voiceStatus"></span>
     </div>
-
     <div id="totalTime"><i class="fas fa-hourglass"></i> Total Time: 0 hours 0 minutes</div>
-
     <table id="entriesTable">
         <thead>
             <tr>
-                <th>Date</th><th>Job Name / Address</th><th>Time In</th><th>Time Out</th><th>Total Time</th><th>Job Description</th><th>Actions</th>
+                <th>Date</th>
+                <th>Job Name / Address</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Total Time</th>
+                <th>Job Description</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody></tbody>
     </table>
-
     <div id="loading"><span class="spinner"></span> Generating Excel...</div>
     <button id="generateExcel"><i class="fas fa-file-excel"></i> Generate Excel</button>
     <button id="clearAllButton"><i class="fas fa-trash-alt"></i> Clear All</button>
-
     <div id="overlay"></div>
     <div id="actionModal">
         <h3>Actions</h3>
@@ -127,10 +128,34 @@
         <button class="delete"><i class="fas fa-trash"></i> Delete</button>
         <button class="cancel"><i class="fas fa-times"></i> Cancel</button>
     </div>
-
+    <div id="commandsModal">
+        <h3>Voice Commands</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Command</th>
+                    <th>Example</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Add job / New entry</td><td>"Add job"</td><td>Clears form for a new entry</td></tr>
+                <tr><td>Job name [name]</td><td>"Job name Acme Project"</td><td>Sets Job Name field</td></tr>
+                <tr><td>Address [address]</td><td>"Address 123 Main St"</td><td>Sets Address field</td></tr>
+                <tr><td>Time in [time]</td><td>"Time in 9 AM"</td><td>Sets Time In field</td></tr>
+                <tr><td>Time out [time]</td><td>"Time out 5 PM"</td><td>Sets Time Out field</td></tr>
+                <tr><td>Description [text]</td><td>"Description worked on site"</td><td>Sets Job Description field</td></tr>
+                <tr><td>Save / Add entry</td><td>"Save"</td><td>Submits the form</td></tr>
+                <tr><td>Generate Excel / Export</td><td>"Generate Excel"</td><td>Downloads Excel file</td></tr>
+                <tr><td>Clear all</td><td>"Clear all"</td><td>Clears all entries (with confirmation)</td></tr>
+                <tr><td>Edit row [number]</td><td>"Edit row 2"</td><td>Edits the specified row</td></tr>
+            </tbody>
+        </table>
+        <button class="cancel"><i class="fas fa-times"></i> Close</button>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        /* ---------- Time helpers ---------- */
+        // Time helpers
         function generateTimeOptions() {
             const opts = [];
             for (let h = 0; h < 24; h++) {
@@ -146,63 +171,63 @@
         const timeOptions = generateTimeOptions();
         const timeInSel = document.getElementById('timeIn');
         const timeOutSel = document.getElementById('timeOut');
-        timeOptions.forEach(o=>{ const opt=document.createElement('option'); opt.value=o.value; opt.text=o.text;
+        timeOptions.forEach(o => { const opt = document.createElement('option'); opt.value = o.value; opt.text = o.text;
             timeInSel.add(opt); timeOutSel.add(opt.cloneNode(true)); });
-        timeInSel.value='08:00'; timeOutSel.value='08:30';
+        timeInSel.value = '08:00'; timeOutSel.value = '08:30';
         document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
 
-        /* ---------- Core data ---------- */
+        // Core data
         let entries = [];
 
-        /* ---------- LocalStorage ---------- */
-        function saveToLocalStorage(){
-            const data={employee:document.getElementById('employee').value,
-                        sessionDate:document.getElementById('sessionDate').value,
-                        entries};
-            localStorage.setItem('timesheetData',JSON.stringify(data));
+        // LocalStorage
+        function saveToLocalStorage() {
+            const data = {employee: document.getElementById('employee').value,
+                          sessionDate: document.getElementById('sessionDate').value,
+                          entries};
+            localStorage.setItem('timesheetData', JSON.stringify(data));
         }
-        function loadFromLocalStorage(){
-            const raw=localStorage.getItem('timesheetData');
-            if(!raw) return;
-            const d=JSON.parse(raw);
-            document.getElementById('employee').value=d.employee||'Lucas';
-            document.getElementById('sessionDate').value=d.sessionDate||new Date().toISOString().split('T')[0];
-            entries=d.entries||[];
+        function loadFromLocalStorage() {
+            const raw = localStorage.getItem('timesheetData');
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            document.getElementById('employee').value = d.employee || 'Lucas';
+            document.getElementById('sessionDate').value = d.sessionDate || new Date().toISOString().split('T')[0];
+            entries = d.entries || [];
             renderTable();
         }
-        function clearAll(){
-            if(confirm('Clear everything?')){entries=[]; localStorage.removeItem('timesheetData');
-                document.getElementById('employee').value='Lucas';
-                document.getElementById('sessionDate').value=new Date().toISOString().split('T')[0];
+        function clearAll() {
+            if (confirm('Clear everything?')) {entries = []; localStorage.removeItem('timesheetData');
+                document.getElementById('employee').value = 'Lucas';
+                document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
                 clearForm(); renderTable();}
         }
 
-        /* ---------- Time utilities ---------- */
-        function timeStrToDecimal(t){const [h,m]=t.split(':').map(Number);return (h+m/60)/24;}
-        function to12HourString(t){const [h,m]=t.split(':').map(Number);
-            const period=h<12?'AM':'PM'; let h12=h%12; if(h12===0)h12=12;
+        // Time utilities
+        function timeStrToDecimal(t) {const [h, m] = t.split(':').map(Number); return (h + m / 60) / 24;}
+        function to12HourString(t) {const [h, m] = t.split(':').map(Number);
+            const period = h < 12 ? 'AM' : 'PM'; let h12 = h % 12; if (h12 === 0) h12 = 12;
             return `${h12}:${String(m).padStart(2,'0')} ${period}`;}
-        function formatTotalTime(dec){
-            let hrs=dec*24; const h=Math.floor(hrs);
-            let min=Math.round((hrs-h)*60/30)*30; if(min>=60){min-=60; hrs++;}
+        function formatTotalTime(dec) {
+            let hrs = dec * 24; const h = Math.floor(hrs);
+            let min = Math.round((hrs - h) * 60 / 30) * 30; if (min >= 60) {min -= 60; hrs++;}
             return `${Math.floor(hrs)}:${String(min).padStart(2,'0')}`;}
-        function getNextTimeOption(cur){
-            const i=timeOptions.findIndex(o=>o.value===cur);
-            return i+1<timeOptions.length?timeOptions[i+1].value:timeOptions[0].value;
+        function getNextTimeOption(cur) {
+            const i = timeOptions.findIndex(o => o.value === cur);
+            return i + 1 < timeOptions.length ? timeOptions[i + 1].value : timeOptions[0].value;
         }
-        function formatDateString(d){
-            if(!d) return '';
-            const [y,m,day]=d.split('-').map(Number);
+        function formatDateString(d) {
+            if (!d) return '';
+            const [y, m, day] = d.split('-').map(Number);
             return `${String(m).padStart(2,'0')}/${String(day).padStart(2,'0')}/${y}`;
         }
 
-        /* ---------- Table rendering ---------- */
-        function renderTable(){
-            const tbody=document.querySelector('#entriesTable tbody'); tbody.innerHTML='';
-            entries.forEach((e,i)=>{
-                const jobAddr=e.address?`${e.jobName}\n${e.address}`:e.jobName;
-                const tr=document.createElement('tr'); tr.draggable=true; tr.dataset.index=i;
-                tr.innerHTML=`
+        // Table rendering
+        function renderTable() {
+            const tbody = document.querySelector('#entriesTable tbody'); tbody.innerHTML = '';
+            entries.forEach((e, i) => {
+                const jobAddr = e.address ? `${e.jobName}\n${e.address}` : e.jobName;
+                const tr = document.createElement('tr'); tr.draggable = true; tr.dataset.index = i;
+                tr.innerHTML = `
                     <td>${formatDateString(e.dateStr)}</td>
                     <td>${jobAddr}</td>
                     <td>${to12HourString(e.timeIn)}</td>
@@ -219,280 +244,276 @@
                     </td>`;
                 tbody.appendChild(tr);
             });
-            document.querySelectorAll('#entriesTable tbody tr').forEach(r=>{
-                r.addEventListener('dragstart',handleDragStart);
-                r.addEventListener('dragover',handleDragOver);
-                r.addEventListener('drop',handleDrop);
-                r.addEventListener('dragend',handleDragEnd);
+            document.querySelectorAll('#entriesTable tbody tr').forEach(r => {
+                r.addEventListener('dragstart', handleDragStart);
+                r.addEventListener('dragover', handleDragOver);
+                r.addEventListener('drop', handleDrop);
+                r.addEventListener('dragend', handleDragEnd);
                 let timer;
-                r.addEventListener('touchstart',ev=>{ev.preventDefault();
-                    timer=setTimeout(()=>showActionModal(r.dataset.index),500);
-                    if('vibrate' in navigator) navigator.vibrate(50);
+                r.addEventListener('touchstart', ev => {ev.preventDefault();
+                    timer = setTimeout(() => showActionModal(r.dataset.index), 500);
+                    if ('vibrate' in navigator) navigator.vibrate(50);
                 });
-                r.addEventListener('touchend',()=>clearTimeout(timer));
-                r.addEventListener('touchcancel',()=>clearTimeout(timer));
+                r.addEventListener('touchend', () => clearTimeout(timer));
+                r.addEventListener('touchcancel', () => clearTimeout(timer));
             });
             updateTotalTime(); saveToLocalStorage();
         }
 
-        /* ---------- Drag & Modal ---------- */
-        function handleDragStart(e){e.target.classList.add('dragging');e.dataTransfer.setData('text/plain',e.target.dataset.index);}
-        function handleDragOver(e){e.preventDefault();}
-        function handleDrop(e){e.preventDefault();
-            const src=parseInt(e.dataTransfer.getData('text/plain'));
-            const dest=parseInt(e.target.closest('tr').dataset.index);
-            if(src!==dest){const [mov]=entries.splice(src,1); entries.splice(dest,0,mov); renderTable();}
+        // Drag & Modal
+        function handleDragStart(e) {e.target.classList.add('dragging'); e.dataTransfer.setData('text/plain', e.target.dataset.index);}
+        function handleDragOver(e) {e.preventDefault();}
+        function handleDrop(e) {e.preventDefault();
+            const src = parseInt(e.dataTransfer.getData('text/plain'));
+            const dest = parseInt(e.target.closest('tr').dataset.index);
+            if (src !== dest) {const [mov] = entries.splice(src, 1); entries.splice(dest, 0, mov); renderTable();}
         }
-        function handleDragEnd(e){e.target.classList.remove('dragging');}
-        function showActionModal(idx){
-            const modal=document.getElementById('actionModal');
-            const overlay=document.getElementById('overlay');
-            modal.style.display='block'; overlay.style.display='block';
-            modal.innerHTML=`<h3>Actions</h3>
+        function handleDragEnd(e) {e.target.classList.remove('dragging');}
+        function showActionModal(idx) {
+            const modal = document.getElementById('actionModal');
+            const overlay = document.getElementById('overlay');
+            modal.style.display = 'block'; overlay.style.display = 'block';
+            modal.innerHTML = `<h3>Actions</h3>
                 <button class="edit">Edit</button>
-                <button class="up" ${idx===0?'disabled':''}>Move Up</button>
-                <button class="down" ${idx===entries.length-1?'disabled':''}>Move Down</button>
+                <button class="up" ${idx === 0 ? 'disabled' : ''}>Move Up</button>
+                <button class="down" ${idx === entries.length - 1 ? 'disabled' : ''}>Move Down</button>
                 <button class="delete">Delete</button>
                 <button class="cancel">Cancel</button>`;
-            modal.querySelector('.edit').onclick=()=>{handleAction(idx,'edit');closeModal();};
-            modal.querySelector('.up').onclick=()=>{handleAction(idx,'up');closeModal();};
-            modal.querySelector('.down').onclick=()=>{handleAction(idx,'down');closeModal();};
-            modal.querySelector('.delete').onclick=()=>{handleAction(idx,'delete');closeModal();};
-            modal.querySelector('.cancel').onclick=closeModal;
-            overlay.onclick=closeModal;
+            modal.querySelector('.edit').onclick = () => {handleAction(idx, 'edit'); closeModal();};
+            modal.querySelector('.up').onclick = () => {handleAction(idx, 'up'); closeModal();};
+            modal.querySelector('.down').onclick = () => {handleAction(idx, 'down'); closeModal();};
+            modal.querySelector('.delete').onclick = () => {handleAction(idx, 'delete'); closeModal();};
+            modal.querySelector('.cancel').onclick = closeModal;
+            overlay.onclick = closeModal;
         }
-        function closeModal(){document.getElementById('actionModal').style.display='none';
-            document.getElementById('overlay').style.display='none';}
-        function handleAction(i,act){
-            if(act==='edit') editRow(i);
-            else if(act==='up') moveUp(i);
-            else if(act==='down') moveDown(i);
-            else if(act==='delete') deleteRow(i);
+        function showCommandsModal() {
+            const modal = document.getElementById('commandsModal');
+            const overlay = document.getElementById('overlay');
+            modal.style.display = 'block'; overlay.style.display = 'block';
+            modal.querySelector('.cancel').onclick = closeModal;
+            overlay.onclick = closeModal;
         }
-        function moveUp(i){if(i>0){[entries[i-1],entries[i]]=[entries[i],entries[i-1]];renderTable();scrollToRow(i-1);}}
-        function moveDown(i){if(i<entries.length-1){[entries[i],entries[i+1]]=[entries[i+1],entries[i]];renderTable();scrollToRow(i+1);}}
-        function scrollToRow(i){const r=document.querySelector(`#entriesTable tbody tr[data-index="${i}"]`);if(r)r.scrollIntoView({behavior:'smooth',block:'nearest'});}
-        function deleteRow(i){if(confirm('Delete this entry?')){entries.splice(i,1);renderTable();}}
-        function editRow(i){
-            const e=entries[i];
-            document.getElementById('jobName').value=e.jobName;
-            document.getElementById('address').value=e.address;
-            document.getElementById('timeIn').value=e.timeIn;
-            document.getElementById('timeOut').value=e.timeOut;
-            document.getElementById('description').value=e.description;
-            document.getElementById('editIndex').value=i;
-            document.getElementById('actionButton').innerHTML='<i class="fas fa-save"></i> Save Changes';
-            document.getElementById('cancelButton').style.display='inline';
+        function closeModal() {
+            document.getElementById('actionModal').style.display = 'none';
+            document.getElementById('commandsModal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+        function handleAction(i, act) {
+            if (act === 'edit') editRow(i);
+            else if (act === 'up') moveUp(i);
+            else if (act === 'down') moveDown(i);
+            else if (act === 'delete') deleteRow(i);
+        }
+        function moveUp(i) {if (i > 0) {[entries[i - 1], entries[i]] = [entries[i], entries[i - 1]]; renderTable(); scrollToRow(i - 1);}}
+        function moveDown(i) {if (i < entries.length - 1) {[entries[i], entries[i + 1]] = [entries[i + 1], entries[i]]; renderTable(); scrollToRow(i + 1);}}
+        function scrollToRow(i) {const r = document.querySelector(`#entriesTable tbody tr[data-index="${i}"]`); if (r) r.scrollIntoView({behavior: 'smooth', block: 'nearest'});}
+        function deleteRow(i) {if (confirm('Delete this entry?')) {entries.splice(i, 1); renderTable();}}
+        function editRow(i) {
+            const e = entries[i];
+            document.getElementById('jobName').value = e.jobName;
+            document.getElementById('address').value = e.address;
+            document.getElementById('timeIn').value = e.timeIn;
+            document.getElementById('timeOut').value = e.timeOut;
+            document.getElementById('description').value = e.description;
+            document.getElementById('editIndex').value = i;
+            document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Save Changes';
+            document.getElementById('cancelButton').style.display = 'inline';
         }
 
-        /* ---------- Total time ---------- */
-        function updateTotalTime(){
-            const tot=entries.reduce((s,e)=>s+e.totalTimeDecimal,0);
-            let hrs=tot*24; const h=Math.floor(hrs);
-            let min=Math.round((hrs-h)*60/30)*30; if(min>=60){min-=60; hrs++;}
-            document.getElementById('totalTime').innerHTML=`<i class="fas fa-hourglass"></i> Total Time: ${Math.floor(hrs)} hours ${min} minutes`;
+        // Total time
+        function updateTotalTime() {
+            const tot = entries.reduce((s, e) => s + e.totalTimeDecimal, 0);
+            let hrs = tot * 24; const h = Math.floor(hrs);
+            let min = Math.round((hrs - h) * 60 / 30) * 30; if (min >= 60) {min -= 60; hrs++;}
+            document.getElementById('totalTime').innerHTML = `<i class="fas fa-hourglass"></i> Total Time: ${Math.floor(hrs)} hours ${min} minutes`;
         }
 
-        /* ---------- Form handling ---------- */
-        function clearForm(){
-            document.getElementById('jobName').value='';
-            document.getElementById('address').value='';
-            document.getElementById('description').value='';
-            document.getElementById('editIndex').value=-1;
-            document.getElementById('actionButton').innerHTML='<i class="fas fa-save"></i> Add Entry';
-            document.getElementById('cancelButton').style.display='none';
-            if(entries.length){
-                const last=entries[entries.length-1];
-                document.getElementById('timeIn').value=last.timeOut;
-                document.getElementById('timeOut').value=getNextTimeOption(last.timeOut);
-            }else{
-                document.getElementById('timeIn').value='08:00';
-                document.getElementById('timeOut').value='08:30';
+        // Form handling
+        function clearForm() {
+            document.getElementById('jobName').value = '';
+            document.getElementById('address').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('editIndex').value = -1;
+            document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Add Entry';
+            document.getElementById('cancelButton').style.display = 'none';
+            if (entries.length) {
+                const last = entries[entries.length - 1];
+                document.getElementById('timeIn').value = last.timeOut;
+                document.getElementById('timeOut').value = getNextTimeOption(last.timeOut);
+            } else {
+                document.getElementById('timeIn').value = '08:00';
+                document.getElementById('timeOut').value = '08:30';
             }
         }
-        document.getElementById('actionButton').addEventListener('click',()=>{
-            const editIdx=parseInt(document.getElementById('editIndex').value);
-            const dateStr=document.getElementById('sessionDate').value;
-            const job=document.getElementById('jobName').value.trim();
-            const addr=document.getElementById('address').value;
-            const tIn=document.getElementById('timeIn').value;
-            const tOut=document.getElementById('timeOut').value;
-            const desc=document.getElementById('description').value;
-            if(!dateStr){alert('Select a date.');return;}
-            if(!job){alert('Job name required.');return;}
-            if(!validateTimes(tIn,tOut)) return;
-            const inDec=timeStrToDecimal(tIn);
-            let outDec=timeStrToDecimal(tOut);
-            if(outDec<=inDec) outDec+=1;
-            const totDec=outDec-inDec;
-            const entry={dateStr,jobName:job,address:addr,timeIn:tIn,timeOut:tOut,totalTimeDecimal:totDec,description:desc};
-            if(editIdx===-1) entries.push(entry); else entries[editIdx]=entry;
+        document.getElementById('actionButton').addEventListener('click', () => {
+            const editIdx = parseInt(document.getElementById('editIndex').value);
+            const dateStr = document.getElementById('sessionDate').value;
+            const job = document.getElementById('jobName').value.trim();
+            const addr = document.getElementById('address').value;
+            const tIn = document.getElementById('timeIn').value;
+            const tOut = document.getElementById('timeOut').value;
+            const desc = document.getElementById('description').value;
+            if (!dateStr) {alert('Select a date.'); return;}
+            if (!job) {alert('Job name required.'); return;}
+            if (!validateTimes(tIn, tOut)) return;
+            const inDec = timeStrToDecimal(tIn);
+            let outDec = timeStrToDecimal(tOut);
+            if (outDec <= inDec) outDec += 1;
+            const totDec = outDec - inDec;
+            const entry = {dateStr, jobName: job, address: addr, timeIn: tIn, timeOut: tOut, totalTimeDecimal: totDec, description: desc};
+            if (editIdx === -1) entries.push(entry); else entries[editIdx] = entry;
             renderTable(); clearForm();
         });
-        document.getElementById('cancelButton').onclick=clearForm;
-        document.getElementById('clearAllButton').onclick=clearAll;
-        function validateTimes(inT,outT){
-            const i=timeStrToDecimal(inT), o=timeStrToDecimal(outT);
-            if(o<=i){alert('Time Out must be after Time In.');return false;}
+        document.getElementById('cancelButton').onclick = clearForm;
+        document.getElementById('clearAllButton').onclick = clearAll;
+        function validateTimes(inT, outT) {
+            const i = timeStrToDecimal(inT), o = timeStrToDecimal(outT);
+            if (o <= i) {alert('Time Out must be after Time In.'); return false;}
             return true;
         }
 
-        /* ---------- Excel export (date fixed) ---------- */
-        document.getElementById('generateExcel').addEventListener('click',()=>{
-            const loading=document.getElementById('loading'); loading.style.display='block';
-            try{
-                const emp=document.getElementById('employee').value||'Employee';
-                const dateStr=document.getElementById('sessionDate').value;
-                if(!dateStr){alert('Select a date.');loading.style.display='none';return;}
-                const sorted=[...entries].sort((a,b)=>timeStrToDecimal(a.timeIn)-timeStrToDecimal(b.timeIn));
-                const data=[];
-                data.push([{v:`Employee Name: ${emp}`,t:'s'},null,null,null,null,null]);
-                data.push([{v:'Date',t:'s'},{v:'Job Name / Address',t:'s'},{v:'Time In',t:'s'},{v:'Time Out',t:'s'},{v:'Total Time',t:'s'},{v:'Job Description',t:'s'}]);
-                sorted.forEach(e=>{
-                    if(!e.dateStr||!/^\d{4}-\d{2}-\d{2}$/.test(e.dateStr)) return;
-                    const [y,m,d]=e.dateStr.split('-').map(Number);
-                    const excelDt=new Date(y,m-1,d); // local timezone
-                    const row=[
-                        {v:excelDt,t:'d',z:'m/d/yyyy'},
-                        {v:e.address?`${e.jobName}\n${e.address}`:e.jobName,t:'s'},
-                        {v:to12HourString(e.timeIn),t:'s'},
-                        {v:to12HourString(e.timeOut),t:'s'},
-                        {v:formatTotalTime(e.totalTimeDecimal),t:'s'},
-                        {v:e.description,t:'s'}
+        // Excel export
+        document.getElementById('generateExcel').addEventListener('click', () => {
+            const loading = document.getElementById('loading'); loading.style.display = 'block';
+            try {
+                const emp = document.getElementById('employee').value || 'Employee';
+                const dateStr = document.getElementById('sessionDate').value;
+                if (!dateStr) {alert('Select a date.'); loading.style.display = 'none'; return;}
+                const sorted = [...entries].sort((a, b) => timeStrToDecimal(a.timeIn) - timeStrToDecimal(b.timeIn));
+                const data = [];
+                data.push([{v: `Employee Name: ${emp}`, t: 's'}, null, null, null, null, null]);
+                data.push([{v: 'Date', t: 's'}, {v: 'Job Name / Address', t: 's'}, {v: 'Time In', t: 's'}, {v: 'Time Out', t: 's'}, {v: 'Total Time', t: 's'}, {v: 'Job Description', t: 's'}]);
+                sorted.forEach(e => {
+                    if (!e.dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(e.dateStr)) return;
+                    const [y, m, d] = e.dateStr.split('-').map(Number);
+                    const excelDt = new Date(y, m - 1, d);
+                    const row = [
+                        {v: excelDt, t: 'd', z: 'm/d/yyyy'},
+                        {v: e.address ? `${e.jobName}\n${e.address}` : e.jobName, t: 's'},
+                        {v: to12HourString(e.timeIn), t: 's'},
+                        {v: to12HourString(e.timeOut), t: 's'},
+                        {v: formatTotalTime(e.totalTimeDecimal), t: 's'},
+                        {v: e.description, t: 's'}
                     ];
                     data.push(row);
                 });
-                const sum=sorted.reduce((s,e)=>s+e.totalTimeDecimal,0);
-                const totH=Math.floor(sum*24);
-                let totM=Math.round((sum*24-totH)*60/30)*30; if(totM>=60){totM-=60; totH++;}
-                data.push([null,null,null,{v:'Total Hours =',t:'s'},{v:`${totH}:${String(totM).padStart(2,'0')} hours`,t:'s'},null]);
-                const ws=XLSX.utils.aoa_to_sheet(data);
-                const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Timesheet');
-                const fname=`${emp}_${dateStr}.xlsx`;
-                const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-                const blob=new Blob([out],{type:'application/octet-stream'});
-                const url=URL.createObjectURL(blob);
-                const a=document.createElement('a'); a.href=url; a.download=fname; document.body.appendChild(a); a.click();
+                const sum = sorted.reduce((s, e) => s + e.totalTimeDecimal, 0);
+                const totH = Math.floor(sum * 24);
+                let totM = Math.round((sum * 24 - totH) * 60 / 30) * 30; if (totM >= 60) {totM -= 60; totH++;}
+                data.push([null, null, null, {v: 'Total Hours =', t: 's'}, {v: `${totH}:${String(totM).padStart(2,'0')} hours`, t: 's'}, null]);
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
+                const fname = `${emp}_${dateStr}.xlsx`;
+                const out = XLSX.write(wb, {bookType: 'xlsx', type: 'array'});
+                const blob = new Blob([out], {type: 'application/octet-stream'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click();
                 document.body.removeChild(a); URL.revokeObjectURL(url);
-                loading.style.display='none';
-            }catch(err){loading.style.display='none';alert('Export failed: '+err.message);}
+                loading.style.display = 'none';
+            } catch (err) {loading.style.display = 'none'; alert('Export failed: ' + err.message);}
         });
 
-        /* ---------- Voice recognition ---------- */
-        const voiceBtn=document.getElementById('voiceBtn');
-        const voiceStatus=document.getElementById('voiceStatus');
-        let recognition=null;
-        let listening=false;
-
-        if('SpeechRecognition' in window || 'webkitSpeechRecognition' in window){
-            const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-            recognition=new SpeechRecognition();
-            recognition.continuous=false;
-            recognition.interimResults=false;
-            recognition.lang='en-US';
-
-            recognition.onresult=e=>{
-                const spoken=e.results[0][0].transcript.trim().toLowerCase();
-                voiceStatus.textContent=`Heard: "${spoken}"`;
+        // Voice recognition
+        const voiceBtn = document.getElementById('voiceBtn');
+        const voiceStatus = document.getElementById('voiceStatus');
+        let recognition = null;
+        let listening = false;
+        if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+            recognition.onresult = e => {
+                const spoken = e.results[0][0].transcript.trim().toLowerCase();
+                voiceStatus.textContent = `Heard: "${spoken}"`;
                 processVoiceCommand(spoken);
             };
-            recognition.onerror=ev=>{voiceStatus.textContent='Error: '+ev.error; stopListening();}
-            recognition.onend=()=>{voiceBtn.classList.remove('listening'); listening=false; voiceBtn.innerHTML='<i class="fas fa-microphone"></i> Start Voice';}
-        }else{
-            // hide button if not supported
-            voiceBtn.style.display='none';
+            recognition.onerror = ev => {voiceStatus.textContent = 'Error: ' + ev.error; stopListening();};
+            recognition.onend = () => {voiceBtn.classList.remove('listening'); listening = false; voiceBtn.innerHTML = '<i class="fas fa-microphone"></i> Start Voice';};
+        } else {
+            voiceBtn.style.display = 'none';
             console.warn('SpeechRecognition not supported in this browser');
         }
-
-        voiceBtn.addEventListener('click',()=>{
-            if(!recognition) return;
-            if(listening){stopListening();return;}
+        voiceBtn.addEventListener('click', () => {
+            if (!recognition) return;
+            if (listening) {stopListening(); return;}
             startListening();
         });
-
-        function startListening(){
+        document.getElementById('commandsBtn').addEventListener('click', showCommandsModal);
+        function startListening() {
             voiceBtn.classList.add('listening');
-            voiceBtn.innerHTML='<i class="fas fa-microphone-slash"></i> Stop';
-            voiceStatus.textContent='Listening...';
-            recognition.start(); listening=true;
+            voiceBtn.innerHTML = '<i class="fas fa-microphone-slash"></i> Stop';
+            voiceStatus.textContent = 'Listening...';
+            recognition.start(); listening = true;
         }
-        function stopListening(){
-            recognition.stop(); listening=false;
+        function stopListening() {
+            recognition.stop(); listening = false;
         }
-
-        // Simple command → action mapping
-        function processVoiceCommand(cmd){
-            // ---- Form filling -------------------------------------------------
-            if(cmd.includes('add job')||cmd.includes('new entry')){
-                // reset form to add mode
+        function processVoiceCommand(cmd) {
+            if (cmd.includes('add job') || cmd.includes('new entry')) {
                 clearForm();
-                voiceStatus.textContent='Ready to add a new entry';
+                voiceStatus.textContent = 'Ready to add a new entry';
                 return;
             }
-            if(cmd.includes('job name')){
-                const match=cmd.match(/job name\s+(.+)/);
-                if(match){document.getElementById('jobName').value=match[1]; voiceStatus.textContent='Job name set'; return;}
+            if (cmd.includes('job name')) {
+                const match = cmd.match(/job name\s+(.+)/);
+                if (match) {document.getElementById('jobName').value = match[1]; voiceStatus.textContent = 'Job name set'; return;}
             }
-            if(cmd.includes('address')){
-                const match=cmd.match(/address\s+(.+)/);
-                if(match){document.getElementById('address').value=match[1]; voiceStatus.textContent='Address set'; return;}
+            if (cmd.includes('address')) {
+                const match = cmd.match(/address\s+(.+)/);
+                if (match) {document.getElementById('address').value = match[1]; voiceStatus.textContent = 'Address set'; return;}
             }
-            if(cmd.includes('time in')){
-                const match=cmd.match(/time in\s+([\d:]+ ?[ap]m)/i);
-                if(match){setSelectTime('timeIn',match[1]); voiceStatus.textContent='Time In set'; return;}
+            if (cmd.includes('time in')) {
+                const match = cmd.match(/time in\s+([\d:]+ ?[ap]m)/i);
+                if (match) {setSelectTime('timeIn', match[1]); voiceStatus.textContent = 'Time In set'; return;}
             }
-            if(cmd.includes('time out')){
-                const match=cmd.match(/time out\s+([\d:]+ ?[ap]m)/i);
-                if(match){setSelectTime('timeOut',match[1]); voiceStatus.textContent='Time Out set'; return;}
+            if (cmd.includes('time out')) {
+                const match = cmd.match(/time out\s+([\d:]+ ?[ap]m)/i);
+                if (match) {setSelectTime('timeOut', match[1]); voiceStatus.textContent = 'Time Out set'; return;}
             }
-            if(cmd.includes('description')){
-                const match=cmd.match(/description\s+(.+)/);
-                if(match){document.getElementById('description').value=match[1]; voiceStatus.textContent='Description set'; return;}
+            if (cmd.includes('description')) {
+                const match = cmd.match(/description\s+(.+)/);
+                if (match) {document.getElementById('description').value = match[1]; voiceStatus.textContent = 'Description set'; return;}
             }
-            if(cmd.includes('save')||cmd.includes('add entry')){
+            if (cmd.includes('save') || cmd.includes('add entry')) {
                 document.getElementById('actionButton').click();
-                voiceStatus.textContent='Entry saved';
+                voiceStatus.textContent = 'Entry saved';
                 return;
             }
-            // ---- Global actions ------------------------------------------------
-            if(cmd.includes('generate excel')||cmd.includes('export')){
+            if (cmd.includes('generate excel') || cmd.includes('export')) {
                 document.getElementById('generateExcel').click();
-                voiceStatus.textContent='Generating Excel...';
+                voiceStatus.textContent = 'Generating Excel...';
                 return;
             }
-            if(cmd.includes('clear all')){
+            if (cmd.includes('clear all')) {
                 document.getElementById('clearAllButton').click();
-                voiceStatus.textContent='Cleared';
+                voiceStatus.textContent = 'Cleared';
                 return;
             }
-            // ---- Editing rows --------------------------------------------------
-            const editMatch=cmd.match(/edit row (\d+)/);
-            if(editMatch){
-                const idx=parseInt(editMatch[1])-1;
-                if(idx>=0 && idx<entries.length){ editRow(idx); voiceStatus.textContent=`Editing row ${idx+1}`; }
-                else voiceStatus.textContent='Row not found';
+            const editMatch = cmd.match(/edit row (\d+)/);
+            if (editMatch) {
+                const idx = parseInt(editMatch[1]) - 1;
+                if (idx >= 0 && idx < entries.length) {editRow(idx); voiceStatus.textContent = `Editing row ${idx + 1}`;}
+                else voiceStatus.textContent = 'Row not found';
                 return;
             }
-            // ---- Default -------------------------------------------------------
-            voiceStatus.textContent='Command not recognized';
+            voiceStatus.textContent = 'Command not recognized';
         }
-
-        // Helper to set a <select> time from a spoken "8:30 am" etc.
-        function setSelectTime(id,spoken){
-            // Normalise to 24-h format expected by the dropdown
-            const normalized=spoken.replace(/\s/g,'').toLowerCase();
+        function setSelectTime(id, spoken) {
+            const normalized = spoken.replace(/\s/g, '').toLowerCase();
             let hour, minute, period;
-            const m=normalized.match(/(\d+):(\d+)(am|pm)/);
-            if(m){
-                hour=parseInt(m[1]); minute=m[2]; period=m[3];
-                if(period==='pm' && hour!==12) hour+=12;
-                if(period==='am' && hour===12) hour=0;
-                const val=`${String(hour).padStart(2,'0')}:${minute}`;
-                document.getElementById(id).value=val;
+            const m = normalized.match(/(\d+):(\d+)(am|pm)/);
+            if (m) {
+                hour = parseInt(m[1]); minute = m[2]; period = m[3];
+                if (period === 'pm' && hour !== 12) hour += 12;
+                if (period === 'am' && hour === 12) hour = 0;
+                const val = `${String(hour).padStart(2,'0')}:${minute}`;
+                document.getElementById(id).value = val;
             }
         }
 
-        /* ---------- Init ---------- */
+        // Init
         loadFromLocalStorage();
     </script>
 </body>
