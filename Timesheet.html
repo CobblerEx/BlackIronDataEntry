@@ -60,11 +60,11 @@
         #actionModal,#commandsModal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(30,30,30,.95);padding:1.5rem;border-radius:.5rem;box-shadow:0 0 20px rgba(255,69,0,.5);z-index:1000;text-align:center;}
         #actionModal button,#commandsModal button{display:block;width:100%;margin:.5rem 0;padding:.8rem;font-size:1rem;}
         #actionModal .cancel,#commandsModal .cancel{background:#dc3545;}
-        #overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:999;}
         #commandsModal table{width:100%;border-collapse:collapse;margin-top:1rem;}
         #commandsModal th,#commandsModal td{border:1px solid #ff4500;padding:.5rem;font-size:.9rem;}
         #commandsModal th{background:linear-gradient(90deg,#ff4500,#e03c00);color:#fff;}
         #commandsModal td{background:#2a2a2a;}
+        #commandsModal p{font-size:.9rem;color:#e0e0e0;margin-top:1rem;}
         @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @media (max-width:600px){
@@ -139,18 +139,19 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><td>Add job / New entry</td><td>"Add job"</td><td>Clears form for a new entry</td></tr>
-                <tr><td>Job name [name]</td><td>"Job name Acme Project"</td><td>Sets Job Name field</td></tr>
-                <tr><td>Address [address]</td><td>"Address 123 Main St"</td><td>Sets Address field</td></tr>
-                <tr><td>Time in [time]</td><td>"Time in 9 AM"</td><td>Sets Time In field</td></tr>
-                <tr><td>Time out [time]</td><td>"Time out 5 PM"</td><td>Sets Time Out field</td></tr>
-                <tr><td>Description [text]</td><td>"Description worked on site"</td><td>Sets Job Description field</td></tr>
-                <tr><td>Save / Add entry</td><td>"Save"</td><td>Submits the form</td></tr>
-                <tr><td>Generate Excel / Export</td><td>"Generate Excel"</td><td>Downloads Excel file</td></tr>
-                <tr><td>Clear all</td><td>"Clear all"</td><td>Clears all entries (with confirmation)</td></tr>
-                <tr><td>Edit row [number]</td><td>"Edit row 2"</td><td>Edits the specified row</td></tr>
+                <tr><td>Add job / New entry / Start entry</td><td>"Add job"</td><td>Clears form for a new entry</td></tr>
+                <tr><td>Job name / Set job / Job title [name]</td><td>"Job name Acme Project"</td><td>Sets Job Name field</td></tr>
+                <tr><td>Address / Location / Place [address]</td><td>"Address 123 Main St"</td><td>Sets Address field</td></tr>
+                <tr><td>Time in / Start time / Begin [time]</td><td>"Time in 9 AM"</td><td>Sets Time In field</td></tr>
+                <tr><td>Time out / End time / Finish [time]</td><td>"Time out 5 PM"</td><td>Sets Time Out field</td></tr>
+                <tr><td>Description / Notes / Details [text]</td><td>"Description worked on site"</td><td>Sets Job Description field</td></tr>
+                <tr><td>Save / Add entry / Submit</td><td>"Save"</td><td>Submits the form</td></tr>
+                <tr><td>Generate Excel / Export / Download</td><td>"Generate Excel"</td><td>Downloads Excel file</td></tr>
+                <tr><td>Clear all / Reset / Delete all</td><td>"Clear all"</td><td>Clears all entries (with confirmation)</td></tr>
+                <tr><td>Edit row / Change row [number]</td><td>"Edit row 2"</td><td>Edits the specified row</td></tr>
             </tbody>
         </table>
+        <p>Tips: Speak clearly in a quiet environment. Use exact phrases or close variations (e.g., "set job" or "job name"). Check microphone permissions if voice fails.</p>
         <button class="cancel"><i class="fas fa-times"></i> Close</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -418,6 +419,8 @@
         const voiceStatus = document.getElementById('voiceStatus');
         let recognition = null;
         let listening = false;
+        let continuousListening = false;
+
         if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
@@ -428,89 +431,183 @@
                 const spoken = e.results[0][0].transcript.trim().toLowerCase();
                 voiceStatus.textContent = `Heard: "${spoken}"`;
                 processVoiceCommand(spoken);
+                playFeedbackSound();
+                if (continuousListening) setTimeout(() => recognition.start(), 500);
             };
-            recognition.onerror = ev => {voiceStatus.textContent = 'Error: ' + ev.error; stopListening();};
-            recognition.onend = () => {voiceBtn.classList.remove('listening'); listening = false; voiceBtn.innerHTML = '<i class="fas fa-microphone"></i> Start Voice';};
+            recognition.onerror = ev => {
+                let msg = '';
+                switch (ev.error) {
+                    case 'no-speech': msg = 'No speech detected. Try speaking louder or closer to the mic.'; break;
+                    case 'aborted': msg = 'Speech aborted. Try again.'; break;
+                    case 'audio-capture': msg = 'Microphone issue. Check permissions or try another device.'; break;
+                    case 'not-allowed': msg = 'Microphone access denied. Enable in browser settings.'; break;
+                    default: msg = `Error: ${ev.error}`;
+                }
+                voiceStatus.textContent = msg; stopListening();
+            };
+            recognition.onend = () => {
+                voiceBtn.classList.remove('listening'); listening = false;
+                voiceBtn.innerHTML = continuousListening ? 
+                    '<i class="fas fa-microphone"></i> Continuous Listening' : 
+                    '<i class="fas fa-microphone"></i> Start Voice';
+                if (continuousListening) recognition.start();
+            };
         } else {
             voiceBtn.style.display = 'none';
             console.warn('SpeechRecognition not supported in this browser');
         }
+
         voiceBtn.addEventListener('click', () => {
             if (!recognition) return;
-            if (listening) {stopListening(); return;}
+            if (listening) {
+                continuousListening = false;
+                stopListening();
+                return;
+            }
+            continuousListening = confirm('Enable continuous listening? (Click OK for continuous, Cancel for single command)');
             startListening();
         });
+
         document.getElementById('commandsBtn').addEventListener('click', showCommandsModal);
+
         function startListening() {
             voiceBtn.classList.add('listening');
             voiceBtn.innerHTML = '<i class="fas fa-microphone-slash"></i> Stop';
             voiceStatus.textContent = 'Listening...';
             recognition.start(); listening = true;
         }
+
         function stopListening() {
             recognition.stop(); listening = false;
         }
-        function processVoiceCommand(cmd) {
-            if (cmd.includes('add job') || cmd.includes('new entry')) {
-                clearForm();
-                voiceStatus.textContent = 'Ready to add a new entry';
-                return;
-            }
-            if (cmd.includes('job name')) {
-                const match = cmd.match(/job name\s+(.+)/);
-                if (match) {document.getElementById('jobName').value = match[1]; voiceStatus.textContent = 'Job name set'; return;}
-            }
-            if (cmd.includes('address')) {
-                const match = cmd.match(/address\s+(.+)/);
-                if (match) {document.getElementById('address').value = match[1]; voiceStatus.textContent = 'Address set'; return;}
-            }
-            if (cmd.includes('time in')) {
-                const match = cmd.match(/time in\s+([\d:]+ ?[ap]m)/i);
-                if (match) {setSelectTime('timeIn', match[1]); voiceStatus.textContent = 'Time In set'; return;}
-            }
-            if (cmd.includes('time out')) {
-                const match = cmd.match(/time out\s+([\d:]+ ?[ap]m)/i);
-                if (match) {setSelectTime('timeOut', match[1]); voiceStatus.textContent = 'Time Out set'; return;}
-            }
-            if (cmd.includes('description')) {
-                const match = cmd.match(/description\s+(.+)/);
-                if (match) {document.getElementById('description').value = match[1]; voiceStatus.textContent = 'Description set'; return;}
-            }
-            if (cmd.includes('save') || cmd.includes('add entry')) {
-                document.getElementById('actionButton').click();
-                voiceStatus.textContent = 'Entry saved';
-                return;
-            }
-            if (cmd.includes('generate excel') || cmd.includes('export')) {
-                document.getElementById('generateExcel').click();
-                voiceStatus.textContent = 'Generating Excel...';
-                return;
-            }
-            if (cmd.includes('clear all')) {
-                document.getElementById('clearAllButton').click();
-                voiceStatus.textContent = 'Cleared';
-                return;
-            }
-            const editMatch = cmd.match(/edit row (\d+)/);
-            if (editMatch) {
-                const idx = parseInt(editMatch[1]) - 1;
-                if (idx >= 0 && idx < entries.length) {editRow(idx); voiceStatus.textContent = `Editing row ${idx + 1}`;}
-                else voiceStatus.textContent = 'Row not found';
-                return;
-            }
-            voiceStatus.textContent = 'Command not recognized';
+
+        function playFeedbackSound() {
+            const audio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YSAAAAABAA==');
+            audio.play();
         }
-        function setSelectTime(id, spoken) {
-            const normalized = spoken.replace(/\s/g, '').toLowerCase();
-            let hour, minute, period;
-            const m = normalized.match(/(\d+):(\d+)(am|pm)/);
-            if (m) {
-                hour = parseInt(m[1]); minute = m[2]; period = m[3];
-                if (period === 'pm' && hour !== 12) hour += 12;
-                if (period === 'am' && hour === 12) hour = 0;
-                const val = `${String(hour).padStart(2,'0')}:${minute}`;
-                document.getElementById(id).value = val;
+
+        // Fuzzy matching
+        function levenshtein(a, b) {
+            const matrix = Array(a.length + 1).fill().map(() => Array(b.length + 1).fill(0));
+            for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+            for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j - 1] + cost
+                    );
+                }
             }
+            return matrix[a.length][b.length];
+        }
+
+        function findClosestCommand(spoken, commands) {
+            let minDist = Infinity;
+            let closest = null;
+            for (const cmd of commands) {
+                const dist = levenshtein(spoken, cmd);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = cmd;
+                }
+            }
+            return minDist <= 5 ? closest : null;
+        }
+
+        // Time parsing
+        const numberWords = {
+            'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+            'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10, 'eleven': 11, 'twelve': 12,
+            'quarter': 15, 'half': 30, 'thirty': 30, 'forty': 40, 'forty-five': 45
+        };
+
+        function parseNaturalTime(spoken) {
+            spoken = spoken.replace(/\s/g, '').toLowerCase();
+            let hour = 0, minute = 0, period = '';
+            const match = spoken.match(/(\w+)(?::(\w+))?([ap]m)?|(\w+)\s*(to|past)\s*(\w+)([ap]m)?/i);
+            if (match) {
+                if (match[1]) { // e.g., "9:30am" or "nine thirty am"
+                    hour = numberWords[match[1]] || parseInt(match[1]) || 0;
+                    minute = match[2] ? (numberWords[match[2]] || parseInt(match[2]) || 0) : 0;
+                    period = match[3] || '';
+                } else if (match[4]) { // e.g., "quarter past nine am"
+                    minute = numberWords[match[4]] || 0;
+                    hour = numberWords[match[6]] || parseInt(match[6]) || 0;
+                    period = match[7] || '';
+                }
+            }
+            if (period === 'pm' && hour !== 12) hour += 12;
+            if (period === 'am' && hour === 12) hour = 0;
+            minute = Math.round(minute / 30) * 30; // Snap to nearest 30 min
+            return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+        }
+
+        function setSelectTime(id, spoken) {
+            const val = parseNaturalTime(spoken);
+            const available = timeOptions.map(o => o.value);
+            if (available.includes(val)) {
+                document.getElementById(id).value = val;
+                return true;
+            }
+            return false;
+        }
+
+        // Voice command processing
+        const commandSynonyms = [
+            {keys: ['add job', 'new entry', 'start entry'], action: () => {clearForm(); return 'Ready to add a new entry';}},
+            {keys: ['job name', 'set job', 'job title'], action: cmd => {
+                const match = cmd.match(/(?:job name|set job|job title)\s+(.+)/i);
+                if (match) {document.getElementById('jobName').value = match[1]; return 'Job name set';}
+                return null;
+            }},
+            {keys: ['address', 'location', 'place'], action: cmd => {
+                const match = cmd.match(/(?:address|location|place)\s+(.+)/i);
+                if (match) {document.getElementById('address').value = match[1]; return 'Address set';}
+                return null;
+            }},
+            {keys: ['time in', 'start time', 'begin'], action: cmd => {
+                const match = cmd.match(/(?:time in|start time|begin)\s+(.+)/i);
+                if (match && setSelectTime('timeIn', match[1])) return 'Time In set';
+                return null;
+            }},
+            {keys: ['time out', 'end time', 'finish'], action: cmd => {
+                const match = cmd.match(/(?:time out|end time|finish)\s+(.+)/i);
+                if (match && setSelectTime('timeOut', match[1])) return 'Time Out set';
+                return null;
+            }},
+            {keys: ['description', 'notes', 'details'], action: cmd => {
+                const match = cmd.match(/(?:description|notes|details)\s+(.+)/i);
+                if (match) {document.getElementById('description').value = match[1]; return 'Description set';}
+                return null;
+            }},
+            {keys: ['save', 'add entry', 'submit'], action: () => {document.getElementById('actionButton').click(); return 'Entry saved';}},
+            {keys: ['generate excel', 'export', 'download'], action: () => {document.getElementById('generateExcel').click(); return 'Generating Excel...';}},
+            {keys: ['clear all', 'reset', 'delete all'], action: () => {document.getElementById('clearAllButton').click(); return 'Cleared';}},
+            {keys: ['edit row', 'change row'], action: cmd => {
+                const match = cmd.match(/(?:edit row|change row)\s+(\d+)/i);
+                if (match) {
+                    const idx = parseInt(match[1]) - 1;
+                    if (idx >= 0 && idx < entries.length) {editRow(idx); return `Editing row ${idx + 1}`;}
+                    return 'Row not found';
+                }
+                return null;
+            }}
+        ];
+
+        function processVoiceCommand(cmd) {
+            for (const cmdDef of commandSynonyms) {
+                for (const key of cmdDef.keys) {
+                    if (cmd.includes(key) || levenshtein(cmd, key) <= 3) {
+                        const result = cmdDef.action(cmd);
+                        if (result) {voiceStatus.textContent = result; return;}
+                    }
+                }
+            }
+            const closest = findClosestCommand(cmd, commandSynonyms.flatMap(c => c.keys));
+            voiceStatus.textContent = closest ? `Did you mean "${closest}"?` : 'Command not recognized. Try "List Commands" for help.';
         }
 
         // Init
