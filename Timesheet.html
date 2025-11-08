@@ -36,52 +36,70 @@
         #cancelButton,#clearAllButton{background:#dc3545;}
         #cancelButton:hover,#clearAllButton:hover{box-shadow:0 0 12px rgba(220,53,69,.8);}
 
-        /* Address History Button */
+        /* PERFECT Address History Button */
+        #address { padding-right: 56px !important; }
         .history-btn {
             position: absolute;
-            right: 8px;
-            top: 34px;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
             background: #ff4500;
             color: white;
             border: none;
             border-radius: 50%;
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             cursor: pointer;
-            font-size: 1rem;
-            z-index: 5;
-            box-shadow: 0 0 8px rgba(255,69,0,.6);
+            font-size: 1.1rem;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(255, 69, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
         }
-        .history-btn:hover {background:#e03c00;transform:scale(1.1);}
+        .history-btn:hover {
+            background: #e03c00;
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 4px 16px rgba(255, 69, 0, 0.6);
+        }
+        .history-btn i {
+            margin: 0 !important;
+            transform: none !important;
+        }
 
         /* History Dropdown */
         #addressHistory {
             display: none;
             position: absolute;
-            top: 100%;
+            top: calc(100% + 8px);
             left: 0;
             right: 0;
             background: #2a2a2a;
             border: 1px solid #ff4500;
-            border-radius: .3rem;
-            max-height: 200px;
+            border-radius: 8px;
+            max-height: 220px;
             overflow-y: auto;
             z-index: 100;
-            box-shadow: 0 0 15px rgba(255,69,0,.5);
+            box-shadow: 0 8px 24px rgba(255, 69, 0, 0.3);
             margin-top: 4px;
         }
         .history-item {
-            padding: .6rem .8rem;
+            padding: 12px 16px;
             cursor: pointer;
             border-bottom: 1px solid #444;
-            font-size: .95rem;
-            transition: background .2s;
+            font-size: 1rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .history-item:hover {
             background: #ff4500;
             color: white;
+            padding-left: 20px;
         }
-        .history-item:last-child {border-bottom:none;}
+        .history-item:last-child { border-bottom: none; }
 
         #voiceControl{margin-top:1rem;display:flex;align-items:center;gap:.5rem;}
         #voiceBtn,#commandsBtn{background:#ff4500;padding:.6rem 1rem;border-radius:.3rem;color:#fff;cursor:pointer;}
@@ -138,7 +156,9 @@
         <label style="position:relative;">
             <i class="fas fa-map-marker-alt"></i> Address: 
             <input type="text" id="address" placeholder="Tap history icon for past addresses">
-            <button type="button" class="history-btn" id="historyBtn" title="Address History"><i class="fas fa-history"></i></button>
+            <button type="button" class="history-btn" id="historyBtn" title="Address History">
+                <i class="fas fa-history"></i>
+            </button>
             <div id="addressHistory"></div>
         </label>
         <label><i class="fas fa-clock"></i> Time In: <select id="timeIn"></select></label>
@@ -438,7 +458,7 @@
             document.getElementById('editIndex').value = i;
             document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Save Changes';
             document.getElementById('cancelButton').style.display = 'inline';
-            addToHistory(e.address); // Save to history when editing
+            addToHistory(e.address);
         }
 
         // === TOTAL TIME ===
@@ -489,7 +509,7 @@
             if (editIdx === -1) entries.push(entry); 
             else entries[editIdx] = entry;
             
-            if (addr) addToHistory(addr); // Save address to history
+            if (addr) addToHistory(addr);
             renderTable(); clearForm();
         });
         document.getElementById('cancelButton').onclick = clearForm;
@@ -500,7 +520,7 @@
             return true;
         }
 
-        // === EXCEL EXPORT (FIXED DATE) ===
+        // === EXCEL EXPORT ===
         document.getElementById('generateExcel').addEventListener('click', () => {
             const loading = document.getElementById('loading'); loading.style.display = 'block';
             try {
@@ -513,7 +533,7 @@
                 data.push([{v: 'Date', t: 's'}, {v: 'Job Name / Address', t: 's'}, {v: 'Time In', t: 's'}, {v: 'Time Out', t: 's'}, {v: 'Total Time', t: 's'}, {v: 'Job Description', t: 's'}]);
                 sorted.forEach(e => {
                     const [y, m, d] = e.dateStr.split('-').map(Number);
-                    const excelDt = Date.UTC(y, m - 1, d) / 86400000 + 25569; // Proper Excel serial
+                    const excelDt = Date.UTC(y, m - 1, d) / 86400000 + 25569;
                     const row = [
                         {v: excelDt, t: 'n', z: 'm/d/yyyy'},
                         {v: e.address ? `${e.jobName}\n${e.address}` : e.jobName, t: 's'},
