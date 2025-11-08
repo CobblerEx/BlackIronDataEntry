@@ -16,7 +16,6 @@
             overflow-x: hidden;
             margin: 0;
         }
-        /* Navigation */
         .nav-buttons {display:flex;justify-content:center;gap:1rem;margin:1rem 0;flex-wrap:wrap;}
         .nav-button {display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#2a2a2a;border:2px solid #ff4500;border-radius:50%;color:#ff4500;text-decoration:none;transition:transform .2s,box-shadow .2s;position:relative;}
         .nav-button:hover{transform:scale(1.1);box-shadow:0 0 10px rgba(255,69,0,.8);}
@@ -24,11 +23,10 @@
         .nav-button::after{content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:.3rem .6rem;border-radius:4px;font-size:.8rem;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;}
         .nav-button:hover::after{opacity:1;}
         @media (max-width:600px){.nav-buttons{gap:.5rem;}.nav-button{width:36px;height:36px;}.nav-button i{font-size:1rem;}}
-        /* Typography */
+
         h1,h2{font-size:clamp(1.8rem,6vw,2.2rem);color:#ff4500;text-shadow:0 0 10px rgba(255,69,0,.5);text-align:center;}
-        /* Form & Controls */
         #form,#totalTime{background:rgba(30,30,30,.9);padding:1.5rem;border-radius:.5rem;box-shadow:0 0 15px rgba(255,69,0,.3);margin-bottom:2rem;}
-        label{display:block;margin-bottom:.5rem;font-size:clamp(1rem,3vw,1.2rem);color:#e0e0e0;}
+        label{display:block;margin-bottom:.5rem;font-size:clamp(1rem,3vw,1.2rem);color:#e0e0e0;position:relative;}
         input,select,textarea{width:100%;padding:.6rem;margin-bottom:.75rem;font-size:clamp(1rem,3vw,1.1rem);background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:.3rem;box-sizing:border-box;transition:box-shadow .3s ease;}
         input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 8px rgba(255,69,0,.7);}
         textarea{height:6rem;}
@@ -37,12 +35,59 @@
         button:disabled{background:#555;cursor:not-allowed;box-shadow:none;}
         #cancelButton,#clearAllButton{background:#dc3545;}
         #cancelButton:hover,#clearAllButton:hover{box-shadow:0 0 12px rgba(220,53,69,.8);}
-        /* Voice UI */
+
+        /* Address History Button */
+        .history-btn {
+            position: absolute;
+            right: 8px;
+            top: 34px;
+            background: #ff4500;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 1rem;
+            z-index: 5;
+            box-shadow: 0 0 8px rgba(255,69,0,.6);
+        }
+        .history-btn:hover {background:#e03c00;transform:scale(1.1);}
+
+        /* History Dropdown */
+        #addressHistory {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #2a2a2a;
+            border: 1px solid #ff4500;
+            border-radius: .3rem;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 0 15px rgba(255,69,0,.5);
+            margin-top: 4px;
+        }
+        .history-item {
+            padding: .6rem .8rem;
+            cursor: pointer;
+            border-bottom: 1px solid #444;
+            font-size: .95rem;
+            transition: background .2s;
+        }
+        .history-item:hover {
+            background: #ff4500;
+            color: white;
+        }
+        .history-item:last-child {border-bottom:none;}
+
         #voiceControl{margin-top:1rem;display:flex;align-items:center;gap:.5rem;}
         #voiceBtn,#commandsBtn{background:#ff4500;padding:.6rem 1rem;border-radius:.3rem;color:#fff;cursor:pointer;}
         #voiceBtn.listening{background:#28a745;}
         #voiceStatus{font-size:.9rem;color:#ff4500;}
-        /* Table */
+
         table{width:100%;border-collapse:collapse;margin-top:1rem;background:rgba(30,30,30,.9);border-radius:.5rem;overflow:hidden;box-shadow:0 0 15px rgba(255,69,0,.3);}
         th,td{border:1px solid #ff4500;padding:.5rem;text-align:left;font-size:clamp(.8rem,2.5vw,.9rem);}
         th{background:linear-gradient(90deg,#ff4500,#e03c00);color:#fff;position:sticky;top:0;z-index:10;}
@@ -56,8 +101,9 @@
         #totalTime{font-weight:bold;font-size:clamp(1rem,3vw,1.2rem);color:#ff4500;text-shadow:0 0 5px rgba(255,69,0,.5);}
         #loading{display:none;text-align:center;padding:1rem;color:#ff4500;}
         .spinner{border:4px solid rgba(255,69,0,.3);border-top:4px solid #ff4500;border-radius:50%;width:24px;height:24px;animation:spin 1s linear infinite;display:inline-block;}
-        /* Modals */
+
         #actionModal,#commandsModal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(30,30,30,.95);padding:1.5rem;border-radius:.5rem;box-shadow:0 0 20px rgba(255,69,0,.5);z-index:1000;text-align:center;}
+        #overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:999;}
         #actionModal button,#commandsModal button{display:block;width:100%;margin:.5rem 0;padding:.8rem;font-size:1rem;}
         #actionModal .cancel,#commandsModal .cancel{background:#dc3545;}
         #commandsModal table{width:100%;border-collapse:collapse;margin-top:1rem;}
@@ -65,6 +111,7 @@
         #commandsModal th{background:linear-gradient(90deg,#ff4500,#e03c00);color:#fff;}
         #commandsModal td{background:#2a2a2a;}
         #commandsModal p{font-size:.9rem;color:#e0e0e0;margin-top:1rem;}
+
         @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @media (max-width:600px){
@@ -88,7 +135,12 @@
         <label><i class="fas fa-calendar"></i> Date: <input type="date" id="sessionDate"></label>
         <h2><i class="fas fa-plus-circle"></i> Add Job Entry</h2>
         <label><i class="fas fa-briefcase"></i> Job Name: <input type="text" id="jobName"></label>
-        <label><i class="fas fa-map-marker-alt"></i> Address: <input type="text" id="address"></label>
+        <label style="position:relative;">
+            <i class="fas fa-map-marker-alt"></i> Address: 
+            <input type="text" id="address" placeholder="Tap history icon for past addresses">
+            <button type="button" class="history-btn" id="historyBtn" title="Address History"><i class="fas fa-history"></i></button>
+            <div id="addressHistory"></div>
+        </label>
         <label><i class="fas fa-clock"></i> Time In: <select id="timeIn"></select></label>
         <label><i class="fas fa-clock"></i> Time Out: <select id="timeOut"></select></label>
         <label><i class="fas fa-comment"></i> Job Description: <textarea id="description"></textarea></label>
@@ -96,12 +148,15 @@
         <button id="actionButton"><i class="fas fa-save"></i> Add Entry</button>
         <button id="cancelButton" style="display:none;"><i class="fas fa-times"></i> Cancel</button>
     </div>
+
     <div id="voiceControl">
         <button id="voiceBtn"><i class="fas fa-microphone"></i> Start Voice</button>
         <button id="commandsBtn"><i class="fas fa-list"></i> List Commands</button>
         <span id="voiceStatus"></span>
     </div>
-    <div id="totalTime"><i class="fas fa-hourglass"></i> Total Time: 0 hours 0 minutes</div>
+
+    <div id="totalTime"><i class="fas fa-hourglass"></i> Total Time: 0 hrs 0 min</div>
+
     <table id="entriesTable">
         <thead>
             <tr>
@@ -116,9 +171,11 @@
         </thead>
         <tbody></tbody>
     </table>
+
     <div id="loading"><span class="spinner"></span> Generating Excel...</div>
     <button id="generateExcel"><i class="fas fa-file-excel"></i> Generate Excel</button>
     <button id="clearAllButton"><i class="fas fa-trash-alt"></i> Clear All</button>
+
     <div id="overlay"></div>
     <div id="actionModal">
         <h3>Actions</h3>
@@ -132,31 +189,29 @@
         <h3>Voice Commands</h3>
         <table>
             <thead>
-                <tr>
-                    <th>Command</th>
-                    <th>Example</th>
-                    <th>Action</th>
-                </tr>
+                <tr><th>Command</th><th>Example</th><th>Action</th></tr>
             </thead>
             <tbody>
-                <tr><td>Add job / New entry / Start entry</td><td>"Add job"</td><td>Clears form for a new entry</td></tr>
-                <tr><td>Job name / Set job / Job title [name]</td><td>"Job name Acme Project"</td><td>Sets Job Name field</td></tr>
-                <tr><td>Address / Location / Place [address]</td><td>"Address 123 Main St"</td><td>Sets Address field</td></tr>
-                <tr><td>Time in / Start time / Begin [time]</td><td>"Time in 9 AM"</td><td>Sets Time In field</td></tr>
-                <tr><td>Time out / End time / Finish [time]</td><td>"Time out 5 PM"</td><td>Sets Time Out field</td></tr>
-                <tr><td>Description / Notes / Details [text]</td><td>"Description worked on site"</td><td>Sets Job Description field</td></tr>
-                <tr><td>Save / Add entry / Submit</td><td>"Save"</td><td>Submits the form</td></tr>
-                <tr><td>Generate Excel / Export / Download</td><td>"Generate Excel"</td><td>Downloads Excel file</td></tr>
-                <tr><td>Clear all / Reset / Delete all</td><td>"Clear all"</td><td>Clears all entries (with confirmation)</td></tr>
-                <tr><td>Edit row / Change row [number]</td><td>"Edit row 2"</td><td>Edits the specified row</td></tr>
+                <tr><td>Add job / New entry</td><td>"Add job"</td><td>Clears form</td></tr>
+                <tr><td>Job name [name]</td><td>"Job name Acme"</td><td>Sets Job Name</td></tr>
+                <tr><td>Address [addr]</td><td>"Address 123 Main"</td><td>Sets Address</td></tr>
+                <tr><td>Time in [time]</td><td>"Time in 9 AM"</td><td>Sets Time In</td></tr>
+                <tr><td>Time out [time]</td><td>"Time out 5 PM"</td><td>Sets Time Out</td></tr>
+                <tr><td>Description [text]</td><td>"Description cleanup"</td><td>Sets Description</td></tr>
+                <tr><td>Save / Submit</td><td>"Save"</td><td>Adds entry</td></tr>
+                <tr><td>Generate Excel</td><td>"Export"</td><td>Downloads file</td></tr>
+                <tr><td>Clear all</td><td>"Reset"</td><td>Clears all</td></tr>
+                <tr><td>Edit row [n]</td><td>"Edit row 2"</td><td>Edits row</td></tr>
+                <tr><td>Show addresses</td><td>"Address history"</td><td>Opens history</td></tr>
             </tbody>
         </table>
-        <p>Tips: Speak clearly in a quiet environment. Use exact phrases or close variations (e.g., "set job" or "job name"). Check microphone permissions if voice fails.</p>
+        <p>Speak clearly. Use "show addresses" to open history!</p>
         <button class="cancel"><i class="fas fa-times"></i> Close</button>
     </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        // Time helpers
+        // === TIME OPTIONS ===
         function generateTimeOptions() {
             const opts = [];
             for (let h = 0; h < 24; h++) {
@@ -172,15 +227,18 @@
         const timeOptions = generateTimeOptions();
         const timeInSel = document.getElementById('timeIn');
         const timeOutSel = document.getElementById('timeOut');
-        timeOptions.forEach(o => { const opt = document.createElement('option'); opt.value = o.value; opt.text = o.text;
-            timeInSel.add(opt); timeOutSel.add(opt.cloneNode(true)); });
+        timeOptions.forEach(o => { 
+            const opt = document.createElement('option'); 
+            opt.value = o.value; opt.text = o.text;
+            timeInSel.add(opt); timeOutSel.add(opt.cloneNode(true)); 
+        });
         timeInSel.value = '08:00'; timeOutSel.value = '08:30';
         document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
 
-        // Core data
+        // === CORE DATA ===
         let entries = [];
 
-        // LocalStorage
+        // === LOCALSTORAGE ===
         function saveToLocalStorage() {
             const data = {employee: document.getElementById('employee').value,
                           sessionDate: document.getElementById('sessionDate').value,
@@ -197,21 +255,28 @@
             renderTable();
         }
         function clearAll() {
-            if (confirm('Clear everything?')) {entries = []; localStorage.removeItem('timesheetData');
+            if (confirm('Clear everything?')) {
+                entries = []; 
+                localStorage.removeItem('timesheetData');
                 document.getElementById('employee').value = 'Lucas';
                 document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
-                clearForm(); renderTable();}
+                clearForm(); renderTable();
+            }
         }
 
-        // Time utilities
+        // === TIME UTILS ===
         function timeStrToDecimal(t) {const [h, m] = t.split(':').map(Number); return (h + m / 60) / 24;}
-        function to12HourString(t) {const [h, m] = t.split(':').map(Number);
+        function to12HourString(t) {
+            const [h, m] = t.split(':').map(Number);
             const period = h < 12 ? 'AM' : 'PM'; let h12 = h % 12; if (h12 === 0) h12 = 12;
-            return `${h12}:${String(m).padStart(2,'0')} ${period}`;}
+            return `${h12}:${String(m).padStart(2,'0')} ${period}`;
+        }
         function formatTotalTime(dec) {
             let hrs = dec * 24; const h = Math.floor(hrs);
-            let min = Math.round((hrs - h) * 60 / 30) * 30; if (min >= 60) {min -= 60; hrs++;}
-            return `${Math.floor(hrs)}:${String(min).padStart(2,'0')}`;}
+            let min = Math.round((hrs - h) * 60 / 30) * 30; 
+            if (min >= 60) {min -= 60; hrs++;}
+            return `${Math.floor(hrs)}:${String(min).padStart(2,'0')}`;
+        }
         function getNextTimeOption(cur) {
             const i = timeOptions.findIndex(o => o.value === cur);
             return i + 1 < timeOptions.length ? timeOptions[i + 1].value : timeOptions[0].value;
@@ -222,7 +287,55 @@
             return `${String(m).padStart(2,'0')}/${String(day).padStart(2,'0')}/${y}`;
         }
 
-        // Table rendering
+        // === ADDRESS HISTORY SYSTEM ===
+        const addressInput = document.getElementById('address');
+        const historyBtn = document.getElementById('historyBtn');
+        const historyDropdown = document.getElementById('addressHistory');
+
+        function loadAddressHistory() {
+            const saved = localStorage.getItem('addressHistory');
+            return saved ? JSON.parse(saved) : [];
+        }
+        function saveAddressHistory(history) {
+            localStorage.setItem('addressHistory', JSON.stringify(history));
+        }
+        function addToHistory(addr) {
+            if (!addr.trim()) return;
+            let history = loadAddressHistory();
+            history = history.filter(a => a !== addr);
+            history.unshift(addr);
+            if (history.length > 50) history.pop();
+            saveAddressHistory(history);
+        }
+        function populateHistory() {
+            const history = loadAddressHistory();
+            historyDropdown.innerHTML = '';
+            if (history.length === 0) {
+                historyDropdown.innerHTML = '<div class="history-item">No addresses saved yet</div>';
+                return;
+            }
+            history.forEach(addr => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.textContent = addr;
+                item.onclick = () => {
+                    addressInput.value = addr;
+                    historyDropdown.style.display = 'none';
+                };
+                historyDropdown.appendChild(item);
+            });
+        }
+        historyBtn.onclick = () => {
+            populateHistory();
+            historyDropdown.style.display = historyDropdown.style.display === 'block' ? 'none' : 'block';
+        };
+        document.addEventListener('click', e => {
+            if (!historyBtn.contains(e.target) && !historyDropdown.contains(e.target) && !addressInput.contains(e.target)) {
+                historyDropdown.style.display = 'none';
+            }
+        });
+
+        // === TABLE RENDERING ===
         function renderTable() {
             const tbody = document.querySelector('#entriesTable tbody'); tbody.innerHTML = '';
             entries.forEach((e, i) => {
@@ -230,7 +343,7 @@
                 const tr = document.createElement('tr'); tr.draggable = true; tr.dataset.index = i;
                 tr.innerHTML = `
                     <td>${formatDateString(e.dateStr)}</td>
-                    <td>${jobAddr}</td>
+                    <td>${jobAddr.replace('\n', '<br>')}</td>
                     <td>${to12HourString(e.timeIn)}</td>
                     <td>${to12HourString(e.timeOut)}</td>
                     <td>${formatTotalTime(e.totalTimeDecimal)}</td>
@@ -239,8 +352,10 @@
                         <i class="fas fa-grip-lines drag-handle" title="Drag to reorder"></i>
                         <select class="action-select" onchange="handleAction(${i},this.value);this.value=''">
                             <option value="" disabled selected>Actions</option>
-                            <option value="edit">Edit</option><option value="up">Move Up</option>
-                            <option value="down">Move Down</option><option value="delete">Delete</option>
+                            <option value="edit">Edit</option>
+                            <option value="up">Move Up</option>
+                            <option value="down">Move Down</option>
+                            <option value="delete">Delete</option>
                         </select>
                     </td>`;
                 tbody.appendChild(tr);
@@ -261,13 +376,17 @@
             updateTotalTime(); saveToLocalStorage();
         }
 
-        // Drag & Modal
+        // === DRAG & MODAL ===
         function handleDragStart(e) {e.target.classList.add('dragging'); e.dataTransfer.setData('text/plain', e.target.dataset.index);}
         function handleDragOver(e) {e.preventDefault();}
         function handleDrop(e) {e.preventDefault();
             const src = parseInt(e.dataTransfer.getData('text/plain'));
             const dest = parseInt(e.target.closest('tr').dataset.index);
-            if (src !== dest) {const [mov] = entries.splice(src, 1); entries.splice(dest, 0, mov); renderTable();}
+            if (src !== dest && !isNaN(dest)) {
+                const [mov] = entries.splice(src, 1); 
+                entries.splice(dest, 0, mov); 
+                renderTable();
+            }
         }
         function handleDragEnd(e) {e.target.classList.remove('dragging');}
         function showActionModal(idx) {
@@ -319,17 +438,20 @@
             document.getElementById('editIndex').value = i;
             document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Save Changes';
             document.getElementById('cancelButton').style.display = 'inline';
+            addToHistory(e.address); // Save to history when editing
         }
 
-        // Total time
+        // === TOTAL TIME ===
         function updateTotalTime() {
             const tot = entries.reduce((s, e) => s + e.totalTimeDecimal, 0);
             let hrs = tot * 24; const h = Math.floor(hrs);
-            let min = Math.round((hrs - h) * 60 / 30) * 30; if (min >= 60) {min -= 60; hrs++;}
-            document.getElementById('totalTime').innerHTML = `<i class="fas fa-hourglass"></i> Total Time: ${Math.floor(hrs)} hours ${min} minutes`;
+            let min = Math.round((hrs - h) * 60 / 30) * 30; 
+            if (min >= 60) {min -= 60; hrs++;}
+            document.getElementById('totalTime').innerHTML = 
+                `<i class="fas fa-hourglass"></i> Total Time: ${Math.floor(hrs)} hrs ${min} min`;
         }
 
-        // Form handling
+        // === FORM HANDLING ===
         function clearForm() {
             document.getElementById('jobName').value = '';
             document.getElementById('address').value = '';
@@ -350,19 +472,24 @@
             const editIdx = parseInt(document.getElementById('editIndex').value);
             const dateStr = document.getElementById('sessionDate').value;
             const job = document.getElementById('jobName').value.trim();
-            const addr = document.getElementById('address').value;
+            const addr = document.getElementById('address').value.trim();
             const tIn = document.getElementById('timeIn').value;
             const tOut = document.getElementById('timeOut').value;
             const desc = document.getElementById('description').value;
             if (!dateStr) {alert('Select a date.'); return;}
             if (!job) {alert('Job name required.'); return;}
             if (!validateTimes(tIn, tOut)) return;
+
             const inDec = timeStrToDecimal(tIn);
             let outDec = timeStrToDecimal(tOut);
             if (outDec <= inDec) outDec += 1;
             const totDec = outDec - inDec;
             const entry = {dateStr, jobName: job, address: addr, timeIn: tIn, timeOut: tOut, totalTimeDecimal: totDec, description: desc};
-            if (editIdx === -1) entries.push(entry); else entries[editIdx] = entry;
+            
+            if (editIdx === -1) entries.push(entry); 
+            else entries[editIdx] = entry;
+            
+            if (addr) addToHistory(addr); // Save address to history
             renderTable(); clearForm();
         });
         document.getElementById('cancelButton').onclick = clearForm;
@@ -373,7 +500,7 @@
             return true;
         }
 
-        // Excel export
+        // === EXCEL EXPORT (FIXED DATE) ===
         document.getElementById('generateExcel').addEventListener('click', () => {
             const loading = document.getElementById('loading'); loading.style.display = 'block';
             try {
@@ -385,11 +512,10 @@
                 data.push([{v: `Employee Name: ${emp}`, t: 's'}, null, null, null, null, null]);
                 data.push([{v: 'Date', t: 's'}, {v: 'Job Name / Address', t: 's'}, {v: 'Time In', t: 's'}, {v: 'Time Out', t: 's'}, {v: 'Total Time', t: 's'}, {v: 'Job Description', t: 's'}]);
                 sorted.forEach(e => {
-                    if (!e.dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(e.dateStr)) return;
                     const [y, m, d] = e.dateStr.split('-').map(Number);
-                    const excelDt = new Date(y, m - 1, d);
+                    const excelDt = Date.UTC(y, m - 1, d) / 86400000 + 25569; // Proper Excel serial
                     const row = [
-                        {v: excelDt, t: 'd', z: 'm/d/yyyy'},
+                        {v: excelDt, t: 'n', z: 'm/d/yyyy'},
                         {v: e.address ? `${e.jobName}\n${e.address}` : e.jobName, t: 's'},
                         {v: to12HourString(e.timeIn), t: 's'},
                         {v: to12HourString(e.timeOut), t: 's'},
@@ -400,21 +526,18 @@
                 });
                 const sum = sorted.reduce((s, e) => s + e.totalTimeDecimal, 0);
                 const totH = Math.floor(sum * 24);
-                let totM = Math.round((sum * 24 - totH) * 60 / 30) * 30; if (totM >= 60) {totM -= 60; totH++;}
+                let totM = Math.round((sum * 24 - totH) * 60 / 30) * 30; 
+                if (totM >= 60) {totM -= 60; totH++;}
                 data.push([null, null, null, {v: 'Total Hours =', t: 's'}, {v: `${totH}:${String(totM).padStart(2,'0')} hours`, t: 's'}, null]);
                 const ws = XLSX.utils.aoa_to_sheet(data);
                 const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
                 const fname = `${emp}_${dateStr}.xlsx`;
-                const out = XLSX.write(wb, {bookType: 'xlsx', type: 'array'});
-                const blob = new Blob([out], {type: 'application/octet-stream'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click();
-                document.body.removeChild(a); URL.revokeObjectURL(url);
+                XLSX.writeFile(wb, fname);
                 loading.style.display = 'none';
             } catch (err) {loading.style.display = 'none'; alert('Export failed: ' + err.message);}
         });
 
-        // Voice recognition
+        // === VOICE RECOGNITION ===
         const voiceBtn = document.getElementById('voiceBtn');
         const voiceStatus = document.getElementById('voiceStatus');
         let recognition = null;
@@ -435,39 +558,26 @@
                 if (continuousListening) setTimeout(() => recognition.start(), 500);
             };
             recognition.onerror = ev => {
-                let msg = '';
-                switch (ev.error) {
-                    case 'no-speech': msg = 'No speech detected. Try speaking louder or closer to the mic.'; break;
-                    case 'aborted': msg = 'Speech aborted. Try again.'; break;
-                    case 'audio-capture': msg = 'Microphone issue. Check permissions or try another device.'; break;
-                    case 'not-allowed': msg = 'Microphone access denied. Enable in browser settings.'; break;
-                    default: msg = `Error: ${ev.error}`;
-                }
-                voiceStatus.textContent = msg; stopListening();
+                voiceStatus.textContent = `Error: ${ev.error}`;
+                stopListening();
             };
             recognition.onend = () => {
                 voiceBtn.classList.remove('listening'); listening = false;
                 voiceBtn.innerHTML = continuousListening ? 
-                    '<i class="fas fa-microphone"></i> Continuous Listening' : 
+                    '<i class="fas fa-microphone"></i> Continuous' : 
                     '<i class="fas fa-microphone"></i> Start Voice';
                 if (continuousListening) recognition.start();
             };
         } else {
             voiceBtn.style.display = 'none';
-            console.warn('SpeechRecognition not supported in this browser');
         }
 
         voiceBtn.addEventListener('click', () => {
             if (!recognition) return;
-            if (listening) {
-                continuousListening = false;
-                stopListening();
-                return;
-            }
-            continuousListening = confirm('Enable continuous listening? (Click OK for continuous, Cancel for single command)');
+            if (listening) { continuousListening = false; stopListening(); return; }
+            continuousListening = confirm('Enable continuous listening?');
             startListening();
         });
-
         document.getElementById('commandsBtn').addEventListener('click', showCommandsModal);
 
         function startListening() {
@@ -476,52 +586,23 @@
             voiceStatus.textContent = 'Listening...';
             recognition.start(); listening = true;
         }
-
-        function stopListening() {
-            recognition.stop(); listening = false;
-        }
+        function stopListening() { recognition.stop(); listening = false; }
 
         function playFeedbackSound() {
-            const audio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YSAAAAABAA==');
-            audio.play();
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, ctx.currentTime);
+            osc.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
         }
 
-        // Fuzzy matching
-        function levenshtein(a, b) {
-            const matrix = Array(a.length + 1).fill().map(() => Array(b.length + 1).fill(0));
-            for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
-            for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
-            for (let i = 1; i <= a.length; i++) {
-                for (let j = 1; j <= b.length; j++) {
-                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-                    matrix[i][j] = Math.min(
-                        matrix[i - 1][j] + 1,
-                        matrix[i][j - 1] + 1,
-                        matrix[i - 1][j - 1] + cost
-                    );
-                }
-            }
-            return matrix[a.length][b.length];
-        }
-
-        function findClosestCommand(spoken, commands) {
-            let minDist = Infinity;
-            let closest = null;
-            for (const cmd of commands) {
-                const dist = levenshtein(spoken, cmd);
-                if (dist < minDist) {
-                    minDist = dist;
-                    closest = cmd;
-                }
-            }
-            return minDist <= 5 ? closest : null;
-        }
-
-        // Time parsing
+        // === VOICE COMMANDS ===
         const numberWords = {
             'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
             'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10, 'eleven': 11, 'twelve': 12,
-            'quarter': 15, 'half': 30, 'thirty': 30, 'forty': 40, 'forty-five': 45
+            'quarter': 15, 'half': 30, 'thirty': 30
         };
 
         function parseNaturalTime(spoken) {
@@ -529,11 +610,11 @@
             let hour = 0, minute = 0, period = '';
             const match = spoken.match(/(\w+)(?::(\w+))?([ap]m)?|(\w+)\s*(to|past)\s*(\w+)([ap]m)?/i);
             if (match) {
-                if (match[1]) { // e.g., "9:30am" or "nine thirty am"
+                if (match[1]) {
                     hour = numberWords[match[1]] || parseInt(match[1]) || 0;
                     minute = match[2] ? (numberWords[match[2]] || parseInt(match[2]) || 0) : 0;
                     period = match[3] || '';
-                } else if (match[4]) { // e.g., "quarter past nine am"
+                } else if (match[4]) {
                     minute = numberWords[match[4]] || 0;
                     hour = numberWords[match[6]] || parseInt(match[6]) || 0;
                     period = match[7] || '';
@@ -541,7 +622,7 @@
             }
             if (period === 'pm' && hour !== 12) hour += 12;
             if (period === 'am' && hour === 12) hour = 0;
-            minute = Math.round(minute / 30) * 30; // Snap to nearest 30 min
+            minute = Math.round(minute / 30) * 30;
             return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
         }
 
@@ -555,9 +636,8 @@
             return false;
         }
 
-        // Voice command processing
         const commandSynonyms = [
-            {keys: ['add job', 'new entry', 'start entry'], action: () => {clearForm(); return 'Ready to add a new entry';}},
+            {keys: ['add job', 'new entry', 'start entry'], action: () => {clearForm(); return 'Ready for new entry';}},
             {keys: ['job name', 'set job', 'job title'], action: cmd => {
                 const match = cmd.match(/(?:job name|set job|job title)\s+(.+)/i);
                 if (match) {document.getElementById('jobName').value = match[1]; return 'Job name set';}
@@ -565,9 +645,10 @@
             }},
             {keys: ['address', 'location', 'place'], action: cmd => {
                 const match = cmd.match(/(?:address|location|place)\s+(.+)/i);
-                if (match) {document.getElementById('address').value = match[1]; return 'Address set';}
+                if (match) {document.getElementById('address').value = match[1]; addToHistory(match[1]); return 'Address set';}
                 return null;
             }},
+            {keys: ['show addresses', 'address history', 'past addresses', 'history'], action: () => {historyBtn.click(); return 'Opening address history';}},
             {keys: ['time in', 'start time', 'begin'], action: cmd => {
                 const match = cmd.match(/(?:time in|start time|begin)\s+(.+)/i);
                 if (match && setSelectTime('timeIn', match[1])) return 'Time In set';
@@ -584,7 +665,7 @@
                 return null;
             }},
             {keys: ['save', 'add entry', 'submit'], action: () => {document.getElementById('actionButton').click(); return 'Entry saved';}},
-            {keys: ['generate excel', 'export', 'download'], action: () => {document.getElementById('generateExcel').click(); return 'Generating Excel...';}},
+            {keys: ['generate excel', 'export', 'download'], action: () => {document.getElementById('generateExcel').click(); return 'Exporting...';}},
             {keys: ['clear all', 'reset', 'delete all'], action: () => {document.getElementById('clearAllButton').click(); return 'Cleared';}},
             {keys: ['edit row', 'change row'], action: cmd => {
                 const match = cmd.match(/(?:edit row|change row)\s+(\d+)/i);
@@ -600,18 +681,18 @@
         function processVoiceCommand(cmd) {
             for (const cmdDef of commandSynonyms) {
                 for (const key of cmdDef.keys) {
-                    if (cmd.includes(key) || levenshtein(cmd, key) <= 3) {
+                    if (cmd.includes(key)) {
                         const result = cmdDef.action(cmd);
                         if (result) {voiceStatus.textContent = result; return;}
                     }
                 }
             }
-            const closest = findClosestCommand(cmd, commandSynonyms.flatMap(c => c.keys));
-            voiceStatus.textContent = closest ? `Did you mean "${closest}"?` : 'Command not recognized. Try "List Commands" for help.';
+            voiceStatus.textContent = 'Command not recognized. Say "list commands" for help.';
         }
 
-        // Init
+        // === INIT ===
         loadFromLocalStorage();
+        populateHistory();
     </script>
 </body>
 </html>
