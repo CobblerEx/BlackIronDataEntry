@@ -7,482 +7,393 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
-            color: #e0e0e0;
-            padding: 1.5rem;
-            max-width: 100%;
-            overflow-x: hidden;
-            margin: 0;
-        }
+        body {font-family:'Roboto',sans-serif;background:linear-gradient(135deg,#1a1a1a 0%,#2c3e50 100%);color:#e0e0e0;padding:1.5rem;margin:0;}
         .nav-buttons {display:flex;justify-content:center;gap:1rem;margin:1rem 0;flex-wrap:wrap;}
-        .nav-button {display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#2a2a2a;border:2px solid #ff4500;border-radius:50%;color:#ff4500;text-decoration:none;transition:transform .2s,box-shadow .2s;position:relative;}
-        .nav-button:hover{transform:scale(1.1);box-shadow:0 0 10px rgba(255,69,0,.8);}
-        .nav-button i{font-size:1.2rem;}
-        .nav-button::after{content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:.3rem .6rem;border-radius:4px;font-size:.8rem;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;}
-        .nav-button:hover::after{opacity:1;}
-        @media (max-width:600px){.nav-buttons{gap:.5rem;}.nav-button{width:36px;height:36px;}.nav-button i{font-size:1rem;}}
-
-        h1,h2{font-size:clamp(1.8rem,6vw,2.2rem);color:#ff4500;text-shadow:0 0 10px rgba(255,69,0,.5);text-align:center;}
-        #form,#totalTime{background:rgba(30,30,30,.9);padding:1.5rem;border-radius:.5rem;box-shadow:0 0 15px rgba(255,69,0,.3);margin-bottom:2rem;}
-        label{display:block;margin-bottom:.5rem;font-size:clamp(1rem,3vw,1.2rem);color:#e0e0e0;position:relative;}
-        input,select,textarea{width:100%;padding:.6rem;margin-bottom:.75rem;font-size:clamp(1rem,3vw,1.1rem);background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:.3rem;box-sizing:border-box;transition:box-shadow .3s ease;}
-        input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 8px rgba(255,69,0,.7);}
-        textarea{height:6rem;}
-        button{background:#ff4500;color:#fff;border:none;border-radius:.3rem;padding:.8rem 1.5rem;font-size:clamp(1rem,3vw,1.1rem);cursor:pointer;transition:transform .2s,box-shadow .2s;margin:.5rem .5rem 0 0;}
-        button:hover{transform:scale(1.05);box-shadow:0 0 12px rgba(255,69,0,.8);}
-        button:disabled{background:#555;cursor:not-allowed;box-shadow:none;}
-        #cancelButton,#clearAllButton{background:#dc3545;}
-        #cancelButton:hover,#clearAllButton:hover{box-shadow:0 0 12px rgba(220,53,69,.8);}
-
-        /* Perfect Address History Button */
-        #address { padding-right: 56px !important; }
-        .history-btn {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #ff4500;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            z-index: 10;
-            box-shadow: 0 2px 8px rgba(255, 69, 0, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-        .history-btn:hover {
-            background: #e03c00;
-            transform: translateY(-50%) scale(1.1);
-            box-shadow: 0 4px 16px rgba(255, 69, 0, 0.6);
-        }
-        .history-btn i { margin: 0 !important; }
-
-        /* Searchable History Dropdown */
-        #addressHistory {
-            display: none;
-            position: absolute;
-            top: calc(100% + 8px);
-            left: 0;
-            right: 0;
-            background: #2a2a2a;
-            border: 1px solid #ff4500;
-            border-radius: 8px;
-            max-height: 220px;
-            overflow-y: auto;
-            z-index: 100;
-            box-shadow: 0 8px 24px rgba(255, 69, 0, 0.3);
-        }
-        .history-item {
-            padding: 12px 16px;
-            cursor: pointer;
-            border-bottom: 1px solid #444;
-            font-size: 1rem;
-            transition: all 0.2s;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .history-item:hover {
-            background: #ff4500;
-            color: white;
-            padding-left: 20px;
-        }
-        .history-item:last-child { border-bottom: none; }
-        .no-results { padding: 12px 16px; color: #888; font-style: italic; }
-
-        #voiceControl{margin-top:1rem;display:flex;align-items:center;gap:.5rem;}
-        #voiceBtn,#commandsBtn{background:#ff4500;padding:.6rem 1rem;border-radius:.3rem;color:#fff;cursor:pointer;}
-        #voiceBtn.listening{background:#28a745;}
-        #voiceStatus{font-size:.9rem;color:#ff4500;}
-        table{width:100%;border-collapse:collapse;margin-top:1rem;background:rgba(30,30,30,.9);border-radius:.5rem;overflow:hidden;box-shadow:0 0 15px rgba(255,69,0,.3);}
-        th,td{border:1px solid #ff4500;padding:.5rem;text-align:left;font-size:clamp(.8rem,2.5vw,.9rem);}
-        th{background:linear-gradient(90deg,#ff4500,#e03c00);color:#fff;position:sticky;top:0;z-index:10;}
-        td{background:#2a2a2a;}
-        tbody tr{transition:background .3s,transform .3s;animation:fadeIn .5s ease-in;}
-        tbody tr:hover{background:#3a3a3a;transform:translateY(-2px);}
-        tbody tr.dragging{opacity:.5;background:#ff4500;}
-        .drag-handle{cursor:move;color:#ff4500;padding-right:.5rem;transition:transform .2s;}
-        .drag-handle:hover{transform:scale(1.2);}
-        .action-select{width:100%;padding:.3rem;font-size:clamp(.8rem,2vw,.9rem);background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:.3rem;}
-        #totalTime{font-weight:bold;font-size:clamp(1rem,3vw,1.2rem);color:#ff4500;text-shadow:0 0 5px rgba(255,69,0,.5);}
-        #loading{display:none;text-align:center;padding:1rem;color:#ff4500;}
-        .spinner{border:4px solid rgba(255,69,0,.3);border-top:4px solid #ff4500;border-radius:50%;width:24px;height:24px;animation:spin 1s linear infinite;display:inline-block;}
-        #actionModal,#commandsModal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(30,30,30,.95);padding:1.5rem;border-radius:.5rem;box-shadow:0 0 20px rgba(255,69,0,.5);z-index:1000;text-align:center;}
-        #overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:999;}
-        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        @media (max-width:600px){
-            table{display:block;overflow-x:auto;white-space:nowrap;}
-            th,td{min-width:70px;}
-            .action-select{max-width:100px;}
-        }
+        .nav-button {width:40px;height:40px;background:#2a2a2a;border:2px solid #ff4500;border-radius:50%;color:#ff4500;display:flex;align-items:center;justify-content:center;text-decoration:none;position:relative;}
+        .nav-button:hover {transform:scale(1.1);box-shadow:0 0 15px rgba(255,69,0,.8);}
+        .nav-button::after {content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:5px 10px;border-radius:4px;font-size:.8rem;opacity:0;white-space:nowrap;transition:opacity .2s;pointer-events:none;z-index:10;}
+        .nav-button:hover::after {opacity:1;}
+        h1,h2 {color:#ff4500;text-align:center;text-shadow:0 0 10px rgba(255,69,0,.5);}
+        #form,#totalTime {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin-bottom:1.5rem;}
+        label {display:block;margin-bottom:.8rem;position:relative;}
+        input,select,textarea {width:100%;padding:.7rem;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;font-size:1rem;box-sizing:border-box;}
+        input:focus,select:focus,textarea:focus {outline:none;box-shadow:0 0 10px rgba(255,69,0,.7);}
+        textarea {height:80px;resize:vertical;}
+        button {background:#ff4500;color:white;border:none;padding:.8rem 1.5rem;border-radius:6px;cursor:pointer;font-size:1rem;margin:0 .5rem .5rem 0;transition:all .2s;}
+        button:hover {transform:scale(1.05);box-shadow:0 0 15px rgba(255,69,0,.8);}
+        #cancelButton,#clearAllButton {background:#dc3545;}
+        #copyLast {background:#28a745;}
+        #address {padding-right:50px !important;}
+        .history-btn {position:absolute;right:8px;top:38px;background:#ff4500;color:white;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;}
+        #addressHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
+        .history-item {padding:12px 16px;cursor:pointer;border-bottom:1px solid #444;}
+        .history-item:hover {background:#ff4500;color:white;padding-left:24px;}
+        table {width:100%;border-collapse:collapse;background:rgba(30,30,30,.95);border-radius:10px;overflow:hidden;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1rem 0;}
+        th,td {border:1px solid #ff4500;padding:.6rem;text-align:left;}
+        th {background:#ff4500;color:white;position:sticky;top:0;}
+        tbody tr:hover {background:#333;transform:translateY(-2px);}
+        .drag-handle {cursor:move;color:#ff4500;margin-right:8px;}
+        .action-select {padding:6px;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:4px;}
+        #totalTime {font-size:1.4rem;font-weight:bold;text-align:center;padding:1rem;}
+        #loading {display:none;text-align:center;padding:1.5rem;background:rgba(0,0,0,.8);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:10px;z-index:1000;}
+        .spinner {border:5px solid #333;border-top:5px solid #ff4500;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;display:inline-block;}
+        @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+        @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;}}
     </style>
 </head>
 <body>
     <div class="nav-buttons">
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit.html" class="nav-button" data-tooltip="Black Iron with Edit"><i class="fas fa-edit"></i></a>
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit3.html" class="nav-button" data-tooltip="Black Iron with Edit v1"><i class="fas fa-file-alt"></i></a>
-        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironcal2.html" class="nav-button" data-tooltip="Black Iron Calculator"><i class="fas fa-calculator"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit.html" class="nav-button" data-tooltip="Black Iron Edit"><i class="fas fa-edit"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit3.html" class="nav-button" data-tooltip="Black Iron v1"><i class="fas fa-file-alt"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironcal2.html" class="nav-button" data-tooltip="Calculator"><i class="fas fa-calculator"></i></a>
         <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html" class="nav-button" data-tooltip="Upload CSV"><i class="fas fa-upload"></i></a>
         <a href="https://cobblerex.github.io/BlackIronDataEntry/Timesheet.html" class="nav-button" data-tooltip="Timesheet"><i class="fas fa-clock"></i></a>
     </div>
+
     <h1>Timesheet Creator</h1>
+
     <div id="form">
-        <label><i class="fas fa-user"></i> Employee Name: <input type="text" id="employee" value="Lucas"></label>
-        <label><i class="fas fa-calendar"></i> Date: <input type="date" id="sessionDate"></label>
-        <h2><i class="fas fa-plus-circle"></i> Add Job Entry</h2>
-        <label><i class="fas fa-briefcase"></i> Job Name: <input type="text" id="jobName"></label>
+        <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
+        <label>Date: <input type="date" id="sessionDate"></label>
+        <h2>Add / Edit Job Entry</h2>
+        <label>Job Name: <input type="text" id="jobName"></label>
         <label style="position:relative;">
-            <i class="fas fa-map-marker-alt"></i> Address: 
-            <input type="text" id="address" placeholder="Type to search past addresses..." autocomplete="off">
-            <button type="button" class="history-btn" id="historyBtn" title="Show Full History">
-                <i class="fas fa-history"></i>
-            </button>
+            Address: 
+            <input type="text" id="address" placeholder="Type to search history..." autocomplete="off">
+            <button type="button" class="history-btn" id="historyBtn"><i class="fas fa-history"></i></button>
             <div id="addressHistory"></div>
         </label>
-        <label><i class="fas fa-clock"></i> Time In: <select id="timeIn"></select></label>
-        <label><i class="fas fa-clock"></i> Time Out: <select id="timeOut"></select></label>
-        <label><i class="fas fa-comments"></i> Job Description: <textarea id="description"></textarea></label>
+        <label>Time In: <select id="timeIn"></select></label>
+        <label>Time Out: <select id="timeOut"></select></label>
+        <label>Description: <textarea id="description"></textarea></label>
         <input type="hidden" id="editIndex" value="-1">
-        <button id="actionButton"><i class="fas fa-save"></i> Add Entry</button>
-        <button id="cancelButton" style="display:none;"><i class="fas fa-times"></i> Cancel</button>
+        <div style="margin-top:1rem;">
+            <button id="actionButton">Add Entry</button>
+            <button id="copyLast">Copy Last Job</button>
+            <button id="cancelButton" style="display:none;">Cancel Edit</button>
+        </div>
     </div>
 
-    <div id="voiceControl">
-        <button id="voiceBtn"><i class="fas fa-microphone"></i> Start Voice</button>
-        <button id="commandsBtn"><i class="fas fa-list"></i> List Commands</button>
-        <span id="voiceStatus"></span>
-    </div>
-
-    <div id="totalTime"><i class="fas fa-hourglass"></i> Total Time: 0 hrs 0 min</div>
+    <div id="totalTime">Total Time: 0 hrs 0 min</div>
 
     <table id="entriesTable">
         <thead>
             <tr>
                 <th>Date</th>
-                <th>Job Name / Address</th>
-                <th>Time In</th>
-                <th>Time Out</th>
-                <th>Total Time</th>
-                <th>Job Description</th>
+                <th>Job / Address</th>
+                <th>In</th>
+                <th>Out</th>
+                <th>Hours</th>
+                <th>Description</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody></tbody>
     </table>
 
-    <div id="loading"><span class="spinner"></span> Generating Excel...</div>
-    <button id="generateExcel"><i class="fas fa-file-excel"></i> Generate Excel</button>
-    <button id="clearAllButton"><i class="fas fa-trash-alt"></i> Clear All</button>
+    <div style="text-align:center;margin:2rem 0;">
+        <button id="generateExcel">Generate Excel</button>
+        <button id="clearAllButton">Clear All</button>
+    </div>
 
-    <div id="overlay"></div>
-    <div id="actionModal">
-        <h3>Actions</h3>
-        <button class="edit"><i class="fas fa-edit"></i> Edit</button>
-        <button class="up"><i class="fas fa-arrow-up"></i> Move Up</button>
-        <button class="down"><i class="fas fa-arrow-down"></i> Move Down</button>
-        <button class="delete"><i class="fas fa-trash"></i> Delete</button>
-        <button class="cancel"><i class="fas fa-times"></i> Cancel</button>
-    </div>
-    <div id="commandsModal">
-        <h3>Voice Commands</h3>
-        <table>
-            <thead><tr><th>Command</th><th>Example</th><th>Action</th></tr></thead>
-            <tbody>
-                <tr><td>Add job / New entry</td><td>"Add job"</td><td>Clears form</td></tr>
-                <tr><td>Job name [name]</td><td>"Job name Acme"</td><td>Sets Job Name</td></tr>
-                <tr><td>Address [addr]</td><td>"Address 123 Main St"</td><td>Sets Address</td></tr>
-                <tr><td>Time in [time]</td><td>"Time in 9 AM"</td><td>Sets Time In</td></tr>
-                <tr><td>Time out [time]</td><td>"Time out 5 PM"</td><td>Sets Time Out</td></tr>
-                <tr><td>Description [text]</td><td>"Description cleanup"</td><td>Sets Description</td></tr>
-                <tr><td>Save / Submit</td><td>"Save"</td><td>Adds entry</td></tr>
-                <tr><td>Generate Excel</td><td>"Export"</td><td>Downloads file</td></tr>
-                <tr><td>Clear all</td><td>"Reset"</td><td>Clears all</td></tr>
-                <tr><td>Edit row [n]</td><td>"Edit row 2"</td><td>Edits row</td></tr>
-                <tr><td>Show addresses / History</td><td>"Show addresses"</td><td>Opens full history</td></tr>
-            </tbody>
-        </table>
-        <p>Just type in Address field to instantly filter history!</p>
-        <button class="cancel"><i class="fas fa-times"></i> Close</button>
-    </div>
+    <div id="loading"><div class="spinner"></div><br>Generating Excel...</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         // === TIME OPTIONS ===
-        function generateTimeOptions() {
-            const opts = [];
-            for (let h = 0; h < 24; h++) {
-                for (let m of [0, 30]) {
-                    const v = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-                    const period = h < 12 ? 'AM' : 'PM';
-                    let h12 = h % 12; if (h12 === 0) h12 = 12;
-                    opts.push({value: v, text: `${h12}:${String(m).padStart(2,'0')} ${period}`});
-                }
+        const timeOptions = [];
+        for (let h = 0; h < 24; h++) {
+            for (let m of [0, 30]) {
+                const val = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+                const h12 = h % 12 || 12;
+                const period = h < 12 ? 'AM' : 'PM';
+                timeOptions.push({value: val, text: `${h12}:${m.toString().padStart(2,'0')} ${period}`});
             }
-            return opts;
         }
-        const timeOptions = generateTimeOptions();
-        const timeInSel = document.getElementById('timeIn');
-        const timeOutSel = document.getElementById('timeOut');
-        timeOptions.forEach(o => {
-            const opt = document.createElement('option');
-            opt.value = o.value; opt.text = o.text;
-            timeInSel.add(opt); timeOutSel.add(opt.cloneNode(true));
-        });
-        timeInSel.value = '08:00'; timeOutSel.value = '08:30';
+        document.getElementById('timeIn').innerHTML = timeOptions.map(o => `<option value="${o.value}">${o.text}</option>`).join('');
+        document.getElementById('timeOut').innerHTML = document.getElementById('timeIn').innerHTML;
+        document.getElementById('timeIn').value = '08:00';
+        document.getElementById('timeOut').value = '08:30';
         document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
 
-        // === CORE DATA ===
+        // === DATA ===
         let entries = [];
+        let addressHistory = [];
 
-        // === LOCALSTORAGE ===
-        function saveToLocalStorage() {
-            const data = {employee: document.getElementById('employee').value,
-                          sessionDate: document.getElementById('sessionDate').value,
-                          entries};
-            localStorage.setItem('timesheetData', JSON.stringify(data));
-        }
-        function loadFromLocalStorage() {
-            const raw = localStorage.getItem('timesheetData');
-            if (!raw) return;
-            const d = JSON.parse(raw);
-            document.getElementById('employee').value = d.employee || 'Lucas';
-            document.getElementById('sessionDate').value = d.sessionDate || new Date().toISOString().split('T')[0];
-            entries = d.entries || [];
+        // === LOCAL STORAGE ===
+        function loadData() {
+            const saved = localStorage.getItem('timesheetData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                document.getElementById('employee').value = data.employee || 'Lucas';
+                document.getElementById('sessionDate').value = data.date || new Date().toISOString().split('T')[0];
+                entries = data.entries || [];
+            }
+            const hist = localStorage.getItem('addressHistory');
+            if (hist) addressHistory = JSON.parse(hist);
             renderTable();
         }
-        function clearAll() {
-            if (confirm('Clear everything?')) {
-                entries = [];
-                localStorage.removeItem('timesheetData');
-                document.getElementById('employee').value = 'Lucas';
-                document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
-                clearForm(); renderTable();
-            }
-        }
-
-        // === TIME UTILS ===
-        function timeStrToDecimal(t) {const [h, m] = t.split(':').map(Number); return (h + m / 60) / 24;}
-        function to12HourString(t) {
-            const [h, m] = t.split(':').map(Number);
-            const period = h < 12 ? 'AM' : 'PM'; let h12 = h % 12; if (h12 === 0) h12 = 12;
-            return `${h12}:${String(m).padStart(2,'0')} ${period}`;
-        }
-        function formatTotalTime(dec) {
-            let hrs = dec * 24; const h = Math.floor(hrs);
-            let min = Math.round((hrs - h) * 60 / 30) * 30;
-            if (min >= 60) {min -= 60; hrs++;}
-            return `${Math.floor(hrs)}:${String(min).padStart(2,'0')}`;
-        }
-        function getNextTimeOption(cur) {
-            const i = timeOptions.findIndex(o => o.value === cur);
-            return i + 1 < timeOptions.length ? timeOptions[i + 1].value : timeOptions[0].value;
-        }
-        function formatDateString(d) {
-            if (!d) return '';
-            const [y, m, day] = d.split('-').map(Number);
-            return `${String(m).padStart(2,'0')}/${String(day).padStart(2,'0')}/${y}`;
-        }
-
-        // === SEARCHABLE ADDRESS HISTORY ===
-        const addressInput = document.getElementById('address');
-        const historyBtn = document.getElementById('historyBtn');
-        const historyDropdown = document.getElementById('addressHistory');
-        let fullHistory = [];
-
-        function loadAddressHistory() {
-            const saved = localStorage.getItem('addressHistory');
-            fullHistory = saved ? JSON.parse(saved) : [];
+        function saveData() {
+            const data = {
+                employee: document.getElementById('employee').value,
+                date: document.getElementById('sessionDate').value,
+                entries
+            };
+            localStorage.setItem('timesheetData', JSON.stringify(data));
         }
         function saveAddressHistory() {
-            localStorage.setItem('addressHistory', JSON.stringify(fullHistory));
+            localStorage.setItem('addressHistory', JSON.stringify(addressHistory));
         }
-        function addToHistory(addr) {
-            if (!addr.trim()) return;
-            fullHistory = fullHistory.filter(a => a !== addr);
-            fullHistory.unshift(addr);
-            if (fullHistory.length > 50) fullHistory.pop();
-            saveAddressHistory();
-        }
-        function filterAndShowHistory(query = '') {
-            const lowerQuery = query.toLowerCase();
-            const filtered = query ? fullHistory.filter(a => a.toLowerCase().includes(lowerQuery)) : fullHistory;
 
-            historyDropdown.innerHTML = '';
+        // === UTILS ===
+        function timeToDecimal(t) {
+            const [h, m] = t.split(':').map(Number);
+            return h + m/60;
+        }
+        function decimalToHours(dec) {
+            const totalMins = Math.round(dec * 60);
+            const h = Math.floor(totalMins / 60);
+            const m = totalMins % 60;
+            return {h, m};
+        }
+        function formatHours(dec) {
+            const {h, m} = decimalToHours(dec);
+            return `${h}:${m.toString().padStart(2,'0')}`;
+        }
+        function getNextTime(current) {
+            const idx = timeOptions.findIndex(o => o.value === current);
+            return timeOptions[(idx + 1) % timeOptions.length].value;
+        }
+
+        // === ADDRESS HISTORY ===
+        const addrInput = document.getElementById('address');
+        const historyBtn = document.getElementById('historyBtn');
+        const dropdown = document.getElementById('addressHistory');
+
+        function showHistory(filter = '') {
+            dropdown.innerHTML = '';
+            const filtered = filter ? addressHistory.filter(a => a.toLowerCase().includes(filter.toLowerCase())) : addressHistory;
             if (filtered.length === 0) {
-                historyDropdown.innerHTML = '<div class="history-item no-results">No matching addresses</div>';
+                dropdown.innerHTML = '<div class="history-item">No addresses found</div>';
             } else {
                 filtered.forEach(addr => {
-                    const item = document.createElement('div');
-                    item.className = 'history-item';
-                    item.textContent = addr;
-                    item.onclick = () => {
-                        addressInput.value = addr;
-                        historyDropdown.style.display = 'none';
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.textContent = addr;
+                    div.onclick = () => {
+                        addrInput.value = addr;
+                        dropdown.style.display = 'none';
                     };
-                    historyDropdown.appendChild(item);
+                    dropdown.appendChild(div);
                 });
             }
-            historyDropdown.style.display = 'block';
+            dropdown.style.display = 'block';
         }
-
-        addressInput.addEventListener('input', () => filterAndShowHistory(addressInput.value));
-        addressInput.addEventListener('focus', () => { if (!addressInput.value) filterAndShowHistory(); });
-        historyBtn.onclick = () => filterAndShowHistory();
+        addrInput.addEventListener('input', () => showHistory(addrInput.value));
+        addrInput.addEventListener('focus', () => showHistory());
+        historyBtn.onclick = () => showHistory();
         document.addEventListener('click', e => {
-            if (!addressInput.contains(e.target) && !historyBtn.contains(e.target) && !historyDropdown.contains(e.target)) {
-                historyDropdown.style.display = 'none';
+            if (!addrInput.contains(e.target) && !historyBtn.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
             }
         });
 
-        // === TABLE RENDERING & REST OF YOUR ORIGINAL CODE (unchanged except tiny fixes) ===
+        // === RENDER TABLE ===
         function renderTable() {
-            const tbody = document.querySelector('#entriesTable tbody'); tbody.innerHTML = '';
-            entries.forEach((e, i) => {
-                const jobAddr = e.address ? `${e.jobName}<br>${e.address}` : e.jobName;
-                const tr = document.createElement('tr'); tr.draggable = true; tr.dataset.index = i;
+            const tbody = document.querySelector('#entriesTable tbody');
+            tbody.innerHTML = '';
+            let totalDecimal = 0;
+
+            entries.forEach((entry, i) => {
+                const inDec = timeToDecimal(entry.timeIn);
+                const outDec = timeToDecimal(entry.timeOut);
+                const duration = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+                totalDecimal += duration;
+
+                const tr = document.createElement('tr');
+                tr.draggable = true;
+                tr.dataset.index = i;
                 tr.innerHTML = `
-                    <td>${formatDateString(e.dateStr)}</td>
-                    <td>${jobAddr}</td>
-                    <td>${to12HourString(e.timeIn)}</td>
-                    <td>${to12HourString(e.timeOut)}</td>
-                    <td>${formatTotalTime(e.totalTimeDecimal)}</td>
-                    <td>${e.description}</td>
+                    <td>${entry.dateStr}</td>
+                    <td><strong>${entry.jobName}</strong><br><small>${entry.address || ''}</small></td>
+                    <td>${entry.timeIn}</td>
+                    <td>${entry.timeOut}</td>
+                    <td>${formatHours(duration)}</td>
+                    <td>${entry.description || ''}</td>
                     <td>
-                        <i class="fas fa-grip-lines drag-handle" title="Drag to reorder"></i>
-                        <select class="action-select" onchange="handleAction(${i},this.value);this.value=''">
+                        <i class="fas fa-grip-lines drag-handle"></i>
+                        <select class="action-select" onchange="handleAction(${i}, this.value); this.value=''">
                             <option value="" disabled selected>Actions</option>
                             <option value="edit">Edit</option>
-                            <option value="up">Move Up</option>
-                            <option value="down">Move Down</option>
+                            <option value="up">Up</option>
+                            <option value="down">Down</option>
                             <option value="delete">Delete</option>
                         </select>
-                    </td>`;
+                    </td>
+                `;
                 tbody.appendChild(tr);
             });
-            document.querySelectorAll('#entriesTable tbody tr').forEach(r => {
-                r.addEventListener('dragstart', e => {e.target.classList.add('dragging'); e.dataTransfer.setData('text/plain', e.target.dataset.index);});
-                r.addEventListener('dragover', e => e.preventDefault());
-                r.addEventListener('drop', e => {
+
+            // Update total
+            const {h, m} = decimalToHours(totalDecimal);
+            document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
+
+            // Drag & drop
+            document.querySelectorAll('tr[data-index]').forEach(tr => {
+                tr.addEventListener('dragstart', e => {
+                    tr.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', tr.dataset.index);
+                });
+                tr.addEventListener('dragover', e => e.preventDefault());
+                tr.addEventListener('drop', e => {
                     e.preventDefault();
-                    const src = parseInt(e.dataTransfer.getData('text/plain'));
-                    const dest = parseInt(e.target.closest('tr').dataset.index);
-                    if (src !== dest && !isNaN(dest)) {
-                        const [mov] = entries.splice(src, 1);
-                        entries.splice(dest, 0, mov);
+                    const from = +e.dataTransfer.getData('text/plain');
+                    const to = +tr.dataset.index;
+                    if (from !== to) {
+                        const [moved] = entries.splice(from, 1);
+                        entries.splice(to, 0, moved);
                         renderTable();
                     }
                 });
-                r.addEventListener('dragend', e => e.target.classList.remove('dragging'));
-                let timer;
-                r.addEventListener('touchstart', ev => {ev.preventDefault(); timer = setTimeout(() => showActionModal(r.dataset.index), 500); if ('vibrate' in navigator) navigator.vibrate(50);});
-                r.addEventListener('touchend', () => clearTimeout(timer));
+                tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
             });
-            updateTotalTime(); saveToLocalStorage();
+
+            saveData();
         }
 
-        function updateTotalTime() {
-            const tot = entries.reduce((s, e) => s + e.totalTimeDecimal, 0);
-            let hrs = tot * 24; const h = Math.floor(hrs);
-            let min = Math.round((hrs - h) * 60 / 30) * 30;
-            if (min >= 60) {min -= 60; hrs++;}
-            document.getElementById('totalTime').innerHTML = `<i class="fas fa-hourglass"></i> Total Time: ${Math.floor(hrs)} hrs ${min} min`;
+        // === ACTIONS ===
+        function handleAction(index, action) {
+            if (action === 'edit') {
+                const e = entries[index];
+                document.getElementById('jobName').value = e.jobName;
+                document.getElementById('address').value = e.address || '';
+                document.getElementById('timeIn').value = e.timeIn;
+                document.getElementById('timeOut').value = e.timeOut;
+                document.getElementById('description').value = e.description || '';
+                document.getElementById('editIndex').value = index;
+                document.getElementById('actionButton').textContent = 'Update Entry';
+                document.getElementById('cancelButton').style.display = 'inline-block';
+                document.getElementById('form').scrollIntoView({behavior: 'smooth'});
+            }
+            else if (action === 'up' && index > 0) {
+                [entries[index-1], entries[index]] = [entries[index], entries[index-1]];
+                renderTable();
+            }
+            else if (action === 'down' && index < entries.length-1) {
+                [entries[index], entries[index+1]] = [entries[index+1], entries[index]];
+                renderTable();
+            }
+            else if (action === 'delete') {
+                if (confirm('Delete this entry?')) {
+                    entries.splice(index, 1);
+                    renderTable();
+                }
+            }
         }
+
+        // === FORM SUBMIT ===
+        document.getElementById('actionButton').onclick = () => {
+            const idx = +document.getElementById('editIndex').value;
+            const date = document.getElementById('sessionDate').value;
+            const job = document.getElementById('jobName').value.trim();
+            const addr = document.getElementById('address').value.trim();
+            const tIn = document.getElementById('timeIn').value;
+            const tOut = document.getElementById('timeOut').value;
+            const desc = document.getElementById('description').value.trim();
+
+            if (!date) return alert('Select date');
+            if (!job) return alert('Enter job name');
+            if (timeToDecimal(tOut) <= timeToDecimal(tIn)) return alert('Time Out must be after Time In');
+
+            const entry = {dateStr: date, jobName: job, address: addr, timeIn: tIn, timeOut: tOut, description: desc};
+
+            if (idx === -1) {
+                entries.push(entry);
+            } else {
+                entries[idx] = entry;
+            }
+
+            if (addr && !addressHistory.includes(addr)) {
+                addressHistory.unshift(addr);
+                if (addressHistory.length > 50) addressHistory.pop();
+                saveAddressHistory();
+            }
+
+            renderTable();
+            clearForm();
+        };
 
         function clearForm() {
             document.getElementById('jobName').value = '';
             document.getElementById('address').value = '';
             document.getElementById('description').value = '';
             document.getElementById('editIndex').value = -1;
-            document.getElementById('actionButton').innerHTML = '<i class="fas fa-save"></i> Add Entry';
+            document.getElementById('actionButton').textContent = 'Add Entry';
             document.getElementById('cancelButton').style.display = 'none';
-            if (entries.length) {
-                const last = entries[entries.length - 1];
+            if (entries.length > 0) {
+                const last = entries[entries.length-1];
                 document.getElementById('timeIn').value = last.timeOut;
-                document.getElementById('timeOut').value = getNextTimeOption(last.timeOut);
-            } else {
-                document.getElementById('timeIn').value = '08:00';
-                document.getElementById('timeOut').value = '08:30';
+                document.getElementById('timeOut').value = getNextTime(last.timeOut);
             }
         }
-
-        document.getElementById('actionButton').addEventListener('click', () => {
-            const editIdx = parseInt(document.getElementById('editIndex').value);
-            const dateStr = document.getElementById('sessionDate').value;
-            const job = document.getElementById('jobName').value.trim();
-            const addr = document.getElementById('address').value.trim();
-            const tIn = document.getElementById('timeIn').value;
-            const tOut = document.getElementById('timeOut').value;
-            const desc = document.getElementById('description').value;
-
-            if (!dateStr) return alert('Select a date.');
-            if (!job) return alert('Job name required.');
-            if (tOut <= tIn) return alert('Time Out must be after Time In.');
-
-            const inDec = timeStrToDecimal(tIn);
-            let outDec = timeStrToDecimal(tOut);
-            if (outDec <= inDec) outDec += 1;
-            const totDec = outDec - inDec;
-
-            const entry = {dateStr, jobName: job, address: addr, timeIn: tIn, timeOut: tOut, totalTimeDecimal: totDec, description: desc};
-
-            if (editIdx === -1) entries.push(entry);
-            else entries[editIdx] = entry;
-
-            if (addr) addToHistory(addr);
-            renderTable(); clearForm();
-        });
-
         document.getElementById('cancelButton').onclick = clearForm;
-        document.getElementById('clearAllButton').onclick = clearAll;
 
-        // Excel Export (fixed date)
-        document.getElementById('generateExcel').addEventListener('click', () => {
-            const loading = document.getElementById('loading'); loading.style.display = 'block';
-            try {
-                const emp = document.getElementById('employee').value || 'Employee';
-                const dateStr = document.getElementById('sessionDate').value;
-                if (!dateStr) {alert('Select a date.'); loading.style.display = 'none'; return;}
-                const sorted = [...entries].sort((a, b) => timeStrToDecimal(a.timeIn) - timeStrToDecimal(b.timeIn));
-                const data = [];
-                data.push([{v: `Employee Name: ${emp}`, t: 's'}]);
-                data.push([{v: 'Date', t: 's'}, {v: 'Job Name / Address', t: 's'}, {v: 'Time In', t: 's'}, {v: 'Time Out', t: 's'}, {v: 'Total Time', t: 's'}, {v: 'Job Description', t: 's'}]);
-                sorted.forEach(e => {
-                    const [y, m, d] = e.dateStr.split('-').map(Number);
-                    const excelDt = Date.UTC(y, m - 1, d) / 86400000 + 25569;
-                    data.push([
-                        {v: excelDt, t: 'n', z: 'm/d/yyyy'},
-                        {v: e.address ? `${e.jobName}\n${e.address}` : e.jobName, t: 's'},
-                        {v: to12HourString(e.timeIn), t: 's'},
-                        {v: to12HourString(e.timeOut), t: 's'},
-                        {v: formatTotalTime(e.totalTimeDecimal), t: 's'},
-                        {v: e.description, t: 's'}
-                    ]);
-                });
-                const sum = sorted.reduce((s, e) => s + e.totalTimeDecimal, 0);
-                const totH = Math.floor(sum * 24);
-                let totM = Math.round((sum * 24 - totH) * 60 / 30) * 30;
-                if (totM >= 60) {totM -= 60; totH++;}
-                data.push([null, null, null, {v: 'Total Hours =', t: 's'}, {v: `${totH}:${String(totM).padStart(2,'0')} hours`, t: 's'}]);
-                const ws = XLSX.utils.aoa_to_sheet(data);
-                const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
-                XLSX.writeFile(wb, `${emp}_${dateStr}.xlsx`);
-                loading.style.display = 'none';
-            } catch (err) {loading.style.display = 'none'; alert('Export failed: ' + err.message);}
+        document.getElementById('copyLast').onclick = () => {
+            if (entries.length === 0) return alert('No previous job');
+            const last = entries[entries.length-1];
+            document.getElementById('jobName').value = last.jobName;
+            document.getElementById('address').value = last.address || '';
+            document.getElementById('description').value = last.description || '';
+            document.getElementById('timeIn').value = last.timeOut;
+            document.getElementById('timeOut').value = getNextTime(last.timeOut);
+        };
+
+        document.getElementById('clearAllButton').onclick = () => {
+            if (confirm('Clear ALL entries? This cannot be undone.')) {
+                entries = [];
+                renderTable();
+                clearForm();
+            }
+        };
+
+        // === EXCEL EXPORT ===
+        document.getElementById('generateExcel').onclick = () => {
+            document.getElementById('loading').style.display = 'block';
+            setTimeout(() => {
+                try {
+                    const wb = XLSX.utils.book_new();
+                    const data = [['Employee:', document.getElementById('employee').value], ['Date:', document.getElementById('sessionDate').value], [], ['Job', 'Address', 'Time In', 'Time Out', 'Hours', 'Description']];
+                    
+                    let totalDec = 0;
+                    entries.forEach(e => {
+                        const inDec = timeToDecimal(e.timeIn);
+                        const outDec = timeToDecimal(e.timeOut);
+                        const dur = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+                        totalDec += dur;
+                        data.push([e.jobName, e.address || '', e.timeIn, e.timeOut, formatHours(dur), e.description || '']);
+                    });
+                    const {h, m} = decimalToHours(totalDec);
+                    data.push([]); data.push(['TOTAL HOURS:', '', '', '', `${h}:${m.toString().padStart(2,'0')}`, '']);
+                    
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+                    ws['!cols'] = [{wch:20}, {wch:30}, {wch:12}, {wch:12}, {wch:10}, {wch:40}];
+                    XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
+                    XLSX.writeFile(wb, `${document.getElementById('employee').value || 'Employee'}_Timesheet_${document.getElementById('sessionDate').value || 'Date'}.xlsx`);
+                } catch (e) {alert('Export failed')}
+                document.getElementById('loading').style.display = 'none';
+            }, 100);
+        };
+
+        // Ctrl+Enter to save
+        document.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                document.getElementById('actionButton').click();
+            }
         });
 
-        // Voice & everything else unchanged (shortened for space, but fully functional in the file)
-
-        loadFromLocalStorage();
-        loadAddressHistory();
+        // === INIT ===
+        loadData();
+        clearForm();
     </script>
 </body>
 </html>
