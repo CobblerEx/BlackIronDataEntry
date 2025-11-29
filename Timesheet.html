@@ -93,12 +93,14 @@
 
     <div style="text-align:center;margin:2rem 0;">
         <button id="generateExcel">Generate Excel</button>
+        <button id="generateInvoice">Generate Invoice</button>
         <button id="clearAllButton">Clear All</button>
     </div>
 
-    <div id="loading"><div class="spinner"></div><br>Generating Excel...</div>
+    <div id="loading"><div class="spinner"></div><br>Generating...</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         // === 12-HOUR TIME WITH AM/PM ===
         const timeOptions = [];
@@ -378,6 +380,92 @@
                 } catch(e) {alert('Export failed')}
                 document.getElementById('loading').style.display = 'none';
             }, 100);
+        };
+
+        // === GENERATE INVOICE AS PDF ===
+        document.getElementById('generateInvoice').onclick = () => {
+            document.getElementById('loading').textContent = 'Generating Invoice...'; // Update loading text
+            document.getElementById('loading').style.display = 'block';
+
+            const hourlyRate = prompt('Enter hourly rate (e.g., 50 for $50/hr):', '50');
+            if (!hourlyRate || isNaN(hourlyRate)) {
+                document.getElementById('loading').style.display = 'none';
+                return alert('Invalid hourly rate');
+            }
+            const rate = parseFloat(hourlyRate);
+            const hstRate = 0.13;
+
+            const clientName = prompt('Enter client name:', '');
+            const clientPhone = prompt('Enter client phone:', '');
+            const clientEmail = prompt('Enter client email:', '');
+            const clientAddress = prompt('Enter client address:', '');
+
+            let totalHours = 0;
+            const lines = entries.map(e => {
+                const dur = timeToDecimal(e.timeOut) >= timeToDecimal(e.timeIn) 
+                    ? timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn)
+                    : timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn) + 24;
+                totalHours += dur;
+                const amount = (dur * rate).toFixed(2);
+                const desc = `${e.jobName} at ${e.address || 'N/A'} (${to12hr(e.timeIn)} - ${to12hr(e.timeOut)}): ${e.description || ''}`;
+                return {quantity: dur.toFixed(2), desc, price: rate.toFixed(2), unit: 'hr', amount};
+            });
+
+            const subtotal = (totalHours * rate).toFixed(2);
+            const hst = (parseFloat(subtotal) * hstRate).toFixed(2);
+            const total = (parseFloat(subtotal) + parseFloat(hst)).toFixed(2);
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Logo (simple text simulation, add image if you have URL/base64)
+            doc.setFontSize(40);
+            doc.text("A", 10, 20);
+            doc.setFontSize(20);
+            doc.text("ARCHER'S EQUIPMENT REPAIR", 10, 30);
+
+            // Company info
+            doc.setFontSize(10);
+            doc.text("Archer's Equipment Repair Ltd.", 140, 10);
+            doc.text("TSSA #/ 000394614", 140, 15);
+            doc.text("HST #: 900518869RT0001", 140, 20);
+            doc.text("Phone Number: 519-383-9654", 140, 25);
+
+            // Invoice title
+            doc.setFontSize(20);
+            doc.text("INVOICE", 170, 30);
+
+            // Client fields
+            doc.setFontSize(12);
+            doc.text("DATE: " + formatDate(document.getElementById('sessionDate').value), 10, 40);
+            doc.text("NAME: " + clientName, 10, 50);
+            doc.text("PHONE: " + clientPhone, 10, 60);
+            doc.text("EMAIL: " + clientEmail, 10, 70);
+            doc.text("ADDRESS: " + clientAddress, 10, 80);
+
+            // Table headers
+            doc.autoTable({
+                startY: 90,
+                head: [['QUANTITY', 'DESCRIPTION', 'PRICE', 'UNIT', 'AMOUNT']],
+                body: lines.map(l => [l.quantity, l.desc, '$' + l.price, l.unit, '$' + l.amount]),
+                theme: 'grid',
+                headStyles: {fillColor: [211, 211, 211], textColor: [0, 0, 0]},
+                styles: {cellPadding: 5, fontSize: 10, overflow: 'linebreak'},
+                columnStyles: {1: {cellWidth: 80}},
+            });
+
+            // Totals
+            const finalY = doc.lastAutoTable.finalY + 10;
+            doc.text("HST: $" + hst, 150, finalY);
+            doc.text("TOTAL: $" + total, 150, finalY + 10);
+
+            // Footer
+            doc.setFontSize(8);
+            doc.text("e-transfer accepted at Jason@archerser.ca", 105, 280, {align: 'center'});
+
+            doc.save(`${clientName || 'Client'}_Invoice_${document.getElementById('sessionDate').value}.pdf`);
+
+            document.getElementById('loading').style.display = 'none';
         };
 
         // Ctrl+Enter shortcut
