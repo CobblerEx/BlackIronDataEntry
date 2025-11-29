@@ -81,8 +81,8 @@
             <tr>
                 <th>Date</th>
                 <th>Job / Address</th>
-                <th>In</th>
-                <th>Out</th>
+                <th>Time In</th>
+                <th>Time Out</th>
                 <th>Hours</th>
                 <th>Description</th>
                 <th>Actions</th>
@@ -100,39 +100,68 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        // === TIME OPTIONS ===
+        // === 12-HOUR TIME WITH AM/PM ===
         const timeOptions = [];
         for (let h = 0; h < 24; h++) {
             for (let m of [0, 30]) {
-                const val = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
-                const h12 = h % 12 || 12;
+                const mil = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+                const hr12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
                 const period = h < 12 ? 'AM' : 'PM';
-                timeOptions.push({value: val, text: `${h12}:${m.toString().padStart(2,'0')} ${period}`});
+                const display = `${hr12}:${m.toString().padStart(2,'0')} ${period}`;
+                timeOptions.push({mil, display});
             }
         }
-        document.getElementById('timeIn').innerHTML = timeOptions.map(o => `<option value="${o.value}">${o.text}</option>`).join('');
-        document.getElementById('timeOut').innerHTML = document.getElementById('timeIn').innerHTML;
-        document.getElementById('timeIn').value = '08:00';
-        document.getElementById('timeOut').value = '08:30';
+
+        // Populate dropdowns
+        const timeIn = document.getElementById('timeIn');
+        const timeOut = document.getElementById('timeOut');
+        timeOptions.forEach(o => {
+            const opt1 = new Option(o.display, o.mil);
+            const opt2 = opt1.cloneNode(true);
+            timeIn.add(opt1);
+            timeOut.add(opt2);
+        });
+        timeIn.value = '08:00';
+        timeOut.value = '08:30';
         document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
 
-        // === DATA ===
-        let entries = [];
-        let addressHistory = [];
-
-        // === LOCAL STORAGE ===
-        function loadData() {
-            const saved = localStorage.getItem('timesheetData');
-            if (saved) {
-                const data = JSON.parse(saved);
-                document.getElementById('employee').value = data.employee || 'Lucas';
-                document.getElementById('sessionDate').value = data.date || new Date().toISOString().split('T')[0];
-                entries = data.entries || [];
-            }
-            const hist = localStorage.getItem('addressHistory');
-            if (hist) addressHistory = JSON.parse(hist);
-            renderTable();
+        // Convert 24h → 12h display
+        function to12hr(time24) {
+            const opt = timeOptions.find(o => o.mil === time24);
+            return opt ? opt.display : time24;
         }
+
+        // Convert hours to decimal (still uses 24h internally)
+        function timeToDecimal(t) {
+            const [h, m] = t.split(':').map(Number);
+            return h + m/60;
+        }
+
+        function decimalToHM(dec) {
+            const totalMins = Math.round(dec * 60);
+            return {h: Math.floor(totalMins / 60), m: totalMins % 60};
+        }
+
+        function formatHours(dec) {
+            const {h, m} = decimalToHM(dec);
+            return `${h}:${m.toString().padStart(2,'0')}`;
+        }
+
+        function getNextTime(current24) {
+            const idx = timeOptions.findIndex(o => o.mil === current24);
+            return timeOptions[(idx + 1) % timeOptions.length].mil;
+        }
+
+        function formatDate(d) {
+            if (!d) return '';
+            const [y, m, day] = d.split('-');
+            return `${m}/${day}/${y}`;
+        }
+
+        // === DATA & STORAGE ===
+        let entries = [];
+        let addressHistory = JSON.parse(localStorage.getItem('addressHistory') || '[]');
+
         function saveData() {
             const data = {
                 employee: document.getElementById('employee').value,
@@ -140,50 +169,36 @@
                 entries
             };
             localStorage.setItem('timesheetData', JSON.stringify(data));
-        }
-        function saveAddressHistory() {
             localStorage.setItem('addressHistory', JSON.stringify(addressHistory));
         }
 
-        // === UTILS ===
-        function timeToDecimal(t) {
-            const [h, m] = t.split(':').map(Number);
-            return h + m/60;
-        }
-        function decimalToHours(dec) {
-            const totalMins = Math.round(dec * 60);
-            const h = Math.floor(totalMins / 60);
-            const m = totalMins % 60;
-            return {h, m};
-        }
-        function formatHours(dec) {
-            const {h, m} = decimalToHours(dec);
-            return `${h}:${m.toString().padStart(2,'0')}`;
-        }
-        function getNextTime(current) {
-            const idx = timeOptions.findIndex(o => o.value === current);
-            return timeOptions[(idx + 1) % timeOptions.length].value;
+        function loadData() {
+            const saved = localStorage.getItem('timesheetData');
+            if (saved) {
+                const d = JSON.parse(saved);
+                document.getElementById('employee').value = d.employee || 'Lucas';
+                document.getElementById('sessionDate').value = d.date || new Date().toISOString().split('T')[0];
+                entries = d.entries || [];
+            }
+            renderTable();
         }
 
         // === ADDRESS HISTORY ===
         const addrInput = document.getElementById('address');
-        const historyBtn = document.getElementById('historyBtn');
         const dropdown = document.getElementById('addressHistory');
-
         function showHistory(filter = '') {
             dropdown.innerHTML = '';
-            const filtered = filter ? addressHistory.filter(a => a.toLowerCase().includes(filter.toLowerCase())) : addressHistory;
-            if (filtered.length === 0) {
+            const list = filter 
+                ? addressHistory.filter(a => a.toLowerCase().includes(filter.toLowerCase()))
+                : addressHistory;
+            if (list.length === 0) {
                 dropdown.innerHTML = '<div class="history-item">No addresses found</div>';
             } else {
-                filtered.forEach(addr => {
+                list.forEach(a => {
                     const div = document.createElement('div');
                     div.className = 'history-item';
-                    div.textContent = addr;
-                    div.onclick = () => {
-                        addrInput.value = addr;
-                        dropdown.style.display = 'none';
-                    };
+                    div.textContent = a;
+                    div.onclick = () => { addrInput.value = a; dropdown.style.display = 'none'; };
                     dropdown.appendChild(div);
                 });
             }
@@ -191,107 +206,94 @@
         }
         addrInput.addEventListener('input', () => showHistory(addrInput.value));
         addrInput.addEventListener('focus', () => showHistory());
-        historyBtn.onclick = () => showHistory();
+        document.getElementById('historyBtn').onclick = () => showHistory();
         document.addEventListener('click', e => {
-            if (!addrInput.contains(e.target) && !historyBtn.contains(e.target) && !dropdown.contains(e.target)) {
+            if (!addrInput.contains(e.target) && !document.getElementById('historyBtn').contains(e.target) && !dropdown.contains(e.target))
                 dropdown.style.display = 'none';
-            }
         });
 
         // === RENDER TABLE ===
         function renderTable() {
             const tbody = document.querySelector('#entriesTable tbody');
             tbody.innerHTML = '';
-            let totalDecimal = 0;
+            let totalDec = 0;
 
-            entries.forEach((entry, i) => {
-                const inDec = timeToDecimal(entry.timeIn);
-                const outDec = timeToDecimal(entry.timeOut);
+            entries.forEach((e, i) => {
+                const inDec = timeToDecimal(e.timeIn);
+                const outDec = timeToDecimal(e.timeOut);
                 const duration = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
-                totalDecimal += duration;
+                totalDec += duration;
 
                 const tr = document.createElement('tr');
                 tr.draggable = true;
                 tr.dataset.index = i;
                 tr.innerHTML = `
-                    <td>${entry.dateStr}</td>
-                    <td><strong>${entry.jobName}</strong><br><small>${entry.address || ''}</small></td>
-                    <td>${entry.timeIn}</td>
-                    <td>${entry.timeOut}</td>
+                    <td>${formatDate(e.dateStr)}</td>
+                    <td><strong>${e.jobName}</strong><br><small>${e.address || ''}</small></td>
+                    <td>${to12hr(e.timeIn)}</td>
+                    <td>${to12hr(e.timeOut)}</td>
                     <td>${formatHours(duration)}</td>
-                    <td>${entry.description || ''}</td>
+                    <td>${e.description || ''}</td>
                     <td>
                         <i class="fas fa-grip-lines drag-handle"></i>
-                        <select class="action-select" onchange="handleAction(${i}, this.value); this.value=''">
+                        <select class="action-select">
                             <option value="" disabled selected>Actions</option>
                             <option value="edit">Edit</option>
                             <option value="up">Up</option>
                             <option value="down">Down</option>
                             <option value="delete">Delete</option>
                         </select>
-                    </td>
-                `;
+                    </td>`;
                 tbody.appendChild(tr);
             });
 
-            // Update total
-            const {h, m} = decimalToHours(totalDecimal);
+            const {h, m} = decimalToHM(totalDec);
             document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
 
             // Drag & drop
             document.querySelectorAll('tr[data-index]').forEach(tr => {
-                tr.addEventListener('dragstart', e => {
-                    tr.classList.add('dragging');
-                    e.dataTransfer.setData('text/plain', tr.dataset.index);
-                });
+                tr.addEventListener('dragstart', e => { tr.classList.add('dragging'); e.dataTransfer.setData('text', tr.dataset.index); });
                 tr.addEventListener('dragover', e => e.preventDefault());
                 tr.addEventListener('drop', e => {
                     e.preventDefault();
-                    const from = +e.dataTransfer.getData('text/plain');
+                    const from = +e.dataTransfer.getData('text');
                     const to = +tr.dataset.index;
-                    if (from !== to) {
-                        const [moved] = entries.splice(from, 1);
-                        entries.splice(to, 0, moved);
-                        renderTable();
-                    }
+                    if (from !== to) { const [item] = entries.splice(from,1); entries.splice(to,0,item); renderTable(); }
                 });
                 tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
+            });
+
+            // Add JS event listeners for action-select dropdowns
+            document.querySelectorAll('.action-select').forEach((select, idx) => {
+                select.addEventListener('change', function() {
+                    handleAction(idx, this.value);
+                    this.value = '';
+                });
             });
 
             saveData();
         }
 
         // === ACTIONS ===
-        function handleAction(index, action) {
-            if (action === 'edit') {
-                const e = entries[index];
+        function handleAction(i, act) {
+            if (act === 'edit') {
+                const e = entries[i];
                 document.getElementById('jobName').value = e.jobName;
                 document.getElementById('address').value = e.address || '';
                 document.getElementById('timeIn').value = e.timeIn;
                 document.getElementById('timeOut').value = e.timeOut;
                 document.getElementById('description').value = e.description || '';
-                document.getElementById('editIndex').value = index;
+                document.getElementById('editIndex').value = i;
                 document.getElementById('actionButton').textContent = 'Update Entry';
                 document.getElementById('cancelButton').style.display = 'inline-block';
-                document.getElementById('form').scrollIntoView({behavior: 'smooth'});
+                document.getElementById('form').scrollIntoView({behavior:'smooth'});
             }
-            else if (action === 'up' && index > 0) {
-                [entries[index-1], entries[index]] = [entries[index], entries[index-1]];
-                renderTable();
-            }
-            else if (action === 'down' && index < entries.length-1) {
-                [entries[index], entries[index+1]] = [entries[index+1], entries[index]];
-                renderTable();
-            }
-            else if (action === 'delete') {
-                if (confirm('Delete this entry?')) {
-                    entries.splice(index, 1);
-                    renderTable();
-                }
-            }
+            else if (act === 'up' && i > 0) { [entries[i-1], entries[i]] = [entries[i], entries[i-1]]; renderTable(); }
+            else if (act === 'down' && i < entries.length-1) { [entries[i], entries[i+1]] = [entries[i+1], entries[i]]; renderTable(); }
+            else if (act === 'delete' && confirm('Delete this entry?')) { entries.splice(i,1); renderTable(); }
         }
 
-        // === FORM SUBMIT ===
+        // === FORM ===
         document.getElementById('actionButton').onclick = () => {
             const idx = +document.getElementById('editIndex').value;
             const date = document.getElementById('sessionDate').value;
@@ -301,22 +303,18 @@
             const tOut = document.getElementById('timeOut').value;
             const desc = document.getElementById('description').value.trim();
 
-            if (!date) return alert('Select date');
+            if (!date) return alert('Select a date');
             if (!job) return alert('Enter job name');
-            if (timeToDecimal(tOut) <= timeToDecimal(tIn)) return alert('Time Out must be after Time In');
+            if (timeToDecimal(tOut) === timeToDecimal(tIn)) return alert('Time In and Time Out cannot be the same');
 
             const entry = {dateStr: date, jobName: job, address: addr, timeIn: tIn, timeOut: tOut, description: desc};
 
-            if (idx === -1) {
-                entries.push(entry);
-            } else {
-                entries[idx] = entry;
-            }
+            if (idx === -1) entries.push(entry);
+            else entries[idx] = entry;
 
             if (addr && !addressHistory.includes(addr)) {
                 addressHistory.unshift(addr);
                 if (addressHistory.length > 50) addressHistory.pop();
-                saveAddressHistory();
             }
 
             renderTable();
@@ -330,7 +328,7 @@
             document.getElementById('editIndex').value = -1;
             document.getElementById('actionButton').textContent = 'Add Entry';
             document.getElementById('cancelButton').style.display = 'none';
-            if (entries.length > 0) {
+            if (entries.length) {
                 const last = entries[entries.length-1];
                 document.getElementById('timeIn').value = last.timeOut;
                 document.getElementById('timeOut').value = getNextTime(last.timeOut);
@@ -339,59 +337,56 @@
         document.getElementById('cancelButton').onclick = clearForm;
 
         document.getElementById('copyLast').onclick = () => {
-            if (entries.length === 0) return alert('No previous job');
-            const last = entries[entries.length-1];
-            document.getElementById('jobName').value = last.jobName;
-            document.getElementById('address').value = last.address || '';
-            document.getElementById('description').value = last.description || '';
-            document.getElementById('timeIn').value = last.timeOut;
-            document.getElementById('timeOut').value = getNextTime(last.timeOut);
+            if (!entries.length) return alert('No previous job');
+            const l = entries[entries.length-1];
+            document.getElementById('jobName').value = l.jobName;
+            document.getElementById('address').value = l.address || '';
+            document.getElementById('description').value = l.description || '';
+            document.getElementById('timeIn').value = l.timeOut;
+            document.getElementById('timeOut').value = getNextTime(l.timeOut);
         };
 
         document.getElementById('clearAllButton').onclick = () => {
-            if (confirm('Clear ALL entries? This cannot be undone.')) {
-                entries = [];
-                renderTable();
-                clearForm();
-            }
+            if (confirm('Clear ALL entries?')) { entries = []; renderTable(); clearForm(); }
         };
 
-        // === EXCEL EXPORT ===
+        // === EXCEL EXPORT (12-hour format) ===
         document.getElementById('generateExcel').onclick = () => {
             document.getElementById('loading').style.display = 'block';
             setTimeout(() => {
                 try {
                     const wb = XLSX.utils.book_new();
-                    const data = [['Employee:', document.getElementById('employee').value], ['Date:', document.getElementById('sessionDate').value], [], ['Job', 'Address', 'Time In', 'Time Out', 'Hours', 'Description']];
-                    
+                    const data = [
+                        [`Timesheet - ${document.getElementById('employee').value}`, `Date: ${formatDate(document.getElementById('sessionDate').value)}`],
+                        [], 
+                        ['Job Name', 'Address', 'Time In', 'Time Out', 'Hours', 'Description']
+                    ];
                     let totalDec = 0;
                     entries.forEach(e => {
-                        const inDec = timeToDecimal(e.timeIn);
-                        const outDec = timeToDecimal(e.timeOut);
-                        const dur = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+                        const dur = timeToDecimal(e.timeOut) >= timeToDecimal(e.timeIn) 
+                            ? timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn)
+                            : timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn) + 24;
                         totalDec += dur;
-                        data.push([e.jobName, e.address || '', e.timeIn, e.timeOut, formatHours(dur), e.description || '']);
+                        data.push([e.jobName, e.address || '', to12hr(e.timeIn), to12hr(e.timeOut), formatHours(dur), e.description || '']);
                     });
-                    const {h, m} = decimalToHours(totalDec);
-                    data.push([]); data.push(['TOTAL HOURS:', '', '', '', `${h}:${m.toString().padStart(2,'0')}`, '']);
-                    
+                    const {h, m} = decimalToHM(totalDec);
+                    data.push([]); data.push(['TOTAL', '', '', '', `${h}:${m.toString().padStart(2,'0')}`, '']);
                     const ws = XLSX.utils.aoa_to_sheet(data);
-                    ws['!cols'] = [{wch:20}, {wch:30}, {wch:12}, {wch:12}, {wch:10}, {wch:40}];
+                    ws['!cols'] = [{wch:20},{wch:30},{wch:14},{wch:14},{wch:10},{wch:40}];
                     XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
-                    XLSX.writeFile(wb, `${document.getElementById('employee').value || 'Employee'}_Timesheet_${document.getElementById('sessionDate').value || 'Date'}.xlsx`);
-                } catch (e) {alert('Export failed')}
+                    XLSX.writeFile(wb, `${document.getElementById('employee').value}_Timesheet_${document.getElementById('sessionDate').value}.xlsx`);
+                } catch(e) {alert('Export failed')}
                 document.getElementById('loading').style.display = 'none';
             }, 100);
         };
 
-        // Ctrl+Enter to save
+        // Ctrl+Enter shortcut
         document.addEventListener('keydown', e => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter')
                 document.getElementById('actionButton').click();
-            }
         });
 
-        // === INIT ===
+        // Init
         loadData();
         clearForm();
     </script>
