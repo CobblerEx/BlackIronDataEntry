@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archer's Timesheet & Invoice System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {font-family:'Roboto',sans-serif;background:linear-gradient(135deg,#1a1a1a 0%,#2c3e50 100%);color:#e0e0e0;padding:1.5rem;margin:0;}
+        .nav-buttons {display:flex;justify-content:center;gap:1rem;margin:1rem 0;flex-wrap:wrap;}
+        .nav-button {width:40px;height:40px;background:#2a2a2a;border:2px solid #ff4500;border-radius:50%;color:#ff4500;display:flex;align-items:center;justify-content:center;text-decoration:none;position:relative;}
+        .nav-button:hover {transform:scale(1.1);box-shadow:0 0 15px rgba(255,69,0,.8);}
+        .nav-button::after {content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:5px 10px;border-radius:4px;font-size:.8rem;opacity:0;white-space:nowrap;transition:opacity .2s;pointer-events:none;z-index:10;}
+        .nav-button:hover::after {opacity:1;}
+        h1,h2 {color:#ff4500;text-align:center;text-shadow:0 0 10px rgba(255,69,0,.5);}
+        #form,#totalTime {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin-bottom:1.5rem;}
+        label {display:block;margin-bottom:.8rem;position:relative;}
+        input,select,textarea {width:100%;padding:.7rem;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;font-size:1rem;box-sizing:border-box;}
+        input:focus,select:focus,textarea:focus {outline:none;box-shadow:0 0 10px rgba(255,69,0,.7);}
+        textarea {height:80px;resize:vertical;}
+        button {background:#ff4500;color:white;border:none;padding:.8rem 1.5rem;border-radius:6px;cursor:pointer;font-size:1rem;margin:0 .5rem .5rem 0;transition:all .2s;}
+        button:hover {transform:scale(1.05);box-shadow:0 0 15px rgba(255,69,0,.8);}
+        #cancelButton,#clearAllButton {background:#dc3545;}
+        #copyLast {background:#28a745;}
+        #address {padding-right:50px !important;}
+        .history-btn {position:absolute;right:8px;top:38px;background:#ff4500;color:white;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;}
+        #addressHistory,#taskHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
+        .history-item {padding:12px 16px;cursor:pointer;border-bottom:1px solid #444;}
+        .history-item:hover {background:#ff4500;color:white;padding-left:24px;}
+        table {width:100%;border-collapse:collapse;background:rgba(30,30,30,.95);border-radius:10px;overflow:hidden;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1rem 0;}
+        th,td {border:1px solid #ff4500;padding:.6rem;text-align:left;}
+        th {background:#ff4500;color:white;position:sticky;top:0;}
+        tbody tr:hover {background:#333;transform:translateY(-2px);cursor:pointer;}
+        .drag-handle {cursor:move;color:#ff4500;margin-right:8px;}
+        .action-select {padding:6px;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:4px;}
+        #totalTime {font-size:1.4rem;font-weight:bold;text-align:center;padding:1rem;}
+        #loading {display:none;text-align:center;padding:1.5rem;background:rgba(0,0,0,.8);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:10px;z-index:1000;}
+        .spinner {border:5px solid #333;border-top:5px solid #ff4500;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;display:inline-block;}
+        #invoiceModal {display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;}
+        #invoiceForm {background:#2a2a2a;padding:2rem;border-radius:10px;box-shadow:0 0 20px #ff4500;max-width:800px;width:90%;}
+        .invoice-line {display:grid;grid-template-columns:1fr 1fr 4fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;}
+        .invoice-line button {margin:0;}
+        #invoiceItems {margin-bottom:20px;}
+        #invoiceTotals {text-align:right;}
+        @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+        @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;} .invoice-line {grid-template-columns:1fr;}}
+    </style>
+</head>
+<body>
+    <div class="nav-buttons">
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit.html" class="nav-button" data-tooltip="Black Iron Edit"><i class="fas fa-edit"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit3.html" class="nav-button" data-tooltip="Black Iron v1"><i class="fas fa-file-alt"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironcal2.html" class="nav-button" data-tooltip="Calculator"><i class="fas fa-calculator"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html" class="nav-button" data-tooltip="Upload CSV"><i class="fas fa-upload"></i></a>
+        <a href="https://cobblerex.github.io/BlackIronDataEntry/Timesheet.html" class="nav-button" data-tooltip="Timesheet"><i class="fas fa-clock"></i></a>
+    </div>
+
+    <h1>Archer's Timesheet & Invoice System</h1>
+
+    <div id="form">
+        <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
+        <label>Date: <input type="date" id="sessionDate"></label>
+        <h2>Add / Edit Job Entry</h2>
+        <label>Job Type: <select id="jobType">
+            <option>Custom</option>
+            <option>Compressor Replacement</option>
+            <option>Refrigerant Leak Repair</option>
+            <option>Furnace Installation</option>
+            <option>Air Conditioner Maintenance</option>
+            <option>Duct Cleaning</option>
+            <option>Thermostat Replacement</option>
+            <option>Boiler Repair</option>
+            <option>Heat Pump Installation</option>
+            <option>Ventilation System Cleaning</option>
+            <option>Radiator Replacement</option>
+            <option>Air Handler Repair</option>
+            <option>Evaporator Coil Cleaning</option>
+            <option>Condenser Unit Replacement</option>
+            <option>Gas Line Installation</option>
+            <option>Humidifier Maintenance</option>
+            <option>Dehumidifier Installation</option>
+        </select></label>
+        <label>Job Name: <input type="text" id="jobName"></label>
+        <label style="position:relative;">
+            Address: 
+            <input type="text" id="address" placeholder="Type to search history..." autocomplete="off">
+            <button type="button" class="history-btn" id="historyBtn"><i class="fas fa-history"></i></button>
+            <div id="addressHistory"></div>
+        </label>
+        <label>Time In: <select id="timeIn"></select></label>
+        <label>Time Out: <select id="timeOut"></select></label>
+        <label>Description: <textarea id="description"></textarea></label>
+        <input type="hidden" id="editIndex" value="-1">
+        <div style="margin-top:1rem;">
+            <button id="actionButton">Add Entry</button>
+            <button id="copyLast">Copy Last Job</button>
+            <button id="cancelButton" style="display:none;">Cancel Edit</button>
+        </div>
+    </div>
+
+    <div id="totalTime">Total Time: 0 hrs 0 min</div>
+
+    <table id="entriesTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Job / Address</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Hours</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div style="text-align:center;margin:2rem 0;">
+        <button id="generateExcel">Generate Excel</button>
+        <button id="generateMultiInvoice">Generate Multi-Job Invoice</button>
+        <button id="exportQuickBooks">Export to QuickBooks (IIF)</button>
+        <button id="clearAllButton">Clear All</button>
+    </div>
+
+    <div id="invoiceModal">
+        <div id="invoiceForm">
+            <h2>Edit Invoice</h2>
+            <label>Client Name: <input type="text" id="clientName"></label>
+            <label>Client Phone: <input type="text" id="clientPhone"></label>
+            <label>Client Email: <input type="text" id="clientEmail"></label>
+            <label>Client Address: <input type="text" id="clientAddress"></label>
+            <label>Hourly Rate: <input type="number" id="hourlyRate" value="50"></label>
+            <h3>Invoice Lines</h3>
+            <div id="invoiceItems"></div>
+            <button id="addLine">Add Line</button>
+            <div id="invoiceTotals"></div>
+            <button id="saveInvoice">Generate PDF</button>
+            <button id="closeModal">Close</button>
+        </div>
+    </div>
+
+    <div id="loading"><div class="spinner"></div><br>Generating...</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        // === 12-HOUR TIME WITH AM/PM ===
+        const timeOptions = [];
+        for (let h = 0; h < 24; h++) {
+            for (let m of [0, 30]) {
+                const mil = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+                const hr12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                const period = h < 12 ? 'AM' : 'PM';
+                const display = `${hr12}:${m.toString().padStart(2,'0')} ${period}`;
+                timeOptions.push({mil, display});
+            }
+        }
+
+        // Populate dropdowns
+        const timeIn = document.getElementById('timeIn');
+        const timeOut = document.getElementById('timeOut');
+        timeOptions.forEach(o => {
+            const opt1 = new Option(o.display, o.mil);
+            const opt2 = opt1.cloneNode(true);
+            timeIn.add(opt1);
+            timeOut.add(opt2);
+        });
+        timeIn.value = '08:00';
+        timeOut.value = '08:30';
+        document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
+
+        // Convert 24h → 12h display
+        function to12hr(time24) {
+            const opt = timeOptions.find(o => o.mil === time24);
+            return opt ? opt.display : time24;
+        }
+
+        // Convert hours to decimal (still uses 24h internally)
+        function timeToDecimal(t) {
+            const [h, m] = t.split(':').map(Number);
+            return h + m/60;
+        }
+
+        function decimalToHM(dec) {
+            const totalMins = Math.round(dec * 60);
+            return {h: Math.floor(totalMins / 60), m: totalMins % 60};
+        }
+
+        function formatHours(dec) {
+            const {h, m} = decimalToHM(dec);
+            return `${h}:${m.toString().padStart(2,'0')}`;
+        }
+
+        function getNextTime(current24) {
+            const idx = timeOptions.findIndex(o => o.mil === current24);
+            return timeOptions[(idx + 1) % timeOptions.length].mil;
+        }
+
+        function formatDate(d) {
+            if (!d) return '';
+            const [y, m, day] = d.split('-');
+            return `${m}/${day}/${y}`;
+        }
+
+        // === JOB TEMPLATES ===
+        const jobTemplates = {
+            'Compressor Replacement': {
+                steps: [
+                    'Reclaimed charge from system',
+                    'Disconnected refrigerant lines + electrical to remove compressor',
+                    'Purged refrigerant lines (nitrogen)',
+                    'Remove old txv (before purge)',
+                    'Install new txv',
+                    'Install new compressor, connect refrigerant lines + electrical',
+                    'Remove + install new line dryer',
+                    'Leak test (nitrogen + soap)',
+                    'Charge system (4lbs - R404A)',
+                    'Test run',
+                    'Will need electrical work (breaker, possible upside wiring)'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'New Compressor', unit: '', price: ''},
+                    {category: 'Parts', qty: 1, desc: 'New TXV (Expansion Valve)', unit: '', price: ''},
+                    {category: 'Parts', qty: 1, desc: 'New Filter Drier', unit: '', price: ''},
+                    {category: 'Materials', qty: 4, desc: 'Refrigerant (R-404A)', unit: 'lbs', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Nitrogen for purging/testing', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Soap solution for leak detection', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'O-ring/seal kit', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Lubricant/oil', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used manifold gauges for pressure check', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used recovery machine for refrigerant', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used vacuum pump for evacuation', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used multimeter for electrical diagnostics', unit: '', price: ''}
+                ]
+            },
+            'Refrigerant Leak Repair': {
+                steps: [
+                    'Inspect system for refrigerant leaks using detector tools',
+                    'Locate and identify leak source',
+                    'Reclaim remaining refrigerant',
+                    'Repair leak (e.g., solder joint, replace fitting)',
+                    'Purge lines with nitrogen',
+                    'Perform leak test (nitrogen + soap)',
+                    'Evacuate system with vacuum pump',
+                    'Charge system with refrigerant',
+                    'Test run and verify no leaks',
+                    'Check electrical connections'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'Replacement fittings or tubing section', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Refrigerant (specify type and lbs)', unit: 'lbs', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Nitrogen for purging/testing', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Solder/flux for repairs', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Soap solution for leak detection', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used leak detector tool', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used recovery machine for refrigerant', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used vacuum pump for evacuation', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used manifold gauges for pressure check', unit: '', price: ''}
+                ]
+            },
+            'Furnace Installation': {
+                steps: [
+                    'Remove old furnace and disconnect gas/electrical/ductwork',
+                    'Inspect and prepare installation site',
+                    'Install new furnace unit',
+                    'Connect gas lines and test for leaks',
+                    'Connect electrical wiring',
+                    'Connect ductwork and seal joints',
+                    'Install thermostat if needed',
+                    'Test run and calibrate system',
+                    'Check for proper airflow and ventilation',
+                    'Clean up site'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'New Furnace Unit', unit: '', price: ''},
+                    {category: 'Parts', qty: 1, desc: 'Thermostat', unit: '', price: ''},
+                    {category: 'Parts', qty: 1, desc: 'Vent piping', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Duct sealing tape/mastic', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Electrical wire/nuts', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Gas line fittings', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used multimeter for electrical diagnostics', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used manometer for air pressure check', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Air Conditioner Maintenance': {
+                steps: [
+                    'Inspect and clean condenser coils',
+                    'Check and tighten electrical connections',
+                    'Lubricate moving parts (fans, motors)',
+                    'Inspect and clean evaporator coils',
+                    'Check refrigerant levels and top up if needed',
+                    'Test for refrigerant leaks',
+                    'Clean or replace air filters',
+                    'Drain and clean condensate lines',
+                    'Check thermostat calibration',
+                    'Test run and verify operation'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'Air filter (specify size)', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Cleaning solution/coil cleaner', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Lubricant/oil', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Refrigerant top-up (if needed)', unit: 'lbs', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Soap solution for leak detection', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used manifold gauges for pressure check', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used infrared thermometer for temp checks', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used leak detector tool', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Duct Cleaning': {
+                steps: [
+                    'Inspect ductwork for debris and damage',
+                    'Seal off vents and registers',
+                    'Use vacuum and brushes to clean ducts',
+                    'Clean blower motor and fan',
+                    'Clean evaporator coil if accessible',
+                    'Sanitize ducts if needed',
+                    'Re-seal and insulate ducts',
+                    'Test airflow',
+                    'Clean up site'
+                ],
+                items: [
+                    {category: 'Materials', qty: 1, desc: 'Duct sealing tape/mastic', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Insulation foam/tape', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Cleaning solution/coil cleaner', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Sanitizer/disinfectant', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used duct cleaning equipment (vacuum, brushes)', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used manometer for air pressure check', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Thermostat Replacement': {
+                steps: [
+                    'Turn off power to HVAC system',
+                    'Remove old thermostat',
+                    'Install new thermostat base',
+                    'Connect wiring to new thermostat',
+                    'Mount new thermostat',
+                    'Restore power and test operation',
+                    'Calibrate and program thermostat',
+                    'Verify system response'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'New Thermostat', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Electrical wire/nuts', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used multimeter for electrical diagnostics', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Boiler Repair': {
+                steps: [
+                    'Inspect boiler for issues (leaks, pressure, etc.)',
+                    'Drain boiler if necessary',
+                    'Replace faulty parts (e.g., valves, pumps)',
+                    'Clean heat exchanger',
+                    'Check and adjust pressure',
+                    'Test safety controls',
+                    'Bleed radiators',
+                    'Test run and verify operation',
+                    'Check for carbon monoxide leaks'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'Replacement valves or pumps', unit: '', price: ''},
+                    {category: 'Parts', qty: 1, desc: 'Pressure relief valve', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Cleaning solution for heat exchanger', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Sealant for leaks', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used pressure gauge', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used carbon monoxide detector', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Heat Pump Installation': {
+                steps: [
+                    'Remove old system if applicable',
+                    'Install outdoor unit on pad',
+                    'Install indoor air handler',
+                    'Connect refrigerant lines',
+                    'Connect electrical wiring',
+                    'Install thermostat',
+                    'Evacuate and charge system',
+                    'Test run in heat and cool modes',
+                    'Check airflow and refrigerant levels'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'New Heat Pump Unit (outdoor)', unit: '', price: ''},
+                    {category: 'Parts', qty: 1, desc: 'Indoor Air Handler', unit: '', price: ''},
+                    {category: 'Parts', qty: 1, desc: 'Thermostat', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Refrigerant lineset', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Electrical wire/nuts', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Refrigerant (specify type and lbs)', unit: 'lbs', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used vacuum pump for evacuation', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used manifold gauges for pressure check', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Ventilation System Cleaning': {
+                steps: [
+                    'Inspect ventilation ducts and fans',
+                    'Remove and clean vent covers',
+                    'Vacuum and brush ducts',
+                    'Clean fan blades and motors',
+                    'Sanitize system',
+                    'Reinstall covers',
+                    'Test system airflow',
+                    'Check for blockages'
+                ],
+                items: [
+                    {category: 'Materials', qty: 1, desc: 'Cleaning solution', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Sanitizer/disinfectant', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used vacuum and brush equipment', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used manometer for air pressure check', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Radiator Replacement': {
+                steps: [
+                    'Drain heating system',
+                    'Remove old radiator',
+                    'Install new radiator',
+                    'Connect pipes and valves',
+                    'Refill system and bleed air',
+                    'Test for leaks',
+                    'Check system pressure',
+                    'Test operation'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'New Radiator', unit: '', price: ''},
+                    {category: 'Parts', qty: 1, desc: 'Valves and fittings', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Pipe sealant', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used pressure tester', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Air Handler Repair': {
+                steps: [
+                    'Inspect air handler for issues',
+                    'Clean coils and blower',
+                    'Replace faulty motor or fan',
+                    'Check electrical connections',
+                    'Lubricate moving parts',
+                    'Test airflow',
+                    'Verify operation'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'Blower motor or fan', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Cleaning solution', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Lubricant/oil', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used multimeter for electrical diagnostics', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Evaporator Coil Cleaning': {
+                steps: [
+                    'Access evaporator coil',
+                    'Apply cleaning solution',
+                    'Rinse and dry coil',
+                    'Check for leaks',
+                    'Reassemble unit',
+                    'Test system operation'
+                ],
+                items: [
+                    {category: 'Materials', qty: 1, desc: 'Coil cleaning solution', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used leak detector tool', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Condenser Unit Replacement': {
+                steps: [
+                    'Reclaim refrigerant',
+                    'Disconnect old unit',
+                    'Install new condenser unit',
+                    'Connect lines and electrical',
+                    'Charge system',
+                    'Test run'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'New Condenser Unit', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Refrigerant (specify type and lbs)', unit: 'lbs', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used recovery machine', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Gas Line Installation': {
+                steps: [
+                    'Plan and mark gas line route',
+                    'Dig trench if needed',
+                    'Install gas piping',
+                    'Connect to appliances',
+                    'Test for leaks',
+                    'Backfill and restore site'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'Gas piping and fittings', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Pipe sealant', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used gas leak detector', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Humidifier Maintenance': {
+                steps: [
+                    'Inspect humidifier',
+                    'Clean or replace water panel',
+                    'Check water supply',
+                    'Clean drain line',
+                    'Test operation',
+                    'Adjust settings'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'Water panel/filter', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Cleaning solution', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            },
+            'Dehumidifier Installation': {
+                steps: [
+                    'Select location',
+                    'Install dehumidifier unit',
+                    'Connect drain line',
+                    'Connect electrical',
+                    'Test operation',
+                    'Set humidity levels'
+                ],
+                items: [
+                    {category: 'Parts', qty: 1, desc: 'Dehumidifier Unit', unit: '', price: ''},
+                    {category: 'Parts', qty: 1, desc: 'Drain hose', unit: '', price: ''},
+                    {category: 'Materials', qty: 1, desc: 'Electrical wire/nuts', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Used multimeter', unit: '', price: ''},
+                    {category: 'Other', qty: 1, desc: 'Diagnostic fee', unit: '', price: ''}
+                ]
+            }
+        };
+
+        // === DATA & STORAGE ===
+        let entries = [];
+        let addressHistory = JSON.parse(localStorage.getItem('addressHistory') || '[]');
+        let taskHistory = JSON.parse(localStorage.getItem('taskHistory') || '[]');
+
+        if (taskHistory.length === 0) {
+          taskHistory = [
+            // Labor: Common repair tasks and steps
+            { category: 'Labor', task: 'Inspect and clean condenser coils' },
+            { category: 'Labor', task: 'Check and tighten electrical connections' },
+            { category: 'Labor', task: 'Lubricate moving parts (fans, motors)' },
+            { category: 'Labor', task: 'Inspect and clean evaporator coils' },
+            { category: 'Labor', task: 'Check refrigerant levels and charge system' },
+            { category: 'Labor', task: 'Test for refrigerant leaks (soap/nitrogen)' },
+            { category: 'Labor', task: 'Reclaim refrigerant charge from system' },
+            { category: 'Labor', task: 'Purge refrigerant lines with nitrogen' },
+            { category: 'Labor', task: 'Disconnect refrigerant lines and electrical' },
+            { category: 'Labor', task: 'Remove old compressor/TXV/filter drier' },
+            { category: 'Labor', task: 'Install new compressor/TXV/filter drier' },
+            { category: 'Labor', task: 'Connect refrigerant lines and electrical' },
+            { category: 'Labor', task: 'Perform leak test on system' },
+            { category: 'Labor', task: 'Test run and verify system operation' },
+            { category: 'Labor', task: 'Inspect heat exchanger for cracks' },
+            { category: 'Labor', task: 'Clean and inspect burner assembly' },
+            { category: 'Labor', task: 'Check thermostat calibration' },
+            { category: 'Labor', task: 'Clean or replace air filters' },
+            { category: 'Labor', task: 'Inspect and seal ductwork' },
+            { category: 'Labor', task: 'Check blower motor and fan operation' },
+            { category: 'Labor', task: 'Drain and clean condensate lines' },
+            { category: 'Labor', task: 'Perform amp draw readings on motors' },
+            { category: 'Labor', task: 'Inspect gas lines for leaks' },
+            { category: 'Labor', task: 'Calibrate controls and safeties' },
+            { category: 'Labor', task: 'Run diagnostic tests on equipment' },
+            { category: 'Labor', task: 'Repair or replace non-functional parts' },
+            { category: 'Labor', task: 'Change filters' },
+            { category: 'Labor', task: 'Clean ducts' },
+            { category: 'Labor', task: 'Refill fluids' },
+            { category: 'Labor', task: 'Install thermostats' },
+            { category: 'Labor', task: 'Connect equipment to fuel lines' },
+            { category: 'Labor', task: 'Install electrical wiring' },
+            { category: 'Labor', task: 'Monitor equipment for leaks' },
+            { category: 'Labor', task: 'Straighten and clean condenser coils' },
+            { category: 'Labor', task: 'Remove broken valve cores' },
+            { category: 'Labor', task: 'Measure refrigerant levels' },
+            { category: 'Labor', task: 'Clear obstructions in refrigeration lines' },
+            { category: 'Labor', task: 'Remove moisture from lines' },
+            { category: 'Labor', task: 'Routine inspection' },
+            { category: 'Labor', task: 'Lubricate motors' },
+            { category: 'Labor', task: 'Check for wear on belts and pulleys' },
+            { category: 'Labor', task: 'Align and tension components' },
+            { category: 'Labor', task: 'Calibrate sensors' },
+
+            // Parts: Common replacement items
+            { category: 'Parts', task: 'Compressor replacement' },
+            { category: 'Parts', task: 'Evaporator coil' },
+            { category: 'Parts', task: 'Condenser coil' },
+            { category: 'Parts', task: 'Blower motor' },
+            { category: 'Parts', task: 'Fan motor' },
+            { category: 'Parts', task: 'Capacitor (run/start)' },
+            { category: 'Parts', task: 'Contactor/relay' },
+            { category: 'Parts', task: 'Thermostat' },
+            { category: 'Parts', task: 'Expansion valve (TXV)' },
+            { category: 'Parts', task: 'Filter drier/line dryer' },
+            { category: 'Parts', task: 'Ignitor' },
+            { category: 'Parts', task: 'Flame sensor' },
+            { category: 'Parts', task: 'Control board' },
+            { category: 'Parts', task: 'Limit switch' },
+            { category: 'Parts', task: 'Heat exchanger' },
+            { category: 'Parts', task: 'Air filter (specify size)' },
+            { category: 'Parts', task: 'Pressure switch' },
+            { category: 'Parts', task: 'Crankcase heater' },
+            { category: 'Parts', task: 'Belts' },
+            { category: 'Parts', task: 'Pulleys' },
+            { category: 'Parts', task: 'Fan assemblies' },
+            { category: 'Parts', task: 'Compressors' },
+            { category: 'Parts', task: 'Coils (evaporator and condenser)' },
+            { category: 'Parts', task: 'Drain pans' },
+            { category: 'Parts', task: 'Drain lines' },
+            { category: 'Parts', task: 'Sensors (pressure, temperature)' },
+            { category: 'Parts', task: 'Fuses' },
+            { category: 'Parts', task: 'Breakers' },
+            { category: 'Parts', task: 'Vibration isolators' },
+            { category: 'Parts', task: 'Mounts' },
+            { category: 'Parts', task: 'Grommets' },
+            { category: 'Parts', task: 'Bearings' },
+            { category: 'Parts', task: 'Valves (expansion, solenoid)' },
+            { category: 'Parts', task: 'Dampers' },
+            { category: 'Parts', task: 'Actuators' },
+            { category: 'Parts', task: 'Gaskets' },
+            { category: 'Parts', task: 'Seals' },
+            { category: 'Parts', task: 'Thermistors' },
+            { category: 'Parts', task: 'Wiring harnesses' },
+
+            // Materials: Consumables used in repairs
+            { category: 'Materials', task: 'Refrigerant (R-410A, specify lbs)' },
+            { category: 'Materials', task: 'Refrigerant (R-404A, specify lbs)' },
+            { category: 'Materials', task: 'Nitrogen for purging/testing' },
+            { category: 'Materials', task: 'Duct sealing tape/mastic' },
+            { category: 'Materials', task: 'Electrical wire/nuts' },
+            { category: 'Materials', task: 'Insulation foam/tape' },
+            { category: 'Materials', task: 'Cleaning solution/coil cleaner' },
+            { category: 'Materials', task: 'Lubricant/oil' },
+            { category: 'Materials', task: 'Soap solution for leak detection' },
+            { category: 'Materials', task: 'Flushing solvent' },
+            { category: 'Materials', task: 'Caulk/sealant' },
+
+            // Other: Equipment used (if billable, e.g., rentals) or special services
+            { category: 'Other', task: 'Used manifold gauges for pressure check' },
+            { category: 'Other', task: 'Used recovery machine for refrigerant' },
+            { category: 'Other', task: 'Used vacuum pump for evacuation' },
+            { category: 'Other', task: 'Used multimeter for electrical diagnostics' },
+            { category: 'Other', task: 'Used infrared thermometer for temp checks' },
+            { category: 'Other', task: 'Used leak detector tool' },
+            { category: 'Other', task: 'Electrical work (breaker/wiring)' },
+            { category: 'Other', task: 'Diagnostic fee' },
+            { category: 'Other', task: 'Used psychrometer for humidity measurement' },
+            { category: 'Other', task: 'Used thermal imaging camera for diagnostics' },
+            { category: 'Other', task: 'Used manometer for air pressure check' },
+            { category: 'Other', task: 'Used nitrogen regulator for gas flow' },
+            { category: 'Other', task: 'Used coil fin straightener' },
+            { category: 'Other', task: 'Used core removal tool' },
+            { category: 'Other', task: 'Used HVAC data logger for monitoring' },
+            { category: 'Other', task: 'Used voltage tester for safety' }
+          ];
+          // Save to localStorage after populating
+          localStorage.setItem('taskHistory', JSON.stringify(taskHistory));
+        }
+
+        function saveData() {
+            const data = {
+                employee: document.getElementById('employee').value,
+                date: document.getElementById('sessionDate').value,
+                entries
+            };
+            localStorage.setItem('timesheetData', JSON.stringify(data));
+            localStorage.setItem('addressHistory', JSON.stringify(addressHistory));
+            localStorage.setItem('taskHistory', JSON.stringify(taskHistory));
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('timesheetData');
+            if (saved) {
+                const d = JSON.parse(saved);
+                document.getElementById('employee').value = d.employee || 'Lucas';
+                document.getElementById('sessionDate').value = d.date || new Date().toISOString().split('T')[0];
+                entries = d.entries || [];
+            }
+            renderTable();
+        }
+
+        // === ADDRESS HISTORY ===
+        const addrInput = document.getElementById('address');
+        const addressDropdown = document.getElementById('addressHistory');
+        function showAddressHistory(filter = '') {
+            addressDropdown.innerHTML = '';
+            const list = filter 
+                ? addressHistory.filter(a => a.toLowerCase().includes(filter.toLowerCase()))
+                : addressHistory;
+            if (list.length === 0) {
+                addressDropdown.innerHTML = '<div class="history-item">No addresses found</div>';
+            } else {
+                list.forEach(a => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.textContent = a;
+                    div.onclick = () => { addrInput.value = a; addressDropdown.style.display = 'none'; };
+                    addressDropdown.appendChild(div);
+                });
+            }
+            addressDropdown.style.display = 'block';
+        }
+        addrInput.addEventListener('input', () => showAddressHistory(addrInput.value));
+        addrInput.addEventListener('focus', () => showAddressHistory());
+        document.getElementById('historyBtn').onclick = () => showAddressHistory();
+        document.addEventListener('click', e => {
+            if (!addrInput.contains(e.target) && !document.getElementById('historyBtn').contains(e.target) && !addressDropdown.contains(e.target))
+                addressDropdown.style.display = 'none';
+        });
+
+        // === RENDER TABLE ===
+        function renderTable() {
+            const tbody = document.querySelector('#entriesTable tbody');
+            tbody.innerHTML = '';
+            let totalDec = 0;
+
+            entries.forEach((e, i) => {
+                const inDec = timeToDecimal(e.timeIn);
+                const outDec = timeToDecimal(e.timeOut);
+                const duration = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+                totalDec += duration;
+
+                const tr = document.createElement('tr');
+                tr.draggable = true;
+                tr.dataset.index = i;
+                tr.innerHTML = `
+                    <td>${formatDate(e.dateStr)}</td>
+                    <td><strong>${e.jobName}</strong><br><small>${e.address || ''}</small></td>
+                    <td>${to12hr(e.timeIn)}</td>
+                    <td>${to12hr(e.timeOut)}</td>
+                    <td>${formatHours(duration)}</td>
+                    <td>${e.description || ''}</td>
+                    <td>
+                        <i class="fas fa-grip-lines drag-handle"></i>
+                        <select class="action-select">
+                            <option value="" disabled selected>Actions</option>
+                            <option value="edit">Edit</option>
+                            <option value="up">Up</option>
+                            <option value="down">Down</option>
+                            <option value="delete">Delete</option>
+                        </select>
+                    </td>`;
+                tbody.appendChild(tr);
+
+                tr.onclick = (ev) => {
+                    if (!ev.target.closest('.action-select, .drag-handle')) openInvoiceEditor(i);
+                };
+            });
+
+            const {h, m} = decimalToHM(totalDec);
+            document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
+
+            // Drag & drop
+            document.querySelectorAll('tr[data-index]').forEach(tr => {
+                tr.addEventListener('dragstart', e => { tr.classList.add('dragging'); e.dataTransfer.setData('text', tr.dataset.index); });
+                tr.addEventListener('dragover', e => e.preventDefault());
+                tr.addEventListener('drop', e => {
+                    e.preventDefault();
+                    const from = +e.dataTransfer.getData('text');
+                    const to = +tr.dataset.index;
+                    if (from !== to) { const [item] = entries.splice(from,1); entries.splice(to,0,item); renderTable(); }
+                });
+                tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
+            });
+
+            // Action selects
+            document.querySelectorAll('.action-select').forEach((select, idx) => {
+                select.addEventListener('change', function() {
+                    handleAction(idx, this.value);
+                    this.value = '';
+                });
+            });
+
+            saveData();
+        }
+
+        // === ACTIONS ===
+        function handleAction(i, act) {
+            if (act === 'edit') {
+                const e = entries[i];
+                document.getElementById('jobName').value = e.jobName;
+                document.getElementById('address').value = e.address || '';
+                document.getElementById('timeIn').value = e.timeIn;
+                document.getElementById('timeOut').value = e.timeOut;
+                document.getElementById('description').value = e.description || '';
+                document.getElementById('editIndex').value = i;
+                document.getElementById('actionButton').textContent = 'Update Entry';
+                document.getElementById('cancelButton').style.display = 'inline-block';
+                document.getElementById('jobType').value = Object.keys(jobTemplates).includes(e.jobName) ? e.jobName : 'Custom';
+                document.getElementById('form').scrollIntoView({behavior:'smooth'});
+            }
+            else if (act === 'up' && i > 0) { [entries[i-1], entries[i]] = [entries[i], entries[i-1]]; renderTable(); }
+            else if (act === 'down' && i < entries.length-1) { [entries[i], entries[i+1]] = [entries[i+1], entries[i]]; renderTable(); }
+            else if (act === 'delete' && confirm('Delete this entry?')) { entries.splice(i,1); renderTable(); }
+        }
+
+        // === FORM ===
+        const jobTypeSelect = document.getElementById('jobType');
+        jobTypeSelect.addEventListener('change', function() {
+            if (this.value !== 'Custom') {
+                document.getElementById('jobName').value = this.value;
+            }
+        });
+
+        document.getElementById('actionButton').onclick = () => {
+            const idx = +document.getElementById('editIndex').value;
+            const date = document.getElementById('sessionDate').value;
+            let job = document.getElementById('jobName').value.trim();
+            const addr = document.getElementById('address').value.trim();
+            const tIn = document.getElementById('timeIn').value;
+            const tOut = document.getElementById('timeOut').value;
+            const desc = document.getElementById('description').value.trim();
+
+            if (!date) return alert('Select a date');
+            if (!job) return alert('Enter job name');
+            if (timeToDecimal(tOut) === timeToDecimal(tIn)) return alert('Time In and Time Out cannot be the same');
+
+            const entry = {dateStr: date, jobName: job, address: addr, timeIn: tIn, timeOut: tOut, description: desc};
+
+            if (idx === -1) entries.push(entry);
+            else entries[idx] = entry;
+
+            if (addr && !addressHistory.includes(addr)) {
+                addressHistory.unshift(addr);
+                if (addressHistory.length > 50) addressHistory.pop();
+            }
+
+            renderTable();
+            clearForm();
+        };
+
+        function clearForm() {
+            document.getElementById('jobType').value = 'Custom';
+            document.getElementById('jobName').value = '';
+            document.getElementById('address').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('editIndex').value = -1;
+            document.getElementById('actionButton').textContent = 'Add Entry';
+            document.getElementById('cancelButton').style.display = 'none';
+            if (entries.length) {
+                const last = entries[entries.length-1];
+                document.getElementById('timeIn').value = last.timeOut;
+                document.getElementById('timeOut').value = getNextTime(last.timeOut);
+            }
+        }
+        document.getElementById('cancelButton').onclick = clearForm;
+
+        document.getElementById('copyLast').onclick = () => {
+            if (!entries.length) return alert('No previous job');
+            const l = entries[entries.length-1];
+            document.getElementById('jobType').value = 'Custom';
+            document.getElementById('jobName').value = l.jobName;
+            document.getElementById('address').value = l.address || '';
+            document.getElementById('description').value = l.description || '';
+            document.getElementById('timeIn').value = l.timeOut;
+            document.getElementById('timeOut').value = getNextTime(l.timeOut);
+        };
+
+        document.getElementById('clearAllButton').onclick = () => {
+            if (confirm('Clear ALL entries?')) { entries = []; renderTable(); clearForm(); }
+        };
+
+        // === EXCEL EXPORT ===
+        document.getElementById('generateExcel').onclick = () => {
+            document.getElementById('loading').style.display = 'block';
+            setTimeout(() => {
+                try {
+                    const wb = XLSX.utils.book_new();
+                    const data = [
+                        [`Timesheet - ${document.getElementById('employee').value}`, `Date: ${formatDate(document.getElementById('sessionDate').value)}`],
+                        [], 
+                        ['Job Name', 'Address', 'Time In', 'Time Out', 'Hours', 'Description']
+                    ];
+                    let totalDec = 0;
+                    entries.forEach(e => {
+                        const dur = timeToDecimal(e.timeOut) >= timeToDecimal(e.timeIn) 
+                            ? timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn)
+                            : timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn) + 24;
+                        totalDec += dur;
+                        data.push([e.jobName, e.address || '', to12hr(e.timeIn), to12hr(e.timeOut), formatHours(dur), e.description || '']);
+                    });
+                    const {h, m} = decimalToHM(totalDec);
+                    data.push([]); data.push(['TOTAL', '', '', '', `${h}:${m.toString().padStart(2,'0')}`, '']);
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+                    ws['!cols'] = [{wch:20},{wch:30},{wch:14},{wch:14},{wch:10},{wch:40}];
+                    XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
+                    XLSX.writeFile(wb, `${document.getElementById('employee').value}_Timesheet_${document.getElementById('sessionDate').value}.xlsx`);
+                } catch(e) {alert('Export failed')}
+                document.getElementById('loading').style.display = 'none';
+            }, 100);
+        };
+
+        // === QuickBooks IIF Export ===
+        document.getElementById('exportQuickBooks').onclick = () => {
+            const rate = prompt('Enter hourly rate for QuickBooks export:', '50');
+            if (!rate || isNaN(rate)) return alert('Invalid rate');
+
+            let iif = "!TRNS\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tDOCNUM\tMEMO\n";
+            iif += "!SPL\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tINVITEM\tQNTY\tPRICE\tMEMO\n";
+            iif += "!ENDTRNS\n";
+
+            entries.forEach((e, i) => {
+                const dur = timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn); // Assume no overnight for IIF simplicity
+                const amount = (dur * parseFloat(rate)).toFixed(2);
+                const customer = e.address || 'Customer';
+                const memo = e.description || '';
+
+                iif += `TRNS\tINVOICE\t${formatDate(e.dateStr)}\tAccounts Receivable\t${customer}\t${amount}\tINV${i+1}\t${memo}\n`;
+                iif += `SPL\tINVOICE\t${formatDate(e.dateStr)}\tService Income\t\t-${amount}\t${e.jobName}\t${dur.toFixed(2)}\t${rate}\t${memo}\n`;
+                iif += "ENDTRNS\n";
+            });
+
+            const blob = new Blob([iif], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'invoices.iif';
+            a.click();
+        };
+
+        // === MULTI-JOB INVOICE ===
+        document.getElementById('generateMultiInvoice').onclick = () => openInvoiceEditor(-1); // -1 for multi
+
+        // === INVOICE EDITOR ===
+        const invoiceModal = document.getElementById('invoiceModal');
+        const invoiceItems = document.getElementById('invoiceItems');
+        document.getElementById('closeModal').onclick = () => invoiceModal.style.display = 'none';
+        document.getElementById('addLine').onclick = () => addInvoiceLine();
+        document.getElementById('hourlyRate').addEventListener('input', updateTotals);
+
+        function openInvoiceEditor(index) {
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientPhone').value = '';
+            document.getElementById('clientEmail').value = '';
+            document.getElementById('clientAddress').value = '';
+            document.getElementById('hourlyRate').value = 50;
+
+            invoiceItems.innerHTML = '';
+            if (index === -1) { // Multi-job
+                entries.forEach(e => {
+                    applyTemplateIfAny(e);
+                });
+            } else { // Single job
+                const e = entries[index];
+                document.getElementById('clientAddress').value = e.address || '';
+                applyTemplateIfAny(e);
+            }
+            updateTotals();
+            invoiceModal.style.display = 'flex';
+        }
+
+        function applyTemplateIfAny(e) {
+            let laborOpts = {isLabor: true, job: e};
+            if (jobTemplates[e.jobName]) {
+                const template = jobTemplates[e.jobName];
+                const stepsDesc = template.steps.join('\n- ');
+                laborOpts.desc = `${e.jobName} (${to12hr(e.timeIn)} - ${to12hr(e.timeOut)}):\n- ${stepsDesc}\n${e.description || ''}`;
+                addInvoiceLine(laborOpts);
+                template.items.forEach(item => {
+                    addInvoiceLine(item);
+                });
+            } else {
+                addInvoiceLine(laborOpts);
+            }
+        }
+
+        function addInvoiceLine(opts = {}) {
+            const isLabor = opts.isLabor || false;
+            const job = opts.job || null;
+            const category = opts.category || (isLabor ? 'Labor' : 'Parts');
+            const qty = opts.qty !== undefined ? opts.qty : (isLabor ? timeToDecimal(job.timeOut) - timeToDecimal(job.timeIn) : 1);
+            const desc = opts.desc || (isLabor ? `${job.jobName} (${to12hr(job.timeIn)} - ${to12hr(job.timeOut)}): ${job.description || ''}` : '');
+            const price = opts.price !== undefined ? opts.price : (isLabor ? document.getElementById('hourlyRate').value : '');
+            const unit = opts.unit || (isLabor ? 'hr' : '');
+
+            const line = document.createElement('div');
+            line.className = 'invoice-line';
+            line.innerHTML = `
+                <select class="category">
+                    <option>Labor</option>
+                    <option>Parts</option>
+                    <option>Materials</option>
+                    <option>Other</option>
+                </select>
+                <input type="number" class="qty" placeholder="Qty" value="${qty.toFixed(2)}">
+                <div style="position:relative;">
+                    <input type="text" class="desc" placeholder="Description" value="${desc}">
+                    <button type="button" class="history-btn task-history-btn"><i class="fas fa-history"></i></button>
+                    <div class="taskHistory"></div>
+                </div>
+                <input type="number" class="price" placeholder="Price" value="${price}">
+                <input type="text" class="unit" placeholder="Unit" value="${unit}">
+                <input type="number" class="amount" placeholder="Amount" readonly>
+                <button class="removeLine">Remove</button>
+            `;
+            invoiceItems.appendChild(line);
+
+            line.querySelector('.category').value = category;
+
+            // Task history (filter by category)
+            const categorySelect = line.querySelector('.category');
+            const descInput = line.querySelector('.desc');
+            const taskDropdown = line.querySelector('.taskHistory');
+            const taskBtn = line.querySelector('.task-history-btn');
+            function showTaskHistory(filter = '') {
+                const category = categorySelect.value;
+                taskDropdown.innerHTML = '';
+                const filteredHistory = taskHistory.filter(t => t.category === category);
+                const list = filter ? filteredHistory.filter(t => t.task.toLowerCase().includes(filter.toLowerCase())) : filteredHistory;
+                if (list.length === 0) {
+                    taskDropdown.innerHTML = '<div class="history-item">No tasks found</div>';
+                } else {
+                    list.forEach(t => {
+                        const div = document.createElement('div');
+                        div.className = 'history-item';
+                        div.textContent = t.task;
+                        div.onclick = () => { descInput.value = t.task; taskDropdown.style.display = 'none'; };
+                        taskDropdown.appendChild(div);
+                    });
+                }
+                taskDropdown.style.display = 'block';
+            }
+            descInput.addEventListener('input', () => showTaskHistory(descInput.value));
+            descInput.addEventListener('focus', () => showTaskHistory());
+            taskBtn.onclick = () => showTaskHistory();
+            categorySelect.addEventListener('change', () => showTaskHistory(descInput.value));
+            document.addEventListener('click', e => {
+                if (!descInput.contains(e.target) && !taskBtn.contains(e.target) && !taskDropdown.contains(e.target)) taskDropdown.style.display = 'none';
+            });
+
+            line.querySelector('.qty').addEventListener('input', updateTotals);
+            line.querySelector('.price').addEventListener('input', updateTotals);
+            line.querySelector('.removeLine').onclick = () => { line.remove(); updateTotals(); };
+
+            updateTotals();
+        }
+
+        function updateTotals() {
+            let subtotal = 0;
+            invoiceItems.querySelectorAll('.invoice-line').forEach(line => {
+                const qty = parseFloat(line.querySelector('.qty').value) || 0;
+                const price = parseFloat(line.querySelector('.price').value) || 0;
+                const amount = qty * price;
+                line.querySelector('.amount').value = amount.toFixed(2);
+                subtotal += amount;
+            });
+            const hst = (subtotal * 0.13).toFixed(2);
+            const total = (subtotal + parseFloat(hst)).toFixed(2);
+            document.getElementById('invoiceTotals').innerHTML = `
+                Subtotal: $${subtotal.toFixed(2)}<br>
+                HST (13%): $${hst}<br>
+                Total: $${total}
+            `;
+        }
+
+        // === GENERATE PDF ===
+        document.getElementById('saveInvoice').onclick = () => {
+            document.getElementById('loading').style.display = 'block';
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Logo
+            doc.setFillColor(0, 0, 0);
+            doc.circle(20, 20, 10, 'F');
+            doc.setDrawColor(255, 255, 255);
+            doc.setLineWidth(2);
+            doc.line(10, 20, 30, 20); // Arrow
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(20);
+            doc.text("A", 16, 25);
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(24);
+            doc.text("ARCHER'S EQUIPMENT REPAIR", 40, 25);
+
+            // Company info
+            doc.setFontSize(10);
+            doc.text("Archer's Equipment Repair Ltd.", 140, 10);
+            doc.text("TSSA #/ 000394614", 140, 15);
+            doc.text("HST #: 900518869RT0001", 140, 20);
+            doc.text("Phone Number: 519-383-9654", 140, 25);
+
+            // Invoice title
+            doc.setFontSize(20);
+            doc.text("INVOICE", 160, 35);
+
+            // Client fields
+            doc.setFontSize(12);
+            doc.text("DATE: " + formatDate(document.getElementById('sessionDate').value), 10, 45);
+            doc.text("NAME: " + document.getElementById('clientName').value, 10, 55);
+            doc.text("PHONE: " + document.getElementById('clientPhone').value, 10, 65);
+            doc.text("EMAIL: " + document.getElementById('clientEmail').value, 10, 75);
+            doc.text("ADDRESS: " + document.getElementById('clientAddress').value, 10, 85);
+
+            // Table
+            const tableData = [];
+            invoiceItems.querySelectorAll('.invoice-line').forEach(line => {
+                tableData.push([
+                    line.querySelector('.qty').value,
+                    line.querySelector('.desc').value,
+                    line.querySelector('.price').value,
+                    line.querySelector('.unit').value,
+                    line.querySelector('.amount').value
+                ]);
+            });
+            doc.autoTable({
+                startY: 95,
+                head: [['QUANTITY', 'DESCRIPTION', 'PRICE', 'UNIT', 'AMOUNT']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: {fillColor: [211, 211, 211], textColor: [0, 0, 0]},
+                styles: {cellPadding: 5, fontSize: 10, overflow: 'linebreak'},
+                columnStyles: {0: {cellWidth: 20}, 1: {cellWidth: 80}, 2: {cellWidth: 20}, 3: {cellWidth: 20}, 4: {cellWidth: 30}},
+            });
+
+            // Totals
+            const finalY = doc.lastAutoTable.finalY + 10;
+            const subtotal = Array.from(invoiceItems.querySelectorAll('.amount')).reduce((sum, el) => sum + parseFloat(el.value || 0), 0).toFixed(2);
+            const hst = (parseFloat(subtotal) * 0.13).toFixed(2);
+            const total = (parseFloat(subtotal) + parseFloat(hst)).toFixed(2);
+            doc.text("HST: $" + hst, 150, finalY);
+            doc.text("TOTAL: $" + total, 150, finalY + 10);
+
+            // Footer
+            doc.setFontSize(8);
+            doc.text("e-transfer accepted at Jason@archerser.ca", 105, 280, {align: 'center'});
+
+            doc.save(`${document.getElementById('clientName').value || 'Invoice'}_${formatDate(document.getElementById('sessionDate').value)}.pdf`);
+
+            // Save new tasks with category
+            invoiceItems.querySelectorAll('.invoice-line').forEach(line => {
+                const category = line.querySelector('.category').value;
+                const task = line.querySelector('.desc').value.trim();
+                if (task && !taskHistory.some(t => t.category === category && t.task === task)) {
+                    taskHistory.push({category, task});
+                    if (taskHistory.length > 100) taskHistory.shift();
+                }
+            });
+            saveData();
+
+            invoiceModal.style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+        };
+
+        // Ctrl+Enter shortcut
+        document.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter')
+                document.getElementById('actionButton').click();
+        });
+
+        // Init
+        loadData();
+        clearForm();
+    </script>
+</body>
+</html>
