@@ -45,6 +45,11 @@
         #invoiceTotals {text-align:right;}
         @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
         @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;} .invoice-line {grid-template-columns:1fr;}}
+        #invoiceForm {
+    /* ... existing styles ... */
+    max-height: 90vh;
+    overflow-y: auto;
+}
     </style>
 </head>
 <body>
