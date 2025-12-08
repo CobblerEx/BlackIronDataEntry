@@ -905,7 +905,7 @@
 
         // === QuickBooks IIF Export ===
         document.getElementById('exportQuickBooks').onclick = () => {
-            const rate = prompt('Enter hourly rate for QuickBooks export:', '50');
+            const rate = prompt('Enter hourly rate for QuickBooks export:', '100');
             if (!rate || isNaN(rate)) return alert('Invalid rate');
 
             let iif = "!TRNS\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tDOCNUM\tMEMO\n";
@@ -946,7 +946,7 @@
             document.getElementById('clientPhone').value = '';
             document.getElementById('clientEmail').value = '';
             document.getElementById('clientAddress').value = '';
-            document.getElementById('hourlyRate').value = 50;
+            document.getElementById('hourlyRate').value = 100;
 
             invoiceItems.innerHTML = '';
             if (index === -1) { // Multi-job
