@@ -38,18 +38,13 @@
         #loading {display:none;text-align:center;padding:1.5rem;background:rgba(0,0,0,.8);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:10px;z-index:1000;}
         .spinner {border:5px solid #333;border-top:5px solid #ff4500;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;display:inline-block;}
         #invoiceModal {display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;}
-        #invoiceForm {background:#2a2a2a;padding:2rem;border-radius:10px;box-shadow:0 0 20px #ff4500;max-width:800px;width:90%;}
+        #invoiceForm {background:#2a2a2a;padding:2rem;border-radius:10px;box-shadow:0 0 20px #ff4500;max-width:800px;width:90%;max-height: 90vh;overflow-y: auto;}
         .invoice-line {display:grid;grid-template-columns:1fr 1fr 4fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;}
         .invoice-line button {margin:0;}
         #invoiceItems {margin-bottom:20px;}
         #invoiceTotals {text-align:right;}
         @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
         @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;} .invoice-line {grid-template-columns:1fr;}}
-        #invoiceForm {
-    /* ... existing styles ... */
-    max-height: 90vh;
-    overflow-y: auto;
-}
     </style>
 </head>
 <body>
@@ -805,8 +800,18 @@
         // === FORM ===
         const jobTypeSelect = document.getElementById('jobType');
         jobTypeSelect.addEventListener('change', function() {
+            const descTextarea = document.getElementById('description');
             if (this.value !== 'Custom') {
                 document.getElementById('jobName').value = this.value;
+                const template = jobTemplates[this.value];
+                if (template && template.steps) {
+                    // Brief description: Join first 5 steps with newlines for readability
+                    const briefSteps = template.steps.slice(0, 5).join('\n- ');
+                    descTextarea.value = `- ${briefSteps}`;
+                }
+            } else {
+                // Clear description for Custom
+                descTextarea.value = '';
             }
         });
 
