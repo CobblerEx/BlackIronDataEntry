@@ -1,0 +1,44 @@
+/* Styles extracted from invoice.html */
+body {font-family:'Roboto',sans-serif;background:linear-gradient(135deg,#1a1a1a 0%,#2c3e50 100%);color:#e0e0e0;padding:1.5rem;margin:0;}
+.nav-buttons {display:flex;justify-content:center;gap:1rem;margin:1rem 0;flex-wrap:wrap;}
+.nav-button {width:40px;height:40px;background:#2a2a2a;border:2px solid #ff4500;border-radius:50%;color:#ff4500;display:flex;align-items:center;justify-content:center;text-decoration:none;position:relative;}
+.nav-button:hover {transform:scale(1.1);box-shadow:0 0 15px rgba(255,69,0,.8);}
+.nav-button::after {content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:5px 10px;border-radius:4px;font-size:.8rem;opacity:0;white-space:nowrap;transition:opacity .2s;pointer-events:none;z-index:10;}
+.nav-button:hover::after {opacity:1;}
+h1,h2 {color:#ff4500;text-align:center;text-shadow:0 0 10px rgba(255,69,0,.5);}
+#form,#totalTime {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin-bottom:1.5rem;}
+label {display:block;margin-bottom:.8rem;position:relative;}
+input,select,textarea {width:100%;padding:.7rem;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;font-size:1rem;box-sizing:border-box;}
+input:focus,select:focus,textarea:focus {outline:none;box-shadow:0 0 10px rgba(255,69,0,.7);}
+textarea {height:80px;resize:vertical;}
+button {background:#ff4500;color:white;border:none;padding:.8rem 1.5rem;border-radius:6px;cursor:pointer;font-size:1rem;margin:0 .5rem .5rem 0;transition:all .2s;}
+button:hover {transform:scale(1.05);box-shadow:0 0 15px rgba(255,69,0,.8);}
+#cancelButton,#clearAllButton {background:#dc3545;}
+#copyLast {background:#28a745;}
+#address {padding-right:50px !important;}
+.history-btn {position:absolute;right:8px;top:38px;background:#ff4500;color:white;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;}
+#addressHistory,#taskHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
+.history-item {padding:12px 16px;cursor:pointer;border-bottom:1px solid #444;}
+.history-item:hover {background:#ff4500;color:white;padding-left:24px;}
+table {width:100%;border-collapse:collapse;background:rgba(30,30,30,.95);border-radius:10px;overflow:hidden;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1rem 0;}
+th,td {border:1px solid #ff4500;padding:.6rem;text-align:left;}
+th {background:#ff4500;color:white;position:sticky;top:0;}
+tbody tr:hover {background:#333;transform:translateY(-2px);cursor:pointer;}
+.drag-handle {cursor:move;color:#ff4500;margin-right:8px;}
+.action-select {padding:6px;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:4px;}
+#totalTime {font-size:1.4rem;font-weight:bold;text-align:center;padding:1rem;}
+#loading {display:none;text-align:center;padding:1.5rem;background:rgba(0,0,0,.8);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:10px;z-index:1000;}
+.spinner {border:5px solid #333;border-top:5px solid #ff4500;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;display:inline-block;}
+#invoiceModal {display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;}
+#invoiceForm {background:#2a2a2a;padding:2rem;border-radius:10px;box-shadow:0 0 20px #ff4500;max-width:800px;width:90%;max-height: 90vh;overflow-y: auto;}
+.invoice-line {display:grid;grid-template-columns:1fr 1fr 4fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;}
+.invoice-line button {margin:0;}
+#invoiceItems {margin-bottom:20px;}
+#invoiceTotals {text-align:right;}
+#timesheetModal {display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;}
+#timesheetForm {background:#2a2a2a;padding:2rem;border-radius:10px;box-shadow:0 0 20px #ff4500;max-width:600px;width:90%;max-height: 80vh;overflow-y: auto;}
+#savedTimesheets {max-height:300px;overflow-y:auto;}
+.timesheet-item {padding:10px;border-bottom:1px solid #444;cursor:pointer;}
+.timesheet-item:hover {background:#ff4500;color:white;}
+@keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;} .invoice-line {grid-template-columns:1fr;}}
