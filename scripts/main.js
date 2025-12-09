@@ -70,6 +70,7 @@ function loadData() {
 
 window.addEventListener('DOMContentLoaded', function() {
 	loadData();
+	renderTable();
 	clearForm();
 
 	// === FORM ===
@@ -107,7 +108,7 @@ window.addEventListener('DOMContentLoaded', function() {
 			if (addressHistory.length > 50) addressHistory.pop();
 		}
 
-		// renderTable();
+		renderTable();
 		clearForm();
 	};
 
@@ -128,8 +129,8 @@ window.addEventListener('DOMContentLoaded', function() {
 		if (confirm('Clear ALL entries?')) { 
 			entries = []; 
 			currentTimesheetId = null;
-			// renderTable(); 
-			clearForm(); 
+			renderTable();
+			clearForm();
 		}
 	};
 
