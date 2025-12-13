@@ -56,16 +56,36 @@
         <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
         <label>Date: <input type="date" id="sessionDate"></label>
         <h2>Add / Edit Job Entry</h2>
-        <label>Job Name: <input type="text" id="jobName"></label>
-        <label style="position:relative;">
+        
+        <label>Job Name: <input type="text" id="jobName" placeholder="e.g. Furnace Tune-Up"></label>
+        
+        <label>Job Type (optional auto-description):
+            <select id="jobType">
+                <option value="">-- Select to auto-fill description --</option>
+                <option value="Furnace Tune-Up">Furnace Tune-Up</option>
+                <option value="AC Maintenance">Air Conditioner Maintenance</option>
+                <option value="Gas Line Install">Gas Line Installation</option>
+                <option value="Water Heater Service">Water Heater Service</option>
+                <option value="Duct Cleaning">Duct Cleaning</option>
+                <option value="Compressor Replacement">Compressor Replacement</option>
+                <option value="Pool Heater Install">Pool Heater Gas Line / Install</option>
+                <option value="Underground Gas Line">Underground Gas Line</option>
+                <option value="General Service Call">General Service Call</option>
+            </select>
+        </label>
+
+                <label style="position:relative;">
             Address: 
             <input type="text" id="address" placeholder="Type to search history..." autocomplete="off">
             <button type="button" class="history-btn" id="historyBtn"><i class="fas fa-history"></i></button>
             <div id="addressHistory"></div>
         </label>
+
         <label>Time In: <select id="timeIn"></select></label>
         <label>Time Out: <select id="timeOut"></select></label>
-        <label>Description: <textarea id="description"></textarea></label>
+        
+       <label>Description: <textarea id="description" placeholder="Auto-filled if Job Type selected. You can edit."></textarea></label>
+        
         <input type="hidden" id="editIndex" value="-1">
         <div style="margin-top:1rem;">
             <button id="actionButton">Add Entry</button>
@@ -102,6 +122,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
+            // === JOB TYPE AUTO-DESCRIPTION TEMPLATES ===
+        const jobTemplates = {
+            "Furnace Tune-Up": "Inspected and cleaned furnace components including burner, heat exchanger, and blower. Checked thermostat operation, gas pressure, ignition system, and safety controls. Replaced air filter. Tested system for proper operation and carbon monoxide levels.",
+            "AC Maintenance": "Performed seasonal maintenance on air conditioning system: cleaned condenser coils, checked refrigerant levels, inspected electrical components, lubricated moving parts, cleared drain line, and tested system performance.",
+            "Gas Line Install": "Installed new black iron gas piping from meter to appliance location. Pressure tested line to 15 PSI for 15 minutes with no drop. Installed drip leg, shut-off valve, and sediment trap per code requirements.",
+            "Water Heater Service": "Flushed water heater tank, inspected anode rod, tested temperature & pressure relief valve, checked burner assembly (gas) or heating elements (electric), and verified proper venting.",
+            "Duct Cleaning": "Performed complete duct cleaning using rotary brush and HEPA vacuum system. Removed and cleaned all supply and return vents. Sanitized ductwork and applied microbial treatment where required.",
+            "Compressor Replacement": "Recovered refrigerant, removed failed compressor, installed new compressor with compatible oil charge. Replaced filter drier, brazed connections, evacuated system to 500 microns, and recharged to manufacturer specifications.",
+            "Pool Heater Install": "Installed new natural gas pool heater including gas line extension, electrical connection, bonding, and venting. Performed startup and verified proper operation.",
+            "Underground Gas Line": "Installed underground polyethylene gas line from meter to building entrance. Trenched, bedded with sand, installed tracer wire, riser, and transition fitting. Pressure tested per local code.",
+            "General Service Call": "Responded to customer service call. Diagnosed issue, performed necessary repairs/adjustments, and verified proper operation of equipment."
+        };
+
         // === 12-HOUR TIME WITH AM/PM ===
         const timeOptions = [];
         for (let h = 0; h < 24; h++) {
@@ -126,6 +159,19 @@
         timeIn.value = '08:00';
         timeOut.value = '08:30';
         document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
+
+      // Auto-description on Job Type change
+        document.getElementById('jobType').addEventListener('change', function() {
+            const selected = this.value;
+            const descField = document.getElementById('description');
+            if (selected && jobTemplates[selected]) {
+                descField.value = jobTemplates[selected];
+                // Optionally auto-set Job Name if it's empty
+                if (!document.getElementById('jobName').value.trim()) {
+                    document.getElementById('jobName').value = selected;
+                }
+            }
+        });
 
         // Convert 24h → 12h display
         function to12hr(time24) {
@@ -285,6 +331,7 @@
                 document.getElementById('timeIn').value = e.timeIn;
                 document.getElementById('timeOut').value = e.timeOut;
                 document.getElementById('description').value = e.description || '';
+                document.getElementById('jobType').value = ''; // don't pre-select
                 document.getElementById('editIndex').value = i;
                 document.getElementById('actionButton').textContent = 'Update Entry';
                 document.getElementById('cancelButton').style.display = 'inline-block';
@@ -325,6 +372,7 @@
 
         function clearForm() {
             document.getElementById('jobName').value = '';
+            document.getElementById('jobType').value = '';
             document.getElementById('address').value = '';
             document.getElementById('description').value = '';
             document.getElementById('editIndex').value = -1;
@@ -335,6 +383,7 @@
                 document.getElementById('timeIn').value = last.timeOut;
                 document.getElementById('timeOut').value = getNextTime(last.timeOut);
             }
+                    document.getElementById('jobName').focus();
         }
         document.getElementById('cancelButton').onclick = clearForm;
 
@@ -346,6 +395,7 @@
             document.getElementById('description').value = l.description || '';
             document.getElementById('timeIn').value = l.timeOut;
             document.getElementById('timeOut').value = getNextTime(l.timeOut);
+            document.getElementById('jobType').value = '';
         };
 
         document.getElementById('clearAllButton').onclick = () => {
