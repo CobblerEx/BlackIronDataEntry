@@ -254,44 +254,6 @@
             return Number(value || 0).toFixed(2);
         }
 
-        function drawInvoiceTable(doc, lines) {
-            if (typeof doc.autoTable === 'function') {
-                doc.autoTable({
-                    startY: 90,
-                    head: [['QUANTITY', 'DESCRIPTION', 'PRICE', 'UNIT', 'AMOUNT']],
-                    body: lines.map(l => [l.quantity.toFixed(2), l.desc, '$' + formatMoney(l.price), l.unit, '$' + formatMoney(l.amount)]),
-                    theme: 'grid',
-                    headStyles: {fillColor: [211, 211, 211], textColor: [0, 0, 0]},
-                    styles: {cellPadding: 5, fontSize: 10, overflow: 'linebreak'},
-                    columnStyles: {1: {cellWidth: 80}},
-                });
-                return doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 200;
-            }
-
-            // Fallback if jspdf-autotable fails to load on slower/cached browsers
-            let y = 90;
-            doc.setFontSize(10);
-            doc.text('QUANTITY', 10, y);
-            doc.text('DESCRIPTION', 35, y);
-            doc.text('PRICE', 125, y);
-            doc.text('UNIT', 150, y);
-            doc.text('AMOUNT', 172, y);
-            y += 6;
-            lines.forEach(l => {
-                if (y > 270) {
-                    doc.addPage();
-                    y = 20;
-                }
-                doc.text(l.quantity.toFixed(2), 10, y);
-                doc.text(String(l.desc).slice(0, 65), 35, y);
-                doc.text('$' + formatMoney(l.price), 125, y);
-                doc.text(l.unit, 150, y);
-                doc.text('$' + formatMoney(l.amount), 172, y);
-                y += 6;
-            });
-            return y + 8;
-        }
-
         // === DATA & STORAGE ===
         let entries = [];
         let addressHistory = JSON.parse(localStorage.getItem('addressHistory') || '[]');
@@ -603,20 +565,14 @@
 
         document.getElementById('addItem').onclick = () => createItemRow();
         document.getElementById('populateInvoice').onclick = () => {
-            ensureLaborRows();
+            ensureLaborRow();
             populateInvoiceFromEntries();
         };
 
         document.getElementById('hourlyRate').addEventListener('input', () => {
-            const {regularRow} = ensureLaborRows();
-            regularRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value || 0);
-            regularRow.querySelector('.item-price').dispatchEvent(new Event('input'));
-        });
-
-        document.getElementById('overtimeRate').addEventListener('input', () => {
-            const {overtimeRow} = ensureLaborRows();
-            overtimeRow.querySelector('.item-price').value = formatMoney(document.getElementById('overtimeRate').value || 0);
-            overtimeRow.querySelector('.item-price').dispatchEvent(new Event('input'));
+            const laborRow = ensureLaborRow();
+            laborRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value || 0);
+            laborRow.querySelector('.item-price').dispatchEvent(new Event('input'));
         });
 
         // === EXCEL EXPORT (12-hour format) ===
@@ -670,31 +626,43 @@
                     return alert('Invalid rate values');
                 }
 
-                const lineRows = [...document.querySelectorAll('#itemsTable tbody tr')];
-                const lines = lineRows
-                    .map(row => {
-                        const quantity = +row.querySelector('.item-qty').value || 0;
-                        const price = +row.querySelector('.item-price').value || 0;
-                        const desc = row.querySelector('.item-desc').value.trim();
-                        const unit = row.querySelector('.item-unit').value.trim() || 'ea';
-                        return {
-                            quantity,
-                            desc,
-                            price,
-                            unit,
-                            amount: quantity * price
-                        };
-                    })
-                    .filter(l => l.desc && l.quantity > 0);
+            const rate = parseFloat(document.getElementById('hourlyRate').value);
+            const hstRate = parseFloat(document.getElementById('hstRate').value || '0.13');
+            const clientName = document.getElementById('clientName').value.trim();
+            const clientPhone = document.getElementById('clientPhone').value.trim();
+            const clientEmail = document.getElementById('clientEmail').value.trim();
+            const clientAddress = document.getElementById('clientAddress').value.trim();
 
-                if (!lines.length) {
-                    document.getElementById('loading').style.display = 'none';
-                    return alert('Add at least one invoice line item.');
-                }
+            if (isNaN(rate) || rate < 0 || isNaN(hstRate) || hstRate < 0) {
+                document.getElementById('loading').style.display = 'none';
+                return alert('Invalid rate values');
+            }
 
-                const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
-                const hst = subtotal * hstRate;
-                const total = subtotal + hst;
+            const lineRows = [...document.querySelectorAll('#itemsTable tbody tr')];
+            const lines = lineRows
+                .map(row => {
+                    const quantity = +row.querySelector('.item-qty').value || 0;
+                    const price = +row.querySelector('.item-price').value || 0;
+                    const desc = row.querySelector('.item-desc').value.trim();
+                    const unit = row.querySelector('.item-unit').value.trim() || 'ea';
+                    return {
+                        quantity,
+                        desc,
+                        price,
+                        unit,
+                        amount: quantity * price
+                    };
+                })
+                .filter(l => l.desc || l.amount);
+
+            if (!lines.length) {
+                document.getElementById('loading').style.display = 'none';
+                return alert('Add at least one invoice line item.');
+            }
+
+            const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
+            const hst = subtotal * hstRate;
+            const total = subtotal + hst;
 
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
@@ -724,8 +692,19 @@
             doc.text("EMAIL: " + clientEmail, 10, 70);
             doc.text("ADDRESS: " + clientAddress, 10, 80);
 
-            // Table + Totals
-                const finalY = drawInvoiceTable(doc, lines);
+            // Table headers
+                doc.autoTable({
+                startY: 90,
+                head: [['QUANTITY', 'DESCRIPTION', 'PRICE', 'UNIT', 'AMOUNT']],
+                body: lines.map(l => [l.quantity.toFixed(2), l.desc, '$' + formatMoney(l.price), l.unit, '$' + formatMoney(l.amount)]),
+                theme: 'grid',
+                headStyles: {fillColor: [211, 211, 211], textColor: [0, 0, 0]},
+                styles: {cellPadding: 5, fontSize: 10, overflow: 'linebreak'},
+                columnStyles: {1: {cellWidth: 80}},
+            });
+
+            // Totals
+            const finalY = doc.lastAutoTable.finalY + 10;
             doc.text("SUBTOTAL: $" + formatMoney(subtotal), 140, finalY);
             doc.text("HST: $" + formatMoney(hst), 140, finalY + 8);
             doc.text("TOTAL: $" + formatMoney(total), 140, finalY + 16);
@@ -752,7 +731,7 @@
         // Init
         loadData();
         clearForm();
-        ensureLaborRows();
+        ensureLaborRow();
         populateInvoiceFromEntries();
     </script>
 </body>
