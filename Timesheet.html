@@ -131,7 +131,8 @@
             <label>Client Phone: <input type="text" id="clientPhone" placeholder="Phone number"></label>
             <label>Client Email: <input type="email" id="clientEmail" placeholder="Email"></label>
             <label>Client Address: <input type="text" id="clientAddress" placeholder="Address"></label>
-            <label>Hourly Rate ($): <input type="number" id="hourlyRate" min="0" step="0.01" value="50"></label>
+            <label>Regular Rate ($): <input type="number" id="hourlyRate" min="0" step="0.01" value="100"></label>
+            <label>Overtime Rate ($): <input type="number" id="overtimeRate" min="0" step="0.01" value="150"></label>
             <label>HST Rate: <input type="number" id="hstRate" min="0" step="0.01" value="0.13"></label>
         </div>
 
@@ -163,6 +164,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
     <script>
             // === JOB TYPE AUTO-DESCRIPTION TEMPLATES ===
         const jobTemplates = {
@@ -382,6 +384,32 @@
             return `Performed ${jobList}. Completed diagnostics, adjustments, cleanup, and final system operation checks.`;
         }
 
+        function isRegularBusinessTime(dt) {
+            const day = dt.getDay();
+            const hour = dt.getHours() + dt.getMinutes() / 60;
+            const weekday = day >= 1 && day <= 5;
+            return weekday && hour >= 8 && hour < 16;
+        }
+
+        function getHoursBreakdown(entry) {
+            const [y, m, d] = (entry.dateStr || document.getElementById('sessionDate').value).split('-').map(Number);
+            const [inH, inM] = entry.timeIn.split(':').map(Number);
+            const [outH, outM] = entry.timeOut.split(':').map(Number);
+            const start = new Date(y, (m - 1), d, inH, inM, 0, 0);
+            let end = new Date(y, (m - 1), d, outH, outM, 0, 0);
+            if (end <= start) end.setDate(end.getDate() + 1);
+
+            let regular = 0;
+            let overtime = 0;
+            const cursor = new Date(start);
+            while (cursor < end) {
+                if (isRegularBusinessTime(cursor)) regular += 0.5;
+                else overtime += 0.5;
+                cursor.setMinutes(cursor.getMinutes() + 30);
+            }
+            return {regular, overtime};
+        }
+
         function createItemRow(item = {}) {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -407,28 +435,52 @@
         }
 
         function populateInvoiceFromEntries() {
-            const totalHours = entries.reduce((sum, e) => sum + getEntryDuration(e), 0);
+            const totals = entries.reduce((acc, e) => {
+                const split = getHoursBreakdown(e);
+                acc.regular += split.regular;
+                acc.overtime += split.overtime;
+                return acc;
+            }, {regular: 0, overtime: 0});
             const laborDescriptionField = document.getElementById('laborDescription');
-            const laborRow = document.querySelector('#itemsTable tbody tr[data-type="labor"]');
+            const regularRow = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
+            const overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
 
             laborDescriptionField.value = getLaborSummary();
-            if (laborRow) {
-                laborRow.querySelector('.item-desc').value = laborDescriptionField.value;
-                laborRow.querySelector('.item-qty').value = totalHours.toFixed(2);
-                laborRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value);
-                laborRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
+            if (!document.getElementById('clientAddress').value.trim() && entries.length && entries[0].address) {
+                document.getElementById('clientAddress').value = entries[0].address;
+            }
+
+            if (regularRow) {
+                regularRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Regular Hours)`;
+                regularRow.querySelector('.item-qty').value = totals.regular.toFixed(2);
+                regularRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value);
+                regularRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
+            }
+            if (overtimeRow) {
+                overtimeRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Overtime Hours)`;
+                overtimeRow.querySelector('.item-qty').value = totals.overtime.toFixed(2);
+                overtimeRow.querySelector('.item-price').value = formatMoney(document.getElementById('overtimeRate').value);
+                overtimeRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
             }
         }
 
-        function ensureLaborRow() {
-            let laborRow = document.querySelector('#itemsTable tbody tr[data-type="labor"]');
-            if (laborRow) return laborRow;
+        function ensureLaborRows() {
+            let regularRow = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
+            let overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
 
-            createItemRow({desc: 'Labor', qty: 0, unit: 'hr', price: document.getElementById('hourlyRate').value || 50});
-            laborRow = document.querySelector('#itemsTable tbody tr:last-child');
-            laborRow.dataset.type = 'labor';
-            laborRow.querySelector('.remove-item').style.display = 'none';
-            return laborRow;
+            if (!regularRow) {
+                createItemRow({desc: 'Labor (Regular Hours)', qty: 0, unit: 'hr', price: document.getElementById('hourlyRate').value || 100});
+                regularRow = document.querySelector('#itemsTable tbody tr:last-child');
+                regularRow.dataset.type = 'regular-labor';
+                regularRow.querySelector('.remove-item').style.display = 'none';
+            }
+            if (!overtimeRow) {
+                createItemRow({desc: 'Labor (Overtime Hours)', qty: 0, unit: 'hr', price: document.getElementById('overtimeRate').value || 150});
+                overtimeRow = document.querySelector('#itemsTable tbody tr:last-child');
+                overtimeRow.dataset.type = 'overtime-labor';
+                overtimeRow.querySelector('.remove-item').style.display = 'none';
+            }
+            return {regularRow, overtimeRow};
         }
 
         // === ACTIONS ===
@@ -557,6 +609,22 @@
         document.getElementById('generateInvoice').onclick = () => {
             document.getElementById('loading').innerHTML = '<div class="spinner"></div><br>Generating Invoice...';
             document.getElementById('loading').style.display = 'block';
+            try {
+                ensureLaborRows();
+                populateInvoiceFromEntries();
+
+                const rate = parseFloat(document.getElementById('hourlyRate').value);
+                const overtimeRate = parseFloat(document.getElementById('overtimeRate').value);
+                const hstRate = parseFloat(document.getElementById('hstRate').value || '0.13');
+                const clientName = document.getElementById('clientName').value.trim();
+                const clientPhone = document.getElementById('clientPhone').value.trim();
+                const clientEmail = document.getElementById('clientEmail').value.trim();
+                const clientAddress = document.getElementById('clientAddress').value.trim();
+
+                if (isNaN(rate) || rate < 0 || isNaN(overtimeRate) || overtimeRate < 0 || isNaN(hstRate) || hstRate < 0) {
+                    document.getElementById('loading').style.display = 'none';
+                    return alert('Invalid rate values');
+                }
 
             const rate = parseFloat(document.getElementById('hourlyRate').value);
             const hstRate = parseFloat(document.getElementById('hstRate').value || '0.13');
@@ -596,8 +664,8 @@
             const hst = subtotal * hstRate;
             const total = subtotal + hst;
 
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
 
             // Logo (simple text simulation, add image if you have URL/base64)
             doc.setFontSize(40);
@@ -625,7 +693,7 @@
             doc.text("ADDRESS: " + clientAddress, 10, 80);
 
             // Table headers
-            doc.autoTable({
+                doc.autoTable({
                 startY: 90,
                 head: [['QUANTITY', 'DESCRIPTION', 'PRICE', 'UNIT', 'AMOUNT']],
                 body: lines.map(l => [l.quantity.toFixed(2), l.desc, '$' + formatMoney(l.price), l.unit, '$' + formatMoney(l.amount)]),
@@ -645,9 +713,13 @@
             doc.setFontSize(8);
             doc.text("e-transfer accepted at Jason@archerser.ca", 105, 280, {align: 'center'});
 
-            doc.save(`${clientName || 'Client'}_Invoice_${document.getElementById('sessionDate').value}.pdf`);
-
-            document.getElementById('loading').style.display = 'none';
+                doc.save(`${clientName || 'Client'}_Invoice_${document.getElementById('sessionDate').value}.pdf`);
+            } catch (err) {
+                alert('Invoice generation failed. Please refresh and try again.');
+                console.error(err);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
         };
 
         // Ctrl+Enter shortcut
