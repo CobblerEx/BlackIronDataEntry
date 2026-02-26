@@ -37,6 +37,13 @@
         #totalTime {font-size:1.4rem;font-weight:bold;text-align:center;padding:1rem;}
         #loading {display:none;text-align:center;padding:1.5rem;background:rgba(0,0,0,.8);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:10px;z-index:1000;}
         .spinner {border:5px solid #333;border-top:5px solid #ff4500;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;display:inline-block;}
+        #invoiceBuilder {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1.5rem 0;}
+        .invoice-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;}
+        .inline-group {display:flex;gap:.5rem;align-items:end;flex-wrap:wrap;}
+        .mini-btn {padding:.5rem .8rem;font-size:.9rem;}
+        .items-table td,.items-table th {vertical-align:middle;}
+        .items-table input {min-width:90px;}
+        .text-right {text-align:right;}
         @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
         @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;}}
     </style>
@@ -113,14 +120,51 @@
 
     <div style="text-align:center;margin:2rem 0;">
         <button id="generateExcel">Generate Excel</button>
-        <button id="generateInvoice">Generate Invoice</button>
+        <button id="generateInvoice" type="button">Generate Invoice</button>
         <button id="clearAllButton">Clear All</button>
+    </div>
+
+    <div id="invoiceBuilder">
+        <h2>Quick Invoice Builder</h2>
+        <div class="invoice-grid">
+            <label>Client Name: <input type="text" id="clientName" placeholder="Customer name"></label>
+            <label>Client Phone: <input type="text" id="clientPhone" placeholder="Phone number"></label>
+            <label>Client Email: <input type="email" id="clientEmail" placeholder="Email"></label>
+            <label>Client Address: <input type="text" id="clientAddress" placeholder="Address"></label>
+            <label>Regular Rate ($): <input type="number" id="hourlyRate" min="0" step="0.01" value="100"></label>
+            <label>Overtime Rate ($): <input type="number" id="overtimeRate" min="0" step="0.01" value="150"></label>
+            <label>HST Rate: <input type="number" id="hstRate" min="0" step="0.01" value="0.13"></label>
+        </div>
+
+        <div class="inline-group" style="margin-top:1rem;">
+            <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Timesheet</button>
+            <button type="button" id="addItem" class="mini-btn">Add Item</button>
+        </div>
+
+        <label style="margin-top:1rem;">Labor Description:
+            <textarea id="laborDescription" placeholder="Service summary auto-filled from your timesheet entries."></textarea>
+        </label>
+
+        <table class="items-table" id="itemsTable">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th style="width:120px;">Qty</th>
+                    <th style="width:120px;">Unit</th>
+                    <th style="width:140px;">Unit Price</th>
+                    <th style="width:140px;">Amount</th>
+                    <th style="width:90px;">Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
     <div id="loading"><div class="spinner"></div><br>Generating...</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
     <script>
             // === JOB TYPE AUTO-DESCRIPTION TEMPLATES ===
         const jobTemplates = {
@@ -204,6 +248,10 @@
             if (!d) return '';
             const [y, m, day] = d.split('-');
             return `${m}/${day}/${y}`;
+        }
+
+        function formatMoney(value) {
+            return Number(value || 0).toFixed(2);
         }
 
         // === DATA & STORAGE ===
@@ -320,6 +368,119 @@
             });
 
             saveData();
+            populateInvoiceFromEntries();
+        }
+
+        function getEntryDuration(entry) {
+            const inDec = timeToDecimal(entry.timeIn);
+            const outDec = timeToDecimal(entry.timeOut);
+            return outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+        }
+
+        function getLaborSummary() {
+            if (!entries.length) return 'Service call completed as requested. Diagnostics, adjustments, and system performance verification performed.';
+            const uniqueJobs = [...new Set(entries.map(e => e.jobName).filter(Boolean))];
+            const jobList = uniqueJobs.join(', ');
+            return `Performed ${jobList}. Completed diagnostics, adjustments, cleanup, and final system operation checks.`;
+        }
+
+        function isRegularBusinessTime(dt) {
+            const day = dt.getDay();
+            const hour = dt.getHours() + dt.getMinutes() / 60;
+            const weekday = day >= 1 && day <= 5;
+            return weekday && hour >= 8 && hour < 16;
+        }
+
+        function getHoursBreakdown(entry) {
+            const [y, m, d] = (entry.dateStr || document.getElementById('sessionDate').value).split('-').map(Number);
+            const [inH, inM] = entry.timeIn.split(':').map(Number);
+            const [outH, outM] = entry.timeOut.split(':').map(Number);
+            const start = new Date(y, (m - 1), d, inH, inM, 0, 0);
+            let end = new Date(y, (m - 1), d, outH, outM, 0, 0);
+            if (end <= start) end.setDate(end.getDate() + 1);
+
+            let regular = 0;
+            let overtime = 0;
+            const cursor = new Date(start);
+            while (cursor < end) {
+                if (isRegularBusinessTime(cursor)) regular += 0.5;
+                else overtime += 0.5;
+                cursor.setMinutes(cursor.getMinutes() + 30);
+            }
+            return {regular, overtime};
+        }
+
+        function createItemRow(item = {}) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" class="item-desc" value="${item.desc || ''}" placeholder="Material / extra service"></td>
+                <td><input type="number" class="item-qty" min="0" step="0.01" value="${item.qty ?? 1}"></td>
+                <td><input type="text" class="item-unit" value="${item.unit || 'ea'}"></td>
+                <td><input type="number" class="item-price" min="0" step="0.01" value="${formatMoney(item.price ?? 0)}"></td>
+                <td class="item-amount text-right">$0.00</td>
+                <td><button type="button" class="mini-btn remove-item">Remove</button></td>
+            `;
+
+            const qty = tr.querySelector('.item-qty');
+            const price = tr.querySelector('.item-price');
+            const amountCell = tr.querySelector('.item-amount');
+            function recalc() {
+                amountCell.textContent = `$${formatMoney((+qty.value || 0) * (+price.value || 0))}`;
+            }
+            qty.addEventListener('input', recalc);
+            price.addEventListener('input', recalc);
+            tr.querySelector('.remove-item').onclick = () => tr.remove();
+            recalc();
+            document.querySelector('#itemsTable tbody').appendChild(tr);
+        }
+
+        function populateInvoiceFromEntries() {
+            const totals = entries.reduce((acc, e) => {
+                const split = getHoursBreakdown(e);
+                acc.regular += split.regular;
+                acc.overtime += split.overtime;
+                return acc;
+            }, {regular: 0, overtime: 0});
+            const laborDescriptionField = document.getElementById('laborDescription');
+            const regularRow = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
+            const overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+
+            laborDescriptionField.value = getLaborSummary();
+            if (!document.getElementById('clientAddress').value.trim() && entries.length && entries[0].address) {
+                document.getElementById('clientAddress').value = entries[0].address;
+            }
+
+            if (regularRow) {
+                regularRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Regular Hours)`;
+                regularRow.querySelector('.item-qty').value = totals.regular.toFixed(2);
+                regularRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value);
+                regularRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
+            }
+            if (overtimeRow) {
+                overtimeRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Overtime Hours)`;
+                overtimeRow.querySelector('.item-qty').value = totals.overtime.toFixed(2);
+                overtimeRow.querySelector('.item-price').value = formatMoney(document.getElementById('overtimeRate').value);
+                overtimeRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
+            }
+        }
+
+        function ensureLaborRows() {
+            let regularRow = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
+            let overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+
+            if (!regularRow) {
+                createItemRow({desc: 'Labor (Regular Hours)', qty: 0, unit: 'hr', price: document.getElementById('hourlyRate').value || 100});
+                regularRow = document.querySelector('#itemsTable tbody tr:last-child');
+                regularRow.dataset.type = 'regular-labor';
+                regularRow.querySelector('.remove-item').style.display = 'none';
+            }
+            if (!overtimeRow) {
+                createItemRow({desc: 'Labor (Overtime Hours)', qty: 0, unit: 'hr', price: document.getElementById('overtimeRate').value || 150});
+                overtimeRow = document.querySelector('#itemsTable tbody tr:last-child');
+                overtimeRow.dataset.type = 'overtime-labor';
+                overtimeRow.querySelector('.remove-item').style.display = 'none';
+            }
+            return {regularRow, overtimeRow};
         }
 
         // === ACTIONS ===
@@ -402,6 +563,24 @@
             if (confirm('Clear ALL entries?')) { entries = []; renderTable(); clearForm(); }
         };
 
+        document.getElementById('addItem').onclick = () => createItemRow();
+        document.getElementById('populateInvoice').onclick = () => {
+            ensureLaborRows();
+            populateInvoiceFromEntries();
+        };
+
+        document.getElementById('hourlyRate').addEventListener('input', () => {
+            const {regularRow} = ensureLaborRows();
+            regularRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value || 0);
+            regularRow.querySelector('.item-price').dispatchEvent(new Event('input'));
+        });
+
+        document.getElementById('overtimeRate').addEventListener('input', () => {
+            const {overtimeRow} = ensureLaborRows();
+            overtimeRow.querySelector('.item-price').value = formatMoney(document.getElementById('overtimeRate').value || 0);
+            overtimeRow.querySelector('.item-price').dispatchEvent(new Event('input'));
+        });
+
         // === EXCEL EXPORT (12-hour format) ===
         document.getElementById('generateExcel').onclick = () => {
             document.getElementById('loading').style.display = 'block';
@@ -434,39 +613,53 @@
 
         // === GENERATE INVOICE AS PDF ===
         document.getElementById('generateInvoice').onclick = () => {
-            document.getElementById('loading').textContent = 'Generating Invoice...'; // Update loading text
+            document.getElementById('loading').innerHTML = '<div class="spinner"></div><br>Generating Invoice...';
             document.getElementById('loading').style.display = 'block';
+            try {
+                ensureLaborRows();
+                populateInvoiceFromEntries();
 
-            const hourlyRate = prompt('Enter hourly rate (e.g., 50 for $50/hr):', '50');
-            if (!hourlyRate || isNaN(hourlyRate)) {
-                document.getElementById('loading').style.display = 'none';
-                return alert('Invalid hourly rate');
-            }
-            const rate = parseFloat(hourlyRate);
-            const hstRate = 0.13;
+                const rate = parseFloat(document.getElementById('hourlyRate').value);
+                const overtimeRate = parseFloat(document.getElementById('overtimeRate').value);
+                const hstRate = parseFloat(document.getElementById('hstRate').value || '0.13');
+                const clientName = document.getElementById('clientName').value.trim();
+                const clientPhone = document.getElementById('clientPhone').value.trim();
+                const clientEmail = document.getElementById('clientEmail').value.trim();
+                const clientAddress = document.getElementById('clientAddress').value.trim();
 
-            const clientName = prompt('Enter client name:', '');
-            const clientPhone = prompt('Enter client phone:', '');
-            const clientEmail = prompt('Enter client email:', '');
-            const clientAddress = prompt('Enter client address:', '');
+                if (isNaN(rate) || rate < 0 || isNaN(overtimeRate) || overtimeRate < 0 || isNaN(hstRate) || hstRate < 0) {
+                    document.getElementById('loading').style.display = 'none';
+                    return alert('Invalid rate values');
+                }
 
-            let totalHours = 0;
-            const lines = entries.map(e => {
-                const dur = timeToDecimal(e.timeOut) >= timeToDecimal(e.timeIn) 
-                    ? timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn)
-                    : timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn) + 24;
-                totalHours += dur;
-                const amount = (dur * rate).toFixed(2);
-                const desc = `${e.jobName} at ${e.address || 'N/A'} (${to12hr(e.timeIn)} - ${to12hr(e.timeOut)}): ${e.description || ''}`;
-                return {quantity: dur.toFixed(2), desc, price: rate.toFixed(2), unit: 'hr', amount};
-            });
+                const lineRows = [...document.querySelectorAll('#itemsTable tbody tr')];
+                const lines = lineRows
+                    .map(row => {
+                        const quantity = +row.querySelector('.item-qty').value || 0;
+                        const price = +row.querySelector('.item-price').value || 0;
+                        const desc = row.querySelector('.item-desc').value.trim();
+                        const unit = row.querySelector('.item-unit').value.trim() || 'ea';
+                        return {
+                            quantity,
+                            desc,
+                            price,
+                            unit,
+                            amount: quantity * price
+                        };
+                    })
+                    .filter(l => l.desc && l.quantity > 0);
 
-            const subtotal = (totalHours * rate).toFixed(2);
-            const hst = (parseFloat(subtotal) * hstRate).toFixed(2);
-            const total = (parseFloat(subtotal) + parseFloat(hst)).toFixed(2);
+                if (!lines.length) {
+                    document.getElementById('loading').style.display = 'none';
+                    return alert('Add at least one invoice line item.');
+                }
 
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+                const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
+                const hst = subtotal * hstRate;
+                const total = subtotal + hst;
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
 
             // Logo (simple text simulation, add image if you have URL/base64)
             doc.setFontSize(40);
@@ -494,10 +687,10 @@
             doc.text("ADDRESS: " + clientAddress, 10, 80);
 
             // Table headers
-            doc.autoTable({
+                doc.autoTable({
                 startY: 90,
                 head: [['QUANTITY', 'DESCRIPTION', 'PRICE', 'UNIT', 'AMOUNT']],
-                body: lines.map(l => [l.quantity, l.desc, '$' + l.price, l.unit, '$' + l.amount]),
+                body: lines.map(l => [l.quantity.toFixed(2), l.desc, '$' + formatMoney(l.price), l.unit, '$' + formatMoney(l.amount)]),
                 theme: 'grid',
                 headStyles: {fillColor: [211, 211, 211], textColor: [0, 0, 0]},
                 styles: {cellPadding: 5, fontSize: 10, overflow: 'linebreak'},
@@ -505,17 +698,22 @@
             });
 
             // Totals
-            const finalY = doc.lastAutoTable.finalY + 10;
-            doc.text("HST: $" + hst, 150, finalY);
-            doc.text("TOTAL: $" + total, 150, finalY + 10);
+                const finalY = doc.lastAutoTable.finalY + 10;
+            doc.text("SUBTOTAL: $" + formatMoney(subtotal), 140, finalY);
+            doc.text("HST: $" + formatMoney(hst), 140, finalY + 8);
+            doc.text("TOTAL: $" + formatMoney(total), 140, finalY + 16);
 
             // Footer
             doc.setFontSize(8);
             doc.text("e-transfer accepted at Jason@archerser.ca", 105, 280, {align: 'center'});
 
-            doc.save(`${clientName || 'Client'}_Invoice_${document.getElementById('sessionDate').value}.pdf`);
-
-            document.getElementById('loading').style.display = 'none';
+                doc.save(`${clientName || 'Client'}_Invoice_${document.getElementById('sessionDate').value}.pdf`);
+            } catch (err) {
+                alert('Invoice generation failed. Please refresh and try again.');
+                console.error(err);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
         };
 
         // Ctrl+Enter shortcut
@@ -527,6 +725,8 @@
         // Init
         loadData();
         clearForm();
+        ensureLaborRows();
+        populateInvoiceFromEntries();
     </script>
 </body>
 </html>
