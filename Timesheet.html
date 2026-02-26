@@ -59,6 +59,18 @@
 
   <h1>Timesheet Creator</h1>
 
+  <!-- ✅ IMPORT EXCEL (phone friendly) -->
+  <div id="form" style="margin-bottom:1.5rem;">
+    <h2>Import Timesheet (.xlsx)</h2>
+    <label>
+      Upload Excel Timesheet:
+      <input type="file" id="importExcelInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+    </label>
+    <small style="display:block;opacity:.85;margin-top:.4rem;">
+      Imports a file exported from this app (Job Name, Address, Time In/Out, Description). This will replace your current entries.
+    </small>
+  </div>
+
   <div id="form">
     <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
     <label>Date: <input type="date" id="sessionDate"></label>
@@ -309,6 +321,144 @@
       }
     });
 
+    // =========================
+    // ✅ EXCEL IMPORT (replaces current entries)
+    // =========================
+    function parseDateFromMdy(mdy) {
+      const m = String(mdy || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!m) return '';
+      const mm = m[1].padStart(2,'0');
+      const dd = m[2].padStart(2,'0');
+      const yyyy = m[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    function parseDateFromDateLabel(label) {
+      const s = String(label || '');
+      const m = s.match(/Date:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+      return m ? parseDateFromMdy(m[1]) : '';
+    }
+    function parseDateFromFilename(name) {
+      const m = String(name || '').match(/(\d{4}-\d{2}-\d{2})/);
+      return m ? m[1] : '';
+    }
+    function parseEmployeeFromTitleCell(a1) {
+      const s = String(a1 || '');
+      const m = s.match(/Timesheet\s*-\s*(.+)$/i);
+      return m ? m[1].trim() : '';
+    }
+    function to24hMil(timeStr) {
+      const s = String(timeStr || '').trim();
+      if (!s) return '';
+      const m24 = s.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+      if (m24) return `${m24[1].padStart(2,'0')}:${m24[2]}`;
+      const m12 = s.match(/^(\d{1,2}):([0-5]\d)\s*([AaPp][Mm])$/);
+      if (!m12) return '';
+      let h = parseInt(m12[1], 10);
+      const min = m12[2];
+      const ap = m12[3].toUpperCase();
+      if (h === 12) h = 0;
+      if (ap === 'PM') h += 12;
+      return `${String(h).padStart(2,'0')}:${min}`;
+    }
+    function findHeaderRowIndex(grid) {
+      for (let r = 0; r < grid.length; r++) {
+        const row = (grid[r] || []).map(v => String(v || '').trim().toLowerCase());
+        if (row.includes('job name') && row.includes('time in') && row.includes('time out')) return r;
+      }
+      return -1;
+    }
+
+    async function handleExcelImport(file) {
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, { type: 'array' });
+      const firstSheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[firstSheetName];
+      const grid = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false });
+
+      const a1 = grid?.[0]?.[0];
+      const b1 = grid?.[0]?.[1];
+
+      let date = parseDateFromDateLabel(b1) || parseDateFromFilename(file.name);
+      if (!date) {
+        date = prompt('Could not detect date. Enter YYYY-MM-DD to import into:', document.getElementById('sessionDate').value);
+        if (!date) return;
+      }
+
+      const emp = parseEmployeeFromTitleCell(a1);
+      if (emp) document.getElementById('employee').value = emp;
+
+      const headerRow = findHeaderRowIndex(grid);
+      if (headerRow === -1) {
+        alert('Could not find header row. Make sure this file was exported from this app.');
+        return;
+      }
+
+      const headers = (grid[headerRow] || []).map(v => String(v || '').trim().toLowerCase());
+      const col = (name) => headers.indexOf(name);
+
+      const cJob = col('job name');
+      const cAddr = col('address');
+      const cIn = col('time in');
+      const cOut = col('time out');
+      const cDesc = col('description');
+
+      if (cJob === -1 || cIn === -1 || cOut === -1) {
+        alert('Missing required columns (Job Name / Time In / Time Out).');
+        return;
+      }
+
+      const imported = [];
+      for (let r = headerRow + 1; r < grid.length; r++) {
+        const row = grid[r] || [];
+        const firstCell = String(row[cJob] || '').trim();
+        if (!firstCell) continue;
+        if (firstCell.toUpperCase() === 'TOTAL') break;
+
+        const jobName = String(row[cJob] || '').trim();
+        const address = String((cAddr >= 0 ? row[cAddr] : '') || '').trim();
+        const timeInVal = to24hMil(row[cIn]);
+        const timeOutVal = to24hMil(row[cOut]);
+        const description = String((cDesc >= 0 ? row[cDesc] : '') || '').trim();
+
+        if (!jobName || !timeInVal || !timeOutVal) continue;
+
+        imported.push({
+          dateStr: date,
+          jobName,
+          address,
+          timeIn: timeInVal,
+          timeOut: timeOutVal,
+          description
+        });
+      }
+
+      if (!imported.length) {
+        alert('Imported file but found no job rows.');
+        return;
+      }
+
+      // Replace current entries + set date
+      document.getElementById('sessionDate').value = date;
+      entries = imported;
+
+      renderTable();
+      clearForm();
+      alert(`Imported ${imported.length} entries for ${date}.`);
+    }
+
+    document.getElementById('importExcelInput').addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        await handleExcelImport(file);
+      } catch (err) {
+        console.error(err);
+        alert('Import failed: ' + (err?.message || 'Unknown error'));
+      } finally {
+        e.target.value = '';
+      }
+    });
+
     // === INVOICE FILTER (select which job to invoice) ===
     function entryKey(e) {
       const job = (e.jobName || '').trim();
@@ -441,10 +591,8 @@
     function populateInvoiceFromEntries() {
       const filtered = getFilteredEntries();
 
-      // Always have regular labor row
       const regularRow = ensureRegularLaborRow();
 
-      // Compute totals
       const totals = filtered.reduce((acc, e) => {
         const split = getHoursBreakdown(e);
         acc.regular += split.regular;
@@ -452,7 +600,6 @@
         return acc;
       }, {regular: 0, overtime: 0});
 
-      // Only show overtime row if overtime > 0
       let overtimeRow = null;
       if (totals.overtime > 0) {
         overtimeRow = ensureOvertimeLaborRow();
@@ -460,7 +607,6 @@
         removeOvertimeLaborRowIfExists();
       }
 
-      // Labor description + default address (only if empty)
       const laborDescriptionField = document.getElementById('laborDescription');
       laborDescriptionField.value = getLaborSummaryFrom(filtered);
 
@@ -468,14 +614,12 @@
         document.getElementById('clientAddress').value = filtered[0].address;
       }
 
-      // Update regular row
       regularRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Regular Hours)`;
       regularRow.querySelector('.item-qty').value = totals.regular.toFixed(2);
       regularRow.querySelector('.item-unit').value = 'hr';
       regularRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value);
       regularRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
 
-      // Update overtime row if present
       if (overtimeRow) {
         overtimeRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Overtime Hours)`;
         overtimeRow.querySelector('.item-qty').value = totals.overtime.toFixed(2);
@@ -492,15 +636,11 @@
       document.getElementById('clientEmail').value = '';
       document.getElementById('clientAddress').value = '';
       document.getElementById('laborDescription').value = '';
-
-      // Reset filter to ALL
       document.getElementById('invoiceJobFilter').value = '__ALL__';
 
-      // Remove all item rows
       const tbody = document.querySelector('#itemsTable tbody');
       tbody.innerHTML = '';
 
-      // Recreate ONLY regular labor row at 0
       ensureRegularLaborRow();
       populateInvoiceFromEntries();
     }
@@ -543,7 +683,6 @@
       const {h, m} = decimalToHM(totalDec);
       document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
 
-      // Drag & drop
       document.querySelectorAll('tr[data-index]').forEach(tr => {
         tr.addEventListener('dragstart', e => { tr.classList.add('dragging'); e.dataTransfer.setData('text', tr.dataset.index); });
         tr.addEventListener('dragover', e => e.preventDefault());
@@ -560,7 +699,6 @@
         tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
       });
 
-      // Actions
       document.querySelectorAll('.action-select').forEach((select, idx) => {
         select.addEventListener('change', function() {
           handleAction(idx, this.value);
@@ -809,7 +947,6 @@
       }
     };
 
-    // Ctrl+Enter shortcut
     document.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         document.getElementById('actionButton').click();
@@ -819,8 +956,6 @@
     // Init
     loadData();
     clearForm();
-
-    // Ensure invoice table starts with regular labor row only (no overtime row unless needed)
     ensureRegularLaborRow();
     refreshInvoiceJobFilterOptions(false);
     populateInvoiceFromEntries();
