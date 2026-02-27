@@ -46,6 +46,31 @@
     .text-right {text-align:right;}
     @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
     @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;}}
+
+    /* ========= TABS ========= */
+    .tabs {display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;margin:1rem 0 1.25rem 0;}
+    .tab-btn {background:#2a2a2a;border:1px solid #ff4500;color:#ff4500;padding:.6rem 1rem;border-radius:999px;cursor:pointer;font-size:1rem;}
+    .tab-btn.active {background:#ff4500;color:#fff;box-shadow:0 0 15px rgba(255,69,0,.6);}
+    .tab-panel {display:none;}
+    .tab-panel.active {display:block;}
+
+    /* ===== Invoice Summary ===== */
+    #invoiceSummary {
+      background:rgba(30,30,30,.95);
+      border:1px solid #ff4500;
+      border-radius:10px;
+      box-shadow:0 0 20px rgba(255,69,0,.2);
+      padding:1rem 1.2rem;
+      margin: 0 0 1rem 0;
+    }
+    #invoiceSummary .summary-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap:.5rem 1rem;
+      align-items:center;
+    }
+    #invoiceSummary .summary-item {font-size:1rem;}
+    #invoiceSummary .summary-item b {color:#ff4500;}
   </style>
 </head>
 <body>
@@ -59,125 +84,150 @@
 
   <h1>Timesheet Creator</h1>
 
-  <!-- ✅ IMPORT EXCEL (phone friendly) -->
-  <div id="form" style="margin-bottom:1.5rem;">
-    <h2>Import Timesheet (.xlsx)</h2>
-    <label>
-      Upload Excel Timesheet:
-      <input type="file" id="importExcelInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-    </label>
-    <small style="display:block;opacity:.85;margin-top:.4rem;">
-      Imports a file exported from this app (Job Name, Address, Time In/Out, Description). This will replace your current entries.
-    </small>
+  <!-- ===== Tabs ===== -->
+  <div class="tabs">
+    <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
+    <button type="button" class="tab-btn" data-tab="invoiceTab"><i class="fas fa-file-invoice-dollar"></i> Invoice</button>
   </div>
 
-  <div id="form">
-    <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
-    <label>Date: <input type="date" id="sessionDate"></label>
-    <h2>Add / Edit Job Entry</h2>
-
-    <label>Job Name: <input type="text" id="jobName" placeholder="e.g. Furnace Tune-Up"></label>
-
-    <label>Job Type (optional auto-description):
-      <select id="jobType">
-        <option value="">-- Select to auto-fill description --</option>
-        <option value="Furnace Tune-Up">Furnace Tune-Up</option>
-        <option value="AC Maintenance">Air Conditioner Maintenance</option>
-        <option value="Gas Line Install">Gas Line Installation</option>
-        <option value="Water Heater Service">Water Heater Service</option>
-        <option value="Duct Cleaning">Duct Cleaning</option>
-        <option value="Compressor Replacement">Compressor Replacement</option>
-        <option value="Pool Heater Install">Pool Heater Gas Line / Install</option>
-        <option value="Underground Gas Line">Underground Gas Line</option>
-        <option value="General Service Call">General Service Call</option>
-      </select>
-    </label>
-
-    <label style="position:relative;">
-      Address:
-      <input type="text" id="address" placeholder="Type to search history..." autocomplete="off">
-      <button type="button" class="history-btn" id="historyBtn"><i class="fas fa-history"></i></button>
-      <div id="addressHistory"></div>
-    </label>
-
-    <label>Time In: <select id="timeIn"></select></label>
-    <label>Time Out: <select id="timeOut"></select></label>
-
-    <label>Description: <textarea id="description" placeholder="Auto-filled if Job Type selected. You can edit."></textarea></label>
-
-    <input type="hidden" id="editIndex" value="-1">
-    <div style="margin-top:1rem;">
-      <button id="actionButton">Add Entry</button>
-      <button id="copyLast">Copy Last Job</button>
-      <button id="cancelButton" style="display:none;">Cancel Edit</button>
+  <!-- ===== Timesheet Tab ===== -->
+  <div id="timesheetTab" class="tab-panel active">
+    <!-- ✅ IMPORT EXCEL (phone friendly) -->
+    <div id="form" style="margin-bottom:1.5rem;">
+      <h2>Import Timesheet (.xlsx)</h2>
+      <label>
+        Upload Excel Timesheet:
+        <input type="file" id="importExcelInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      </label>
+      <small style="display:block;opacity:.85;margin-top:.4rem;">
+        Imports a file exported from this app (Job Name, Address, Time In/Out, Description). This will replace your current entries.
+      </small>
     </div>
-  </div>
 
-  <div id="totalTime">Total Time: 0 hrs 0 min</div>
+    <div id="form">
+      <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
+      <label>Date: <input type="date" id="sessionDate"></label>
+      <h2>Add / Edit Job Entry</h2>
 
-  <table id="entriesTable">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Job / Address</th>
-        <th>Time In</th>
-        <th>Time Out</th>
-        <th>Hours</th>
-        <th>Description</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+      <label>Job Name: <input type="text" id="jobName" placeholder="e.g. Furnace Tune-Up"></label>
 
-  <div style="text-align:center;margin:2rem 0;">
-    <button id="generateExcel">Generate Excel</button>
-    <button id="generateInvoice" type="button">Generate Invoice</button>
-    <button id="clearAllButton">Clear All</button>
-  </div>
-
-  <div id="invoiceBuilder">
-    <h2>Quick Invoice Builder</h2>
-
-    <div class="invoice-grid">
-      <label>Invoice For:
-        <select id="invoiceJobFilter">
-          <option value="__ALL__">All entries (selected date)</option>
+      <label>Job Type (optional auto-description):
+        <select id="jobType">
+          <option value="">-- Select to auto-fill description --</option>
+          <option value="Furnace Tune-Up">Furnace Tune-Up</option>
+          <option value="AC Maintenance">Air Conditioner Maintenance</option>
+          <option value="Gas Line Install">Gas Line Installation</option>
+          <option value="Water Heater Service">Water Heater Service</option>
+          <option value="Duct Cleaning">Duct Cleaning</option>
+          <option value="Compressor Replacement">Compressor Replacement</option>
+          <option value="Pool Heater Install">Pool Heater Gas Line / Install</option>
+          <option value="Underground Gas Line">Underground Gas Line</option>
+          <option value="General Service Call">General Service Call</option>
         </select>
       </label>
 
-      <label>Client Name: <input type="text" id="clientName" placeholder="Customer name"></label>
-      <label>Client Phone: <input type="text" id="clientPhone" placeholder="Phone number"></label>
-      <label>Client Email: <input type="email" id="clientEmail" placeholder="Email"></label>
-      <label>Client Address: <input type="text" id="clientAddress" placeholder="Address"></label>
-      <label>Regular Rate ($): <input type="number" id="hourlyRate" min="0" step="0.01" value="100"></label>
-      <label>Overtime Rate ($): <input type="number" id="overtimeRate" min="0" step="0.01" value="150"></label>
-      <label>HST Rate: <input type="number" id="hstRate" min="0" step="0.01" value="0.13"></label>
+      <label style="position:relative;">
+        Address:
+        <input type="text" id="address" placeholder="Type to search history..." autocomplete="off">
+        <button type="button" class="history-btn" id="historyBtn"><i class="fas fa-history"></i></button>
+        <div id="addressHistory"></div>
+      </label>
+
+      <label>Time In: <select id="timeIn"></select></label>
+      <label>Time Out: <select id="timeOut"></select></label>
+
+      <label>Description: <textarea id="description" placeholder="Auto-filled if Job Type selected. You can edit."></textarea></label>
+
+      <input type="hidden" id="editIndex" value="-1">
+      <div style="margin-top:1rem;">
+        <button id="actionButton">Add Entry</button>
+        <button id="copyLast">Copy Last Job</button>
+        <button id="cancelButton" style="display:none;">Cancel Edit</button>
+      </div>
     </div>
 
-    <div class="inline-group" style="margin-top:1rem;">
-      <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Timesheet</button>
-      <button type="button" id="addItem" class="mini-btn">Add Item</button>
-      <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
-    </div>
+    <div id="totalTime">Total Time: 0 hrs 0 min</div>
 
-    <label style="margin-top:1rem;">Labor Description:
-      <textarea id="laborDescription" placeholder="Service summary auto-filled from your timesheet entries."></textarea>
-    </label>
-
-    <table class="items-table" id="itemsTable">
+    <table id="entriesTable">
       <thead>
         <tr>
+          <th>Date</th>
+          <th>Job / Address</th>
+          <th>Time In</th>
+          <th>Time Out</th>
+          <th>Hours</th>
           <th>Description</th>
-          <th style="width:120px;">Qty</th>
-          <th style="width:120px;">Unit</th>
-          <th style="width:140px;">Unit Price</th>
-          <th style="width:140px;">Amount</th>
-          <th style="width:90px;">Action</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
+
+    <div style="text-align:center;margin:2rem 0;">
+      <button id="generateExcel">Generate Excel</button>
+      <button id="goToInvoice" type="button">Go To Invoice</button>
+      <button id="clearAllButton">Clear All</button>
+    </div>
+  </div>
+
+  <!-- ===== Invoice Tab ===== -->
+  <div id="invoiceTab" class="tab-panel">
+    <!-- Small summary of total hours (and selected job hours) -->
+    <div id="invoiceSummary">
+      <div class="summary-grid">
+        <div class="summary-item"><b>Date:</b> <span id="sumDate">—</span></div>
+        <div class="summary-item"><b>Employee:</b> <span id="sumEmployee">—</span></div>
+        <div class="summary-item"><b>Selected:</b> <span id="sumSelected">All entries</span></div>
+        <div class="summary-item"><b>Total Hours:</b> <span id="sumTotalHours">0 hrs 0 min</span></div>
+        <div class="summary-item"><b>Regular:</b> <span id="sumRegularHours">0.00</span> hr</div>
+        <div class="summary-item"><b>Overtime:</b> <span id="sumOvertimeHours">0.00</span> hr</div>
+      </div>
+    </div>
+
+    <div id="invoiceBuilder">
+      <h2>Quick Invoice Builder</h2>
+
+      <div class="invoice-grid">
+        <label>Invoice For:
+          <select id="invoiceJobFilter">
+            <option value="__ALL__">All entries (selected date)</option>
+          </select>
+        </label>
+
+        <label>Client Name: <input type="text" id="clientName" placeholder="Customer name"></label>
+        <label>Client Phone: <input type="text" id="clientPhone" placeholder="Phone number"></label>
+        <label>Client Email: <input type="email" id="clientEmail" placeholder="Email"></label>
+        <label>Client Address: <input type="text" id="clientAddress" placeholder="Address"></label>
+        <label>Regular Rate ($): <input type="number" id="hourlyRate" min="0" step="0.01" value="100"></label>
+        <label>Overtime Rate ($): <input type="number" id="overtimeRate" min="0" step="0.01" value="150"></label>
+        <label>HST Rate: <input type="number" id="hstRate" min="0" step="0.01" value="0.13"></label>
+      </div>
+
+      <div class="inline-group" style="margin-top:1rem;">
+        <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Timesheet</button>
+        <button type="button" id="addItem" class="mini-btn">Add Item</button>
+        <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
+        <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
+      </div>
+
+      <label style="margin-top:1rem;">Labor Description:
+        <textarea id="laborDescription" placeholder="Service summary auto-filled from your timesheet entries."></textarea>
+      </label>
+
+      <table class="items-table" id="itemsTable">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th style="width:120px;">Qty</th>
+            <th style="width:120px;">Unit</th>
+            <th style="width:140px;">Unit Price</th>
+            <th style="width:140px;">Amount</th>
+            <th style="width:90px;">Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <div id="loading"><div class="spinner"></div><br>Generating...</div>
@@ -437,7 +487,6 @@
         return;
       }
 
-      // Replace current entries + set date
       document.getElementById('sessionDate').value = date;
       entries = imported;
 
@@ -588,6 +637,39 @@
       return `Performed ${jobList}${addrNote}. Completed diagnostics, adjustments, cleanup, and final system operation checks.`;
     }
 
+    // ===== Invoice Summary updater =====
+    function updateInvoiceSummary() {
+      const filtered = getFilteredEntries();
+
+      // total duration from time-in/out (matches your timesheet total)
+      let totalDec = 0;
+      filtered.forEach(e => {
+        const inDec = timeToDecimal(e.timeIn);
+        const outDec = timeToDecimal(e.timeOut);
+        const dur = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+        totalDec += dur;
+      });
+      const {h, m} = decimalToHM(totalDec);
+
+      // regular/overtime split
+      const totals = filtered.reduce((acc, e) => {
+        const split = getHoursBreakdown(e);
+        acc.regular += split.regular;
+        acc.overtime += split.overtime;
+        return acc;
+      }, {regular: 0, overtime: 0});
+
+      const sel = document.getElementById('invoiceJobFilter').value;
+      const selectedLabel = sel === '__ALL__' ? 'All entries' : entryLabelFromKey(sel);
+
+      document.getElementById('sumDate').textContent = formatDate(document.getElementById('sessionDate').value) || '—';
+      document.getElementById('sumEmployee').textContent = document.getElementById('employee').value || '—';
+      document.getElementById('sumSelected').textContent = selectedLabel;
+      document.getElementById('sumTotalHours').textContent = `${h} hrs ${m} min`;
+      document.getElementById('sumRegularHours').textContent = totals.regular.toFixed(2);
+      document.getElementById('sumOvertimeHours').textContent = totals.overtime.toFixed(2);
+    }
+
     function populateInvoiceFromEntries() {
       const filtered = getFilteredEntries();
 
@@ -627,6 +709,8 @@
         overtimeRow.querySelector('.item-price').value = formatMoney(document.getElementById('overtimeRate').value);
         overtimeRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
       }
+
+      updateInvoiceSummary();
     }
 
     // === CLEAR INVOICE (does NOT clear timesheet) ===
@@ -644,6 +728,30 @@
       ensureRegularLaborRow();
       populateInvoiceFromEntries();
     }
+
+    // ===== Tabs logic =====
+    function setActiveTab(tabId) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+      const panel = document.getElementById(tabId);
+      const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+      if (panel) panel.classList.add('active');
+      if (btn) btn.classList.add('active');
+
+      if (tabId === 'invoiceTab') {
+        refreshInvoiceJobFilterOptions(true);
+        populateInvoiceFromEntries();
+        updateInvoiceSummary();
+        window.scrollTo({top: 0, behavior: 'smooth'});
+      }
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+    });
+
+    document.getElementById('goToInvoice').addEventListener('click', () => setActiveTab('invoiceTab'));
 
     // === RENDER TABLE ===
     function renderTable() {
@@ -683,6 +791,7 @@
       const {h, m} = decimalToHM(totalDec);
       document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
 
+      // Drag & drop
       document.querySelectorAll('tr[data-index]').forEach(tr => {
         tr.addEventListener('dragstart', e => { tr.classList.add('dragging'); e.dataTransfer.setData('text', tr.dataset.index); });
         tr.addEventListener('dragover', e => e.preventDefault());
@@ -699,6 +808,7 @@
         tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
       });
 
+      // Actions
       document.querySelectorAll('.action-select').forEach((select, idx) => {
         select.addEventListener('change', function() {
           handleAction(idx, this.value);
@@ -709,6 +819,7 @@
       saveData();
       refreshInvoiceJobFilterOptions(true);
       populateInvoiceFromEntries();
+      updateInvoiceSummary();
     }
 
     // === ACTIONS ===
@@ -802,6 +913,7 @@
 
     document.getElementById('invoiceJobFilter').addEventListener('change', () => {
       populateInvoiceFromEntries();
+      updateInvoiceSummary();
     });
 
     document.getElementById('hourlyRate').addEventListener('input', () => {
@@ -820,7 +932,7 @@
       populateInvoiceFromEntries();
     });
 
-    // === EXCEL EXPORT (unchanged) ===
+    // === EXCEL EXPORT ===
     document.getElementById('generateExcel').onclick = () => {
       document.getElementById('loading').style.display = 'block';
       setTimeout(() => {
@@ -854,13 +966,14 @@
       }, 100);
     };
 
-    // === GENERATE INVOICE AS PDF (uses ONLY the filtered invoice lines table) ===
+    // === GENERATE INVOICE AS PDF ===
     document.getElementById('generateInvoice').onclick = () => {
       document.getElementById('loading').innerHTML = '<div class="spinner"></div><br>Generating Invoice...';
       document.getElementById('loading').style.display = 'block';
 
       try {
         populateInvoiceFromEntries();
+        updateInvoiceSummary();
 
         const rate = parseFloat(document.getElementById('hourlyRate').value);
         const overtimeRate = parseFloat(document.getElementById('overtimeRate').value);
@@ -947,6 +1060,7 @@
       }
     };
 
+    // Ctrl+Enter shortcut
     document.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         document.getElementById('actionButton').click();
@@ -959,6 +1073,7 @@
     ensureRegularLaborRow();
     refreshInvoiceJobFilterOptions(false);
     populateInvoiceFromEntries();
+    updateInvoiceSummary();
   </script>
 </body>
 </html>
