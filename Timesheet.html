@@ -1,86 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Timesheet Creator</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <style>
-    body {font-family:'Roboto',sans-serif;background:linear-gradient(135deg,#1a1a1a 0%,#2c3e50 100%);color:#e0e0e0;padding:1.5rem;margin:0;}
-    .nav-buttons {display:flex;justify-content:center;gap:1rem;margin:1rem 0;flex-wrap:wrap;}
-    .nav-button {width:40px;height:40px;background:#2a2a2a;border:2px solid #ff4500;border-radius:50%;color:#ff4500;display:flex;align-items:center;justify-content:center;text-decoration:none;position:relative;}
-    .nav-button:hover {transform:scale(1.1);box-shadow:0 0 15px rgba(255,69,0,.8);}
-    .nav-button::after {content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:5px 10px;border-radius:4px;font-size:.8rem;opacity:0;white-space:nowrap;transition:opacity .2s;pointer-events:none;z-index:10;}
-    .nav-button:hover::after {opacity:1;}
-    h1,h2 {color:#ff4500;text-align:center;text-shadow:0 0 10px rgba(255,69,0,.5);}
-    #form,#totalTime {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin-bottom:1.5rem;}
-    label {display:block;margin-bottom:.8rem;position:relative;}
-    input,select,textarea {width:100%;padding:.7rem;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;font-size:1rem;box-sizing:border-box;}
-    input:focus,select:focus,textarea:focus {outline:none;box-shadow:0 0 10px rgba(255,69,0,.7);}
-    textarea {height:80px;resize:vertical;}
-    button {background:#ff4500;color:white;border:none;padding:.8rem 1.5rem;border-radius:6px;cursor:pointer;font-size:1rem;margin:0 .5rem .5rem 0;transition:all .2s;}
-    button:hover {transform:scale(1.05);box-shadow:0 0 15px rgba(255,69,0,.8);}
-    #cancelButton,#clearAllButton {background:#dc3545;}
-    #copyLast {background:#28a745;}
-    #address {padding-right:50px !important;}
-    .history-btn {position:absolute;right:8px;top:38px;background:#ff4500;color:white;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;}
-    #addressHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
-    .history-item {padding:12px 16px;cursor:pointer;border-bottom:1px solid #444;}
-    .history-item:hover {background:#ff4500;color:white;padding-left:24px;}
-    table {width:100%;border-collapse:collapse;background:rgba(30,30,30,.95);border-radius:10px;overflow:hidden;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1rem 0;}
-    th,td {border:1px solid #ff4500;padding:.6rem;text-align:left;}
-    th {background:#ff4500;color:white;position:sticky;top:0;}
-    tbody tr:hover {background:#333;transform:translateY(-2px);}
-    .drag-handle {cursor:move;color:#ff4500;margin-right:8px;}
-    .action-select {padding:6px;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:4px;}
-    #totalTime {font-size:1.4rem;font-weight:bold;text-align:center;padding:1rem;}
-    #loading {display:none;text-align:center;padding:1.5rem;background:rgba(0,0,0,.8);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:10px;z-index:1000;}
-    .spinner {border:5px solid #333;border-top:5px solid #ff4500;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;display:inline-block;}
-    #invoiceBuilder {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1.5rem 0;}
-    .invoice-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;}
-    .inline-group {display:flex;gap:.5rem;align-items:end;flex-wrap:wrap;}
-    .mini-btn {padding:.5rem .8rem;font-size:.9rem;}
-    .items-table td,.items-table th {vertical-align:middle;}
-    .items-table input {min-width:90px;}
-    .text-right {text-align:right;}
-    @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-    @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;}}
-
-    /* ========= TABS ========= */
-    .tabs {display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;margin:1rem 0 1.25rem 0;}
-    .tab-btn {background:#2a2a2a;border:1px solid #ff4500;color:#ff4500;padding:.6rem 1rem;border-radius:999px;cursor:pointer;font-size:1rem;}
-    .tab-btn.active {background:#ff4500;color:#fff;box-shadow:0 0 15px rgba(255,69,0,.6);}
-    .tab-panel {display:none;}
-    .tab-panel.active {display:block;}
-
-    /* ===== Invoice Summary ===== */
-    #invoiceSummary {
-      background:rgba(30,30,30,.95);
-      border:1px solid #ff4500;
-      border-radius:10px;
-      box-shadow:0 0 20px rgba(255,69,0,.2);
-      padding:1rem 1.2rem;
-      margin: 0 0 1rem 0;
-    }
-    #invoiceSummary .summary-grid {
-      display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap:.5rem 1rem;
-      align-items:center;
-    }
-    #invoiceSummary .summary-item {font-size:1rem;}
-    #invoiceSummary .summary-item b {color:#ff4500;}
-
-    /* ===== Import section (moved to bottom) ===== */
-    #importSection{
-      background:rgba(30,30,30,.95);
-      padding:1.5rem;
-      border-radius:10px;
-      box-shadow:0 0 20px rgba(255,69,0,.3);
-      margin:2rem 0;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timesheet Creator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {font-family:'Roboto',sans-serif;background:linear-gradient(135deg,#1a1a1a 0%,#2c3e50 100%);color:#e0e0e0;padding:1.5rem;margin:0;}
+        .nav-buttons {display:flex;justify-content:center;gap:1rem;margin:1rem 0;flex-wrap:wrap;}
+        .nav-button {width:40px;height:40px;background:#2a2a2a;border:2px solid #ff4500;border-radius:50%;color:#ff4500;display:flex;align-items:center;justify-content:center;text-decoration:none;position:relative;}
+        .nav-button:hover {transform:scale(1.1);box-shadow:0 0 15px rgba(255,69,0,.8);}
+        .nav-button::after {content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:5px 10px;border-radius:4px;font-size:.8rem;opacity:0;white-space:nowrap;transition:opacity .2s;pointer-events:none;z-index:10;}
+        .nav-button:hover::after {opacity:1;}
+        h1,h2 {color:#ff4500;text-align:center;text-shadow:0 0 10px rgba(255,69,0,.5);}
+        #form,#totalTime {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin-bottom:1.5rem;}
+        label {display:block;margin-bottom:.8rem;position:relative;}
+        input,select,textarea {width:100%;padding:.7rem;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;font-size:1rem;box-sizing:border-box;}
+        input:focus,select:focus,textarea:focus {outline:none;box-shadow:0 0 10px rgba(255,69,0,.7);}
+        textarea {height:80px;resize:vertical;}
+        button {background:#ff4500;color:white;border:none;padding:.8rem 1.5rem;border-radius:6px;cursor:pointer;font-size:1rem;margin:0 .5rem .5rem 0;transition:all .2s;}
+        button:hover {transform:scale(1.05);box-shadow:0 0 15px rgba(255,69,0,.8);}
+        #cancelButton,#clearAllButton {background:#dc3545;}
+        #copyLast {background:#28a745;}
+        #address {padding-right:50px !important;}
+        .history-btn {position:absolute;right:8px;top:38px;background:#ff4500;color:white;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;}
+        #addressHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
+        .history-item {padding:12px 16px;cursor:pointer;border-bottom:1px solid #444;}
+        .history-item:hover {background:#ff4500;color:white;padding-left:24px;}
+        table {width:100%;border-collapse:collapse;background:rgba(30,30,30,.95);border-radius:10px;overflow:hidden;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1rem 0;}
+        th,td {border:1px solid #ff4500;padding:.6rem;text-align:left;}
+        th {background:#ff4500;color:white;position:sticky;top:0;}
+        tbody tr:hover {background:#333;transform:translateY(-2px);}
+        .drag-handle {cursor:move;color:#ff4500;margin-right:8px;}
+        .action-select {padding:6px;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:4px;}
+        #totalTime {font-size:1.4rem;font-weight:bold;text-align:center;padding:1rem;}
+        #loading {display:none;text-align:center;padding:1.5rem;background:rgba(0,0,0,.8);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:10px;z-index:1000;}
+        .spinner {border:5px solid #333;border-top:5px solid #ff4500;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;display:inline-block;}
+        @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+        @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;}}
+    </style>
 </head>
 <body>
   <div class="nav-buttons">
@@ -91,16 +50,7 @@
     <a href="https://cobblerex.github.io/BlackIronDataEntry/Timesheet.html" class="nav-button" data-tooltip="Timesheet"><i class="fas fa-clock"></i></a>
   </div>
 
-  <h1>Timesheet Creator</h1>
-
-  <!-- ===== Tabs ===== -->
-  <div class="tabs">
-    <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
-    <button type="button" class="tab-btn" data-tab="invoiceTab"><i class="fas fa-file-invoice-dollar"></i> Invoice</button>
-  </div>
-
-  <!-- ===== Timesheet Tab ===== -->
-  <div id="timesheetTab" class="tab-panel active">
+    <h1>Timesheet Creator</h1>
 
     <div id="form">
       <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
@@ -162,84 +112,10 @@
     </table>
 
     <div style="text-align:center;margin:2rem 0;">
-      <button id="generateExcel">Generate Excel</button>
-      <button id="goToInvoice" type="button">Go To Invoice</button>
-      <button id="clearAllButton">Clear All</button>
+        <button id="generateExcel">Generate Excel</button>
+        <button id="generateInvoice">Generate Invoice</button>
+        <button id="clearAllButton">Clear All</button>
     </div>
-
-    <!-- ✅ IMPORT EXCEL (moved to bottom of Timesheet tab) -->
-    <div id="importSection">
-      <h2>Import Timesheet (.xlsx)</h2>
-      <label>
-        Upload Excel Timesheet:
-        <input type="file" id="importExcelInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-      </label>
-      <small style="display:block;opacity:.85;margin-top:.4rem;">
-        Imports a file exported from this app (Job Name, Address, Time In/Out, Description). This will replace your current entries.
-      </small>
-    </div>
-
-  </div>
-
-  <!-- ===== Invoice Tab ===== -->
-  <div id="invoiceTab" class="tab-panel">
-    <!-- Small summary of total hours (and selected job hours) -->
-    <div id="invoiceSummary">
-      <div class="summary-grid">
-        <div class="summary-item"><b>Date:</b> <span id="sumDate">—</span></div>
-        <div class="summary-item"><b>Employee:</b> <span id="sumEmployee">—</span></div>
-        <div class="summary-item"><b>Selected:</b> <span id="sumSelected">All entries</span></div>
-        <div class="summary-item"><b>Total Hours:</b> <span id="sumTotalHours">0 hrs 0 min</span></div>
-        <div class="summary-item"><b>Regular:</b> <span id="sumRegularHours">0.00</span> hr</div>
-        <div class="summary-item"><b>Overtime:</b> <span id="sumOvertimeHours">0.00</span> hr</div>
-      </div>
-    </div>
-
-    <div id="invoiceBuilder">
-      <h2>Quick Invoice Builder</h2>
-
-      <div class="invoice-grid">
-        <label>Invoice For:
-          <select id="invoiceJobFilter">
-            <option value="__ALL__">All entries (selected date)</option>
-          </select>
-        </label>
-
-        <label>Client Name: <input type="text" id="clientName" placeholder="Customer name"></label>
-        <label>Client Phone: <input type="text" id="clientPhone" placeholder="Phone number"></label>
-        <label>Client Email: <input type="email" id="clientEmail" placeholder="Email"></label>
-        <label>Client Address: <input type="text" id="clientAddress" placeholder="Address"></label>
-        <label>Regular Rate ($): <input type="number" id="hourlyRate" min="0" step="0.01" value="100"></label>
-        <label>Overtime Rate ($): <input type="number" id="overtimeRate" min="0" step="0.01" value="150"></label>
-        <label>HST Rate: <input type="number" id="hstRate" min="0" step="0.01" value="0.13"></label>
-      </div>
-
-      <div class="inline-group" style="margin-top:1rem;">
-        <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Timesheet</button>
-        <button type="button" id="addItem" class="mini-btn">Add Item</button>
-        <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
-        <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
-      </div>
-
-      <label style="margin-top:1rem;">Labor Description:
-        <textarea id="laborDescription" placeholder="Service summary auto-filled from your timesheet entries."></textarea>
-      </label>
-
-      <table class="items-table" id="itemsTable">
-        <thead>
-          <tr>
-            <th>Description</th>
-            <th style="width:120px;">Qty</th>
-            <th style="width:120px;">Unit</th>
-            <th style="width:140px;">Unit Price</th>
-            <th style="width:140px;">Amount</th>
-            <th style="width:90px;">Action</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
 
   <div id="loading"><div class="spinner"></div><br>Generating...</div>
 
@@ -350,416 +226,34 @@
       renderTable();
     }
 
-    // === ADDRESS HISTORY ===
-    const addrInput = document.getElementById('address');
-    const dropdown = document.getElementById('addressHistory');
-
-    function showHistory(filter = '') {
-      dropdown.innerHTML = '';
-      const list = filter
-        ? addressHistory.filter(a => a.toLowerCase().includes(filter.toLowerCase()))
-        : addressHistory;
-
-      if (list.length === 0) {
-        dropdown.innerHTML = '<div class="history-item">No addresses found</div>';
-      } else {
-        list.forEach(a => {
-          const div = document.createElement('div');
-          div.className = 'history-item';
-          div.textContent = a;
-          div.onclick = () => { addrInput.value = a; dropdown.style.display = 'none'; };
-          dropdown.appendChild(div);
+        // === ADDRESS HISTORY ===
+        const addrInput = document.getElementById('address');
+        const dropdown = document.getElementById('addressHistory');
+        function showHistory(filter = '') {
+            dropdown.innerHTML = '';
+            const list = filter 
+                ? addressHistory.filter(a => a.toLowerCase().includes(filter.toLowerCase()))
+                : addressHistory;
+            if (list.length === 0) {
+                dropdown.innerHTML = '<div class="history-item">No addresses found</div>';
+            } else {
+                list.forEach(a => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.textContent = a;
+                    div.onclick = () => { addrInput.value = a; dropdown.style.display = 'none'; };
+                    dropdown.appendChild(div);
+                });
+            }
+            dropdown.style.display = 'block';
+        }
+        addrInput.addEventListener('input', () => showHistory(addrInput.value));
+        addrInput.addEventListener('focus', () => showHistory());
+        document.getElementById('historyBtn').onclick = () => showHistory();
+        document.addEventListener('click', e => {
+            if (!addrInput.contains(e.target) && !document.getElementById('historyBtn').contains(e.target) && !dropdown.contains(e.target))
+                dropdown.style.display = 'none';
         });
-      }
-      dropdown.style.display = 'block';
-    }
-    addrInput.addEventListener('input', () => showHistory(addrInput.value));
-    addrInput.addEventListener('focus', () => showHistory());
-    document.getElementById('historyBtn').onclick = () => showHistory();
-    document.addEventListener('click', e => {
-      if (!addrInput.contains(e.target) && !document.getElementById('historyBtn').contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.style.display = 'none';
-      }
-    });
-
-    // =========================
-    // ✅ EXCEL IMPORT (replaces current entries)
-    // =========================
-    function parseDateFromMdy(mdy) {
-      const m = String(mdy || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-      if (!m) return '';
-      const mm = m[1].padStart(2,'0');
-      const dd = m[2].padStart(2,'0');
-      const yyyy = m[3];
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    function parseDateFromDateLabel(label) {
-      const s = String(label || '');
-      const m = s.match(/Date:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
-      return m ? parseDateFromMdy(m[1]) : '';
-    }
-    function parseDateFromFilename(name) {
-      const m = String(name || '').match(/(\d{4}-\d{2}-\d{2})/);
-      return m ? m[1] : '';
-    }
-    function parseEmployeeFromTitleCell(a1) {
-      const s = String(a1 || '');
-      const m = s.match(/Timesheet\s*-\s*(.+)$/i);
-      return m ? m[1].trim() : '';
-    }
-    function to24hMil(timeStr) {
-      const s = String(timeStr || '').trim();
-      if (!s) return '';
-      const m24 = s.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
-      if (m24) return `${m24[1].padStart(2,'0')}:${m24[2]}`;
-      const m12 = s.match(/^(\d{1,2}):([0-5]\d)\s*([AaPp][Mm])$/);
-      if (!m12) return '';
-      let h = parseInt(m12[1], 10);
-      const min = m12[2];
-      const ap = m12[3].toUpperCase();
-      if (h === 12) h = 0;
-      if (ap === 'PM') h += 12;
-      return `${String(h).padStart(2,'0')}:${min}`;
-    }
-    function findHeaderRowIndex(grid) {
-      for (let r = 0; r < grid.length; r++) {
-        const row = (grid[r] || []).map(v => String(v || '').trim().toLowerCase());
-        if (row.includes('job name') && row.includes('time in') && row.includes('time out')) return r;
-      }
-      return -1;
-    }
-
-    async function handleExcelImport(file) {
-      const ab = await file.arrayBuffer();
-      const wb = XLSX.read(ab, { type: 'array' });
-      const firstSheetName = wb.SheetNames[0];
-      const ws = wb.Sheets[firstSheetName];
-      const grid = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false });
-
-      const a1 = grid?.[0]?.[0];
-      const b1 = grid?.[0]?.[1];
-
-      let date = parseDateFromDateLabel(b1) || parseDateFromFilename(file.name);
-      if (!date) {
-        date = prompt('Could not detect date. Enter YYYY-MM-DD to import into:', document.getElementById('sessionDate').value);
-        if (!date) return;
-      }
-
-      const emp = parseEmployeeFromTitleCell(a1);
-      if (emp) document.getElementById('employee').value = emp;
-
-      const headerRow = findHeaderRowIndex(grid);
-      if (headerRow === -1) {
-        alert('Could not find header row. Make sure this file was exported from this app.');
-        return;
-      }
-
-      const headers = (grid[headerRow] || []).map(v => String(v || '').trim().toLowerCase());
-      const col = (name) => headers.indexOf(name);
-
-      const cJob = col('job name');
-      const cAddr = col('address');
-      const cIn = col('time in');
-      const cOut = col('time out');
-      const cDesc = col('description');
-
-      if (cJob === -1 || cIn === -1 || cOut === -1) {
-        alert('Missing required columns (Job Name / Time In / Time Out).');
-        return;
-      }
-
-      const imported = [];
-      for (let r = headerRow + 1; r < grid.length; r++) {
-        const row = grid[r] || [];
-        const firstCell = String(row[cJob] || '').trim();
-        if (!firstCell) continue;
-        if (firstCell.toUpperCase() === 'TOTAL') break;
-
-        const jobName = String(row[cJob] || '').trim();
-        const address = String((cAddr >= 0 ? row[cAddr] : '') || '').trim();
-        const timeInVal = to24hMil(row[cIn]);
-        const timeOutVal = to24hMil(row[cOut]);
-        const description = String((cDesc >= 0 ? row[cDesc] : '') || '').trim();
-
-        if (!jobName || !timeInVal || !timeOutVal) continue;
-
-        imported.push({
-          dateStr: date,
-          jobName,
-          address,
-          timeIn: timeInVal,
-          timeOut: timeOutVal,
-          description
-        });
-      }
-
-      if (!imported.length) {
-        alert('Imported file but found no job rows.');
-        return;
-      }
-
-      document.getElementById('sessionDate').value = date;
-      entries = imported;
-
-      renderTable();
-      clearForm();
-      alert(`Imported ${imported.length} entries for ${date}.`);
-    }
-
-    document.getElementById('importExcelInput').addEventListener('change', async (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      try {
-        await handleExcelImport(file);
-      } catch (err) {
-        console.error(err);
-        alert('Import failed: ' + (err?.message || 'Unknown error'));
-      } finally {
-        e.target.value = '';
-      }
-    });
-
-    // === INVOICE FILTER (select which job to invoice) ===
-    function entryKey(e) {
-      const job = (e.jobName || '').trim();
-      const addr = (e.address || '').trim();
-      return `${job}||${addr}`;
-    }
-    function entryLabelFromKey(key) {
-      const [job, addr] = key.split('||');
-      return addr ? `${job} — ${addr}` : job;
-    }
-    function getFilteredEntries() {
-      const sel = document.getElementById('invoiceJobFilter').value;
-      if (sel === '__ALL__') return entries.slice();
-      return entries.filter(e => entryKey(e) === sel);
-    }
-    function refreshInvoiceJobFilterOptions(keepSelection = true) {
-      const select = document.getElementById('invoiceJobFilter');
-      const prev = select.value;
-      const keys = [...new Set(entries.map(entryKey))].filter(k => k && !k.startsWith('||'));
-
-      select.innerHTML = '';
-      select.add(new Option('All entries (selected date)', '__ALL__'));
-      keys.forEach(k => select.add(new Option(entryLabelFromKey(k), k)));
-
-      if (keepSelection && [...select.options].some(o => o.value === prev)) select.value = prev;
-      else select.value = '__ALL__';
-    }
-
-    // === INVOICE ITEMS TABLE HELPERS ===
-    function createItemRow(item = {}) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input type="text" class="item-desc" value="${item.desc || ''}" placeholder="Material / extra service"></td>
-        <td><input type="number" class="item-qty" min="0" step="0.01" value="${item.qty ?? 1}"></td>
-        <td><input type="text" class="item-unit" value="${item.unit || 'ea'}"></td>
-        <td><input type="number" class="item-price" min="0" step="0.01" value="${formatMoney(item.price ?? 0)}"></td>
-        <td class="item-amount text-right">$0.00</td>
-        <td><button type="button" class="mini-btn remove-item">Remove</button></td>
-      `;
-
-      const qty = tr.querySelector('.item-qty');
-      const price = tr.querySelector('.item-price');
-      const amountCell = tr.querySelector('.item-amount');
-
-      function recalc() {
-        amountCell.textContent = `$${formatMoney((+qty.value || 0) * (+price.value || 0))}`;
-      }
-      qty.addEventListener('input', recalc);
-      price.addEventListener('input', recalc);
-      tr.querySelector('.remove-item').onclick = () => tr.remove();
-      recalc();
-
-      document.querySelector('#itemsTable tbody').appendChild(tr);
-      return tr;
-    }
-
-    function ensureRegularLaborRow() {
-      let regularRow = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
-      if (!regularRow) {
-        createItemRow({
-          desc: 'Labor (Regular Hours)',
-          qty: 0,
-          unit: 'hr',
-          price: document.getElementById('hourlyRate').value || 100
-        });
-        regularRow = document.querySelector('#itemsTable tbody tr:last-child');
-        regularRow.dataset.type = 'regular-labor';
-        regularRow.querySelector('.remove-item').style.display = 'none';
-      }
-      return regularRow;
-    }
-
-    function ensureOvertimeLaborRow() {
-      let overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
-      if (!overtimeRow) {
-        createItemRow({
-          desc: 'Labor (Overtime Hours)',
-          qty: 0,
-          unit: 'hr',
-          price: document.getElementById('overtimeRate').value || 150
-        });
-        overtimeRow = document.querySelector('#itemsTable tbody tr:last-child');
-        overtimeRow.dataset.type = 'overtime-labor';
-        overtimeRow.querySelector('.remove-item').style.display = 'none';
-      }
-      return overtimeRow;
-    }
-
-    function removeOvertimeLaborRowIfExists() {
-      const overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
-      if (overtimeRow) overtimeRow.remove();
-    }
-
-    // === HOURS / LABOR SUMMARY ===
-    function isRegularBusinessTime(dt) {
-      const day = dt.getDay();
-      const hour = dt.getHours() + dt.getMinutes() / 60;
-      const weekday = day >= 1 && day <= 5;
-      return weekday && hour >= 8 && hour < 16;
-    }
-
-    function getHoursBreakdown(entry) {
-      const [y, m, d] = (entry.dateStr || document.getElementById('sessionDate').value).split('-').map(Number);
-      const [inH, inM] = entry.timeIn.split(':').map(Number);
-      const [outH, outM] = entry.timeOut.split(':').map(Number);
-      const start = new Date(y, (m - 1), d, inH, inM, 0, 0);
-      let end = new Date(y, (m - 1), d, outH, outM, 0, 0);
-      if (end <= start) end.setDate(end.getDate() + 1);
-
-      let regular = 0;
-      let overtime = 0;
-      const cursor = new Date(start);
-      while (cursor < end) {
-        if (isRegularBusinessTime(cursor)) regular += 0.5;
-        else overtime += 0.5;
-        cursor.setMinutes(cursor.getMinutes() + 30);
-      }
-      return {regular, overtime};
-    }
-
-    function getLaborSummaryFrom(filtered) {
-      if (!filtered.length) return 'Service call completed as requested. Diagnostics, adjustments, and system performance verification performed.';
-      const uniqueJobs = [...new Set(filtered.map(e => e.jobName).filter(Boolean))];
-      const uniqueAddrs = [...new Set(filtered.map(e => (e.address || '').trim()).filter(Boolean))];
-      const jobList = uniqueJobs.join(', ');
-      const addrNote = uniqueAddrs.length === 1 ? ` at ${uniqueAddrs[0]}` : '';
-      return `Performed ${jobList}${addrNote}. Completed diagnostics, adjustments, cleanup, and final system operation checks.`;
-    }
-
-    // ===== Invoice Summary updater =====
-    function updateInvoiceSummary() {
-      const filtered = getFilteredEntries();
-
-      let totalDec = 0;
-      filtered.forEach(e => {
-        const inDec = timeToDecimal(e.timeIn);
-        const outDec = timeToDecimal(e.timeOut);
-        const dur = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
-        totalDec += dur;
-      });
-      const {h, m} = decimalToHM(totalDec);
-
-      const totals = filtered.reduce((acc, e) => {
-        const split = getHoursBreakdown(e);
-        acc.regular += split.regular;
-        acc.overtime += split.overtime;
-        return acc;
-      }, {regular: 0, overtime: 0});
-
-      const sel = document.getElementById('invoiceJobFilter').value;
-      const selectedLabel = sel === '__ALL__' ? 'All entries' : entryLabelFromKey(sel);
-
-      document.getElementById('sumDate').textContent = formatDate(document.getElementById('sessionDate').value) || '—';
-      document.getElementById('sumEmployee').textContent = document.getElementById('employee').value || '—';
-      document.getElementById('sumSelected').textContent = selectedLabel;
-      document.getElementById('sumTotalHours').textContent = `${h} hrs ${m} min`;
-      document.getElementById('sumRegularHours').textContent = totals.regular.toFixed(2);
-      document.getElementById('sumOvertimeHours').textContent = totals.overtime.toFixed(2);
-    }
-
-    function populateInvoiceFromEntries() {
-      const filtered = getFilteredEntries();
-
-      const regularRow = ensureRegularLaborRow();
-
-      const totals = filtered.reduce((acc, e) => {
-        const split = getHoursBreakdown(e);
-        acc.regular += split.regular;
-        acc.overtime += split.overtime;
-        return acc;
-      }, {regular: 0, overtime: 0});
-
-      let overtimeRow = null;
-      if (totals.overtime > 0) {
-        overtimeRow = ensureOvertimeLaborRow();
-      } else {
-        removeOvertimeLaborRowIfExists();
-      }
-
-      const laborDescriptionField = document.getElementById('laborDescription');
-      laborDescriptionField.value = getLaborSummaryFrom(filtered);
-
-      if (!document.getElementById('clientAddress').value.trim() && filtered.length && filtered[0].address) {
-        document.getElementById('clientAddress').value = filtered[0].address;
-      }
-
-      regularRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Regular Hours)`;
-      regularRow.querySelector('.item-qty').value = totals.regular.toFixed(2);
-      regularRow.querySelector('.item-unit').value = 'hr';
-      regularRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value);
-      regularRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
-
-      if (overtimeRow) {
-        overtimeRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Overtime Hours)`;
-        overtimeRow.querySelector('.item-qty').value = totals.overtime.toFixed(2);
-        overtimeRow.querySelector('.item-unit').value = 'hr';
-        overtimeRow.querySelector('.item-price').value = formatMoney(document.getElementById('overtimeRate').value);
-        overtimeRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
-      }
-
-      updateInvoiceSummary();
-    }
-
-    function clearInvoice() {
-      document.getElementById('clientName').value = '';
-      document.getElementById('clientPhone').value = '';
-      document.getElementById('clientEmail').value = '';
-      document.getElementById('clientAddress').value = '';
-      document.getElementById('laborDescription').value = '';
-      document.getElementById('invoiceJobFilter').value = '__ALL__';
-
-      const tbody = document.querySelector('#itemsTable tbody');
-      tbody.innerHTML = '';
-
-      ensureRegularLaborRow();
-      populateInvoiceFromEntries();
-    }
-
-    // ===== Tabs logic =====
-    function setActiveTab(tabId) {
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-
-      const panel = document.getElementById(tabId);
-      const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
-      if (panel) panel.classList.add('active');
-      if (btn) btn.classList.add('active');
-
-      if (tabId === 'invoiceTab') {
-        refreshInvoiceJobFilterOptions(true);
-        populateInvoiceFromEntries();
-        updateInvoiceSummary();
-        window.scrollTo({top: 0, behavior: 'smooth'});
-      }
-    }
-
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
-    });
-
-    document.getElementById('goToInvoice').addEventListener('click', () => setActiveTab('invoiceTab'));
 
     // === RENDER TABLE ===
     function renderTable() {
@@ -799,28 +293,26 @@
       const {h, m} = decimalToHM(totalDec);
       document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
 
-      document.querySelectorAll('tr[data-index]').forEach(tr => {
-        tr.addEventListener('dragstart', e => { tr.classList.add('dragging'); e.dataTransfer.setData('text', tr.dataset.index); });
-        tr.addEventListener('dragover', e => e.preventDefault());
-        tr.addEventListener('drop', e => {
-          e.preventDefault();
-          const from = +e.dataTransfer.getData('text');
-          const to = +tr.dataset.index;
-          if (from !== to) {
-            const [item] = entries.splice(from,1);
-            entries.splice(to,0,item);
-            renderTable();
-          }
-        });
-        tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
-      });
+            // Drag & drop
+            document.querySelectorAll('tr[data-index]').forEach(tr => {
+                tr.addEventListener('dragstart', e => { tr.classList.add('dragging'); e.dataTransfer.setData('text', tr.dataset.index); });
+                tr.addEventListener('dragover', e => e.preventDefault());
+                tr.addEventListener('drop', e => {
+                    e.preventDefault();
+                    const from = +e.dataTransfer.getData('text');
+                    const to = +tr.dataset.index;
+                    if (from !== to) { const [item] = entries.splice(from,1); entries.splice(to,0,item); renderTable(); }
+                });
+                tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
+            });
 
-      document.querySelectorAll('.action-select').forEach((select, idx) => {
-        select.addEventListener('change', function() {
-          handleAction(idx, this.value);
-          this.value = '';
-        });
-      });
+            // Add JS event listeners for action-select dropdowns
+            document.querySelectorAll('.action-select').forEach((select, idx) => {
+                select.addEventListener('change', function() {
+                    handleAction(idx, this.value);
+                    this.value = '';
+                });
+            });
 
       saveData();
       refreshInvoiceJobFilterOptions(true);
@@ -828,33 +320,35 @@
       updateInvoiceSummary();
     }
 
-    function handleAction(i, act) {
-      if (act === 'edit') {
-        const e = entries[i];
-        document.getElementById('jobName').value = e.jobName;
-        document.getElementById('address').value = e.address || '';
-        document.getElementById('timeIn').value = e.timeIn;
-        document.getElementById('timeOut').value = e.timeOut;
-        document.getElementById('description').value = e.description || '';
-        document.getElementById('jobType').value = '';
-        document.getElementById('editIndex').value = i;
-        document.getElementById('actionButton').textContent = 'Update Entry';
-        document.getElementById('cancelButton').style.display = 'inline-block';
-        document.getElementById('form').scrollIntoView({behavior:'smooth'});
-      }
-      else if (act === 'up' && i > 0) { [entries[i-1], entries[i]] = [entries[i], entries[i-1]]; renderTable(); }
-      else if (act === 'down' && i < entries.length-1) { [entries[i], entries[i+1]] = [entries[i+1], entries[i]]; renderTable(); }
-      else if (act === 'delete' && confirm('Delete this entry?')) { entries.splice(i,1); renderTable(); }
-    }
+        // === ACTIONS ===
+        function handleAction(i, act) {
+            if (act === 'edit') {
+                const e = entries[i];
+                document.getElementById('jobName').value = e.jobName;
+                document.getElementById('address').value = e.address || '';
+                document.getElementById('timeIn').value = e.timeIn;
+                document.getElementById('timeOut').value = e.timeOut;
+                document.getElementById('description').value = e.description || '';
+                document.getElementById('jobType').value = ''; // don't pre-select
+                document.getElementById('editIndex').value = i;
+                document.getElementById('actionButton').textContent = 'Update Entry';
+                document.getElementById('cancelButton').style.display = 'inline-block';
+                document.getElementById('form').scrollIntoView({behavior:'smooth'});
+            }
+            else if (act === 'up' && i > 0) { [entries[i-1], entries[i]] = [entries[i], entries[i-1]]; renderTable(); }
+            else if (act === 'down' && i < entries.length-1) { [entries[i], entries[i+1]] = [entries[i+1], entries[i]]; renderTable(); }
+            else if (act === 'delete' && confirm('Delete this entry?')) { entries.splice(i,1); renderTable(); }
+        }
 
-    document.getElementById('actionButton').onclick = () => {
-      const idx = +document.getElementById('editIndex').value;
-      const date = document.getElementById('sessionDate').value;
-      const job = document.getElementById('jobName').value.trim();
-      const addr = document.getElementById('address').value.trim();
-      const tIn = document.getElementById('timeIn').value;
-      const tOut = document.getElementById('timeOut').value;
-      const desc = document.getElementById('description').value.trim();
+        // === FORM ===
+        document.getElementById('actionButton').onclick = () => {
+            const idx = +document.getElementById('editIndex').value;
+            const date = document.getElementById('sessionDate').value;
+            const job = document.getElementById('jobName').value.trim();
+            const addr = document.getElementById('address').value.trim();
+            const tIn = document.getElementById('timeIn').value;
+            const tOut = document.getElementById('timeOut').value;
+            const desc = document.getElementById('description').value.trim();
 
       if (!date) return alert('Select a date');
       if (!job) return alert('Enter job name');
@@ -902,106 +396,72 @@
       document.getElementById('jobType').value = '';
     };
 
-    document.getElementById('clearAllButton').onclick = () => {
-      if (confirm('Clear ALL entries?')) {
-        entries = [];
-        renderTable();
-        clearForm();
-      }
-    };
+        document.getElementById('clearAllButton').onclick = () => {
+            if (confirm('Clear ALL entries?')) { entries = []; renderTable(); clearForm(); }
+        };
 
-    document.getElementById('addItem').onclick = () => createItemRow();
-    document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
-    document.getElementById('clearInvoice').onclick = () => clearInvoice();
+        // === EXCEL EXPORT (12-hour format) ===
+        document.getElementById('generateExcel').onclick = () => {
+            document.getElementById('loading').style.display = 'block';
+            setTimeout(() => {
+                try {
+                    const wb = XLSX.utils.book_new();
+                    const data = [
+                        [`Timesheet - ${document.getElementById('employee').value}`, `Date: ${formatDate(document.getElementById('sessionDate').value)}`],
+                        [], 
+                        ['Job Name', 'Address', 'Time In', 'Time Out', 'Hours', 'Description']
+                    ];
+                    let totalDec = 0;
+                    entries.forEach(e => {
+                        const dur = timeToDecimal(e.timeOut) >= timeToDecimal(e.timeIn) 
+                            ? timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn)
+                            : timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn) + 24;
+                        totalDec += dur;
+                        data.push([e.jobName, e.address || '', to12hr(e.timeIn), to12hr(e.timeOut), formatHours(dur), e.description || '']);
+                    });
+                    const {h, m} = decimalToHM(totalDec);
+                    data.push([]); data.push(['TOTAL', '', '', '', `${h}:${m.toString().padStart(2,'0')}`, '']);
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+                    ws['!cols'] = [{wch:20},{wch:30},{wch:14},{wch:14},{wch:10},{wch:40}];
+                    XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
+                    XLSX.writeFile(wb, `${document.getElementById('employee').value}_Timesheet_${document.getElementById('sessionDate').value}.xlsx`);
+                } catch(e) {alert('Export failed')}
+                document.getElementById('loading').style.display = 'none';
+            }, 100);
+        };
 
-    document.getElementById('invoiceJobFilter').addEventListener('change', () => {
-      populateInvoiceFromEntries();
-      updateInvoiceSummary();
-    });
+        // === GENERATE INVOICE AS PDF ===
+        document.getElementById('generateInvoice').onclick = () => {
+            document.getElementById('loading').textContent = 'Generating Invoice...'; // Update loading text
+            document.getElementById('loading').style.display = 'block';
 
-    document.getElementById('hourlyRate').addEventListener('input', () => {
-      const r = ensureRegularLaborRow();
-      r.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value || 0);
-      r.querySelector('.item-price').dispatchEvent(new Event('input'));
-      populateInvoiceFromEntries();
-    });
+            const hourlyRate = prompt('Enter hourly rate (e.g., 50 for $50/hr):', '50');
+            if (!hourlyRate || isNaN(hourlyRate)) {
+                document.getElementById('loading').style.display = 'none';
+                return alert('Invalid hourly rate');
+            }
+            const rate = parseFloat(hourlyRate);
+            const hstRate = 0.13;
 
-    document.getElementById('overtimeRate').addEventListener('input', () => {
-      const otRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
-      if (otRow) {
-        otRow.querySelector('.item-price').value = formatMoney(document.getElementById('overtimeRate').value || 0);
-        otRow.querySelector('.item-price').dispatchEvent(new Event('input'));
-      }
-      populateInvoiceFromEntries();
-    });
+            const clientName = prompt('Enter client name:', '');
+            const clientPhone = prompt('Enter client phone:', '');
+            const clientEmail = prompt('Enter client email:', '');
+            const clientAddress = prompt('Enter client address:', '');
 
-    document.getElementById('generateExcel').onclick = () => {
-      document.getElementById('loading').style.display = 'block';
-      setTimeout(() => {
-        try {
-          const wb = XLSX.utils.book_new();
-          const data = [
-            [`Timesheet - ${document.getElementById('employee').value}`, `Date: ${formatDate(document.getElementById('sessionDate').value)}`],
-            [],
-            ['Job Name', 'Address', 'Time In', 'Time Out', 'Hours', 'Description']
-          ];
-          let totalDec = 0;
-          entries.forEach(e => {
-            const dur = timeToDecimal(e.timeOut) >= timeToDecimal(e.timeIn)
-              ? timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn)
-              : timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn) + 24;
-            totalDec += dur;
-            data.push([e.jobName, e.address || '', to12hr(e.timeIn), to12hr(e.timeOut), formatHours(dur), e.description || '']);
-          });
-          const {h, m} = decimalToHM(totalDec);
-          data.push([]);
-          data.push(['TOTAL', '', '', '', `${h}:${m.toString().padStart(2,'0')}`, '']);
-          const ws = XLSX.utils.aoa_to_sheet(data);
-          ws['!cols'] = [{wch:20},{wch:30},{wch:14},{wch:14},{wch:10},{wch:40}];
-          XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
-          XLSX.writeFile(wb, `${document.getElementById('employee').value}_Timesheet_${document.getElementById('sessionDate').value}.xlsx`);
-        } catch(e) {
-          alert('Export failed');
-          console.error(e);
-        }
-        document.getElementById('loading').style.display = 'none';
-      }, 100);
-    };
+            let totalHours = 0;
+            const lines = entries.map(e => {
+                const dur = timeToDecimal(e.timeOut) >= timeToDecimal(e.timeIn) 
+                    ? timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn)
+                    : timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn) + 24;
+                totalHours += dur;
+                const amount = (dur * rate).toFixed(2);
+                const desc = `${e.jobName} at ${e.address || 'N/A'} (${to12hr(e.timeIn)} - ${to12hr(e.timeOut)}): ${e.description || ''}`;
+                return {quantity: dur.toFixed(2), desc, price: rate.toFixed(2), unit: 'hr', amount};
+            });
 
-    document.getElementById('generateInvoice').onclick = () => {
-      document.getElementById('loading').innerHTML = '<div class="spinner"></div><br>Generating Invoice...';
-      document.getElementById('loading').style.display = 'block';
-
-      try {
-        populateInvoiceFromEntries();
-        updateInvoiceSummary();
-
-        const hstRate = parseFloat(document.getElementById('hstRate').value || '0.13');
-
-        const clientName = document.getElementById('clientName').value.trim();
-        const clientPhone = document.getElementById('clientPhone').value.trim();
-        const clientEmail = document.getElementById('clientEmail').value.trim();
-        const clientAddress = document.getElementById('clientAddress').value.trim();
-
-        const lineRows = [...document.querySelectorAll('#itemsTable tbody tr')];
-        const lines = lineRows
-          .map(row => {
-            const quantity = +row.querySelector('.item-qty').value || 0;
-            const price = +row.querySelector('.item-price').value || 0;
-            const desc = row.querySelector('.item-desc').value.trim();
-            const unit = row.querySelector('.item-unit').value.trim() || 'ea';
-            return { quantity, desc, price, unit, amount: quantity * price };
-          })
-          .filter(l => (l.desc && l.quantity) || l.amount);
-
-        if (!lines.length) {
-          document.getElementById('loading').style.display = 'none';
-          return alert('Add at least one invoice line item.');
-        }
-
-        const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
-        const hst = subtotal * hstRate;
-        const total = subtotal + hst;
+            const subtotal = (totalHours * rate).toFixed(2);
+            const hst = (parseFloat(subtotal) * hstRate).toFixed(2);
+            const total = (parseFloat(subtotal) + parseFloat(hst)).toFixed(2);
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
@@ -1054,11 +514,11 @@
       }
     };
 
-    document.addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        document.getElementById('actionButton').click();
-      }
-    });
+        // Ctrl+Enter shortcut
+        document.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter')
+                document.getElementById('actionButton').click();
+        });
 
     // Init
     loadData();
