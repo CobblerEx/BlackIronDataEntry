@@ -1068,7 +1068,7 @@
         if (LOGO_URL && LOGO_URL.trim() !== "") {
           try {
             const { dataUrl, fmt } = await loadImageAsDataURL(LOGO_URL);
-            doc.addImage(dataUrl, fmt, 10, 8, 25, 25); // x,y,w,h
+            doc.addImage(dataUrl, fmt, 10, 8, 25, 20); // x,y,w,h
           } catch (e) {
             console.warn("Logo skipped:", e.message);
           }
@@ -1076,7 +1076,7 @@
 
         // Left header text
         doc.setFontSize(20);
-        doc.text("ARCHER'S EQUIPMENT REPAIR", 10, 30);
+        doc.text("ARCHER'S EQUIPMENT REPAIR", 10, 35);
 
         // Right header block
         doc.setFontSize(10);
@@ -1087,7 +1087,7 @@
 
         // Invoice label
         doc.setFontSize(20);
-        doc.text("INVOICE", 170, 30);
+        doc.text("INVOICE", 170, 35);
 
         // Client block
         doc.setFontSize(12);
