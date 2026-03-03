@@ -248,6 +248,30 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
 
   <script>
+    // =========================
+    // ✅ LOGO CONFIG (replace this with your GitHub Pages image URL)
+    // Example: https://cobblerex.github.io/BlackIronDataEntry/assets/archers-logo.png
+    // =========================
+    const LOGO_URL = "PUT_YOUR_LOGO_URL_HERE";
+
+    // Load image URL into a PNG DataURL for jsPDF
+    function loadImageAsDataURL(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = () => reject(new Error("Logo failed to load. Check LOGO_URL path/CORS."));
+        img.src = url;
+      });
+    }
+
     // === JOB TYPE AUTO-DESCRIPTION TEMPLATES ===
     const jobTemplates = {
       "Furnace Tune-Up": "Inspected and cleaned furnace components including burner, heat exchanger, and blower. Checked thermostat operation, gas pressure, ignition system, and safety controls. Replaced air filter. Tested system for proper operation and carbon monoxide levels.",
@@ -551,9 +575,9 @@
     function createItemRow(item = {}) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="text" class="item-desc" value="${item.desc || ''}" placeholder="Material / extra service"></td>
+        <td><input type="text" class="item-desc" value="${(item.desc || '').replace(/"/g, '&quot;')}" placeholder="Material / extra service"></td>
         <td><input type="number" class="item-qty" min="0" step="0.01" value="${item.qty ?? 1}"></td>
-        <td><input type="text" class="item-unit" value="${item.unit || 'ea'}"></td>
+        <td><input type="text" class="item-unit" value="${(item.unit || 'ea').replace(/"/g, '&quot;')}"></td>
         <td><input type="number" class="item-price" min="0" step="0.01" value="${formatMoney(item.price ?? 0)}"></td>
         <td class="item-amount text-right">$0.00</td>
         <td><button type="button" class="mini-btn remove-item">Remove</button></td>
@@ -573,6 +597,17 @@
 
       document.querySelector('#itemsTable tbody').appendChild(tr);
       return tr;
+    }
+
+    // ✅ DEFAULT REMOVABLE $100 SERVICE CHARGE
+    function ensureServiceChargeRow() {
+      let row = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
+      if (!row) {
+        createItemRow({ desc: 'Service Charge', qty: 1, unit: 'ea', price: 100 });
+        row = document.querySelector('#itemsTable tbody tr:last-child');
+        row.dataset.type = 'service-charge';
+      }
+      return row;
     }
 
     function ensureRegularLaborRow() {
@@ -648,6 +683,31 @@
       return `Performed ${jobList}${addrNote}. Completed diagnostics, adjustments, cleanup, and final system operation checks.`;
     }
 
+    // ✅ Pull description(s) from timesheet entries into invoice labor description
+    function getLaborDescriptionFromTimesheet(filtered) {
+      const lines = filtered
+        .map(e => {
+          const desc = (e.description || '').trim();
+          const job = (e.jobName || '').trim();
+          if (!desc && !job) return null;
+          if (!desc) return job;
+          return job ? `${job}: ${desc}` : desc;
+        })
+        .filter(Boolean);
+
+      if (!lines.length) return getLaborSummaryFrom(filtered);
+      return lines.join('\n');
+    }
+
+    // Always clear + populate address based on selected invoice filter
+    function setClientAddressFromFiltered(filtered) {
+      const addrField = document.getElementById('clientAddress');
+      const uniqueAddrs = [...new Set(filtered.map(e => (e.address || '').trim()).filter(Boolean))];
+
+      if (uniqueAddrs.length === 1) addrField.value = uniqueAddrs[0];
+      else addrField.value = ''; // multiple/no addresses => blank so you don't accidentally invoice wrong one
+    }
+
     // ===== Invoice Summary updater =====
     function updateInvoiceSummary() {
       const filtered = getFilteredEntries();
@@ -679,9 +739,12 @@
       document.getElementById('sumOvertimeHours').textContent = totals.overtime.toFixed(2);
     }
 
+    // ✅ Updated: ensures service charge exists, imports descriptions, and clears+populates client address
     function populateInvoiceFromEntries() {
       const filtered = getFilteredEntries();
 
+      // Ensure default rows exist
+      ensureServiceChargeRow();
       const regularRow = ensureRegularLaborRow();
 
       const totals = filtered.reduce((acc, e) => {
@@ -692,25 +755,24 @@
       }, {regular: 0, overtime: 0});
 
       let overtimeRow = null;
-      if (totals.overtime > 0) {
-        overtimeRow = ensureOvertimeLaborRow();
-      } else {
-        removeOvertimeLaborRowIfExists();
-      }
+      if (totals.overtime > 0) overtimeRow = ensureOvertimeLaborRow();
+      else removeOvertimeLaborRowIfExists();
 
+      // Labor description from timesheet descriptions
       const laborDescriptionField = document.getElementById('laborDescription');
-      laborDescriptionField.value = getLaborSummaryFrom(filtered);
+      laborDescriptionField.value = getLaborDescriptionFromTimesheet(filtered);
 
-      if (!document.getElementById('clientAddress').value.trim() && filtered.length && filtered[0].address) {
-        document.getElementById('clientAddress').value = filtered[0].address;
-      }
+      // Always refresh address based on current selection
+      setClientAddressFromFiltered(filtered);
 
+      // Regular labor row
       regularRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Regular Hours)`;
       regularRow.querySelector('.item-qty').value = totals.regular.toFixed(2);
       regularRow.querySelector('.item-unit').value = 'hr';
       regularRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value);
       regularRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
 
+      // Overtime labor row
       if (overtimeRow) {
         overtimeRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Overtime Hours)`;
         overtimeRow.querySelector('.item-qty').value = totals.overtime.toFixed(2);
@@ -733,6 +795,8 @@
       const tbody = document.querySelector('#itemsTable tbody');
       tbody.innerHTML = '';
 
+      // Ensure defaults come back
+      ensureServiceChargeRow();
       ensureRegularLaborRow();
       populateInvoiceFromEntries();
     }
@@ -935,6 +999,7 @@
       populateInvoiceFromEntries();
     });
 
+    // === EXCEL EXPORT ===
     document.getElementById('generateExcel').onclick = () => {
       document.getElementById('loading').style.display = 'block';
       setTimeout(() => {
@@ -968,7 +1033,10 @@
       }, 100);
     };
 
-    document.getElementById('generateInvoice').onclick = () => {
+    // =========================
+    // ✅ INVOICE PDF (NOW ASYNC for logo loading)
+    // =========================
+    document.getElementById('generateInvoice').onclick = async () => {
       document.getElementById('loading').innerHTML = '<div class="spinner"></div><br>Generating Invoice...';
       document.getElementById('loading').style.display = 'block';
 
@@ -1006,20 +1074,34 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        doc.setFontSize(40);
-        doc.text("A", 10, 20);
+        // ===== Header (logo replaces big "A") =====
+        if (LOGO_URL && LOGO_URL !== "https://cobblerex.github.io/BlackIronDataEntry/archers-logo.jpg") {
+          try {
+            const logoData = await loadImageAsDataURL(LOGO_URL);
+            // x, y, width, height (tweak to preference)
+            doc.addImage(logoData, "jpg", 10, 8, 25, 25);
+          } catch (e) {
+            console.warn(e);
+            // fall back silently (no logo)
+          }
+        }
+
+        // Left header text
         doc.setFontSize(20);
         doc.text("ARCHER'S EQUIPMENT REPAIR", 10, 30);
 
+        // Right header block
         doc.setFontSize(10);
         doc.text("Archer's Equipment Repair Ltd.", 140, 10);
         doc.text("TSSA #/ 000394614", 140, 15);
         doc.text("HST #: 900518869RT0001", 140, 20);
         doc.text("Phone Number: 519-383-9654", 140, 25);
 
+        // Invoice label
         doc.setFontSize(20);
         doc.text("INVOICE", 170, 30);
 
+        // Client block
         doc.setFontSize(12);
         doc.text("DATE: " + formatDate(document.getElementById('sessionDate').value), 10, 40);
         doc.text("NAME: " + clientName, 10, 50);
@@ -1027,6 +1109,7 @@
         doc.text("EMAIL: " + clientEmail, 10, 70);
         doc.text("ADDRESS: " + clientAddress, 10, 80);
 
+        // Line items
         doc.autoTable({
           startY: 90,
           head: [['QUANTITY', 'DESCRIPTION', 'PRICE', 'UNIT', 'AMOUNT']],
@@ -1054,6 +1137,7 @@
       }
     };
 
+    // Ctrl+Enter shortcut
     document.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         document.getElementById('actionButton').click();
@@ -1063,6 +1147,7 @@
     // Init
     loadData();
     clearForm();
+    ensureServiceChargeRow();
     ensureRegularLaborRow();
     refreshInvoiceJobFilterOptions(false);
     populateInvoiceFromEntries();
