@@ -249,26 +249,28 @@
 
   <script>
     // =========================
-    // ✅ LOGO CONFIG (replace this with your GitHub Pages image URL)
-    // Example: https://cobblerex.github.io/BlackIronDataEntry/assets/archers-logo.png
+    // ✅ LOGO CONFIG (your GitHub Pages image URL)
     // =========================
-    const LOGO_URL = "PUT_YOUR_LOGO_URL_HERE";
+    const LOGO_URL = "https://cobblerex.github.io/BlackIronDataEntry/archers_logo.jpg";
 
-    // Load image URL into a PNG DataURL for jsPDF
-    function loadImageAsDataURL(url) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL("image/png"));
-        };
-        img.onerror = () => reject(new Error("Logo failed to load. Check LOGO_URL path/CORS."));
-        img.src = url;
+    // ✅ Fetch-based loader (avoids "tainted canvas" issues)
+    function detectFmt(url) {
+      const u = String(url || "").toLowerCase();
+      if (u.endsWith(".jpg") || u.endsWith(".jpeg")) return "JPEG";
+      return "PNG";
+    }
+
+    async function loadImageAsDataURL(url) {
+      const res = await fetch(url, { mode: "cors", cache: "no-cache" });
+      if (!res.ok) throw new Error(`Logo fetch failed: ${res.status} ${res.statusText}`);
+
+      const blob = await res.blob();
+
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ dataUrl: reader.result, fmt: detectFmt(url) });
+        reader.onerror = () => reject(new Error("Failed reading logo blob"));
+        reader.readAsDataURL(blob);
       });
     }
 
@@ -683,7 +685,6 @@
       return `Performed ${jobList}${addrNote}. Completed diagnostics, adjustments, cleanup, and final system operation checks.`;
     }
 
-    // ✅ Pull description(s) from timesheet entries into invoice labor description
     function getLaborDescriptionFromTimesheet(filtered) {
       const lines = filtered
         .map(e => {
@@ -699,16 +700,14 @@
       return lines.join('\n');
     }
 
-    // Always clear + populate address based on selected invoice filter
     function setClientAddressFromFiltered(filtered) {
       const addrField = document.getElementById('clientAddress');
       const uniqueAddrs = [...new Set(filtered.map(e => (e.address || '').trim()).filter(Boolean))];
 
       if (uniqueAddrs.length === 1) addrField.value = uniqueAddrs[0];
-      else addrField.value = ''; // multiple/no addresses => blank so you don't accidentally invoice wrong one
+      else addrField.value = '';
     }
 
-    // ===== Invoice Summary updater =====
     function updateInvoiceSummary() {
       const filtered = getFilteredEntries();
 
@@ -739,11 +738,9 @@
       document.getElementById('sumOvertimeHours').textContent = totals.overtime.toFixed(2);
     }
 
-    // ✅ Updated: ensures service charge exists, imports descriptions, and clears+populates client address
     function populateInvoiceFromEntries() {
       const filtered = getFilteredEntries();
 
-      // Ensure default rows exist
       ensureServiceChargeRow();
       const regularRow = ensureRegularLaborRow();
 
@@ -758,21 +755,17 @@
       if (totals.overtime > 0) overtimeRow = ensureOvertimeLaborRow();
       else removeOvertimeLaborRowIfExists();
 
-      // Labor description from timesheet descriptions
       const laborDescriptionField = document.getElementById('laborDescription');
       laborDescriptionField.value = getLaborDescriptionFromTimesheet(filtered);
 
-      // Always refresh address based on current selection
       setClientAddressFromFiltered(filtered);
 
-      // Regular labor row
       regularRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Regular Hours)`;
       regularRow.querySelector('.item-qty').value = totals.regular.toFixed(2);
       regularRow.querySelector('.item-unit').value = 'hr';
       regularRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value);
       regularRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
 
-      // Overtime labor row
       if (overtimeRow) {
         overtimeRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Overtime Hours)`;
         overtimeRow.querySelector('.item-qty').value = totals.overtime.toFixed(2);
@@ -795,13 +788,11 @@
       const tbody = document.querySelector('#itemsTable tbody');
       tbody.innerHTML = '';
 
-      // Ensure defaults come back
       ensureServiceChargeRow();
       ensureRegularLaborRow();
       populateInvoiceFromEntries();
     }
 
-    // ===== Tabs logic =====
     function setActiveTab(tabId) {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -825,7 +816,6 @@
 
     document.getElementById('goToInvoice').addEventListener('click', () => setActiveTab('invoiceTab'));
 
-    // === RENDER TABLE ===
     function renderTable() {
       const tbody = document.querySelector('#entriesTable tbody');
       tbody.innerHTML = '';
@@ -1034,7 +1024,7 @@
     };
 
     // =========================
-    // ✅ INVOICE PDF (NOW ASYNC for logo loading)
+    // ✅ INVOICE PDF (Async, logo fetch-based)
     // =========================
     document.getElementById('generateInvoice').onclick = async () => {
       document.getElementById('loading').innerHTML = '<div class="spinner"></div><br>Generating Invoice...';
@@ -1074,15 +1064,13 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        // ===== Header (logo replaces big "A") =====
-        if (LOGO_URL && LOGO_URL !== "https://cobblerex.github.io/BlackIronDataEntry/archers-logo.jpg") {
+        // ===== Header Logo (FIXED) =====
+        if (LOGO_URL && LOGO_URL.trim() !== "") {
           try {
-            const logoData = await loadImageAsDataURL(LOGO_URL);
-            // x, y, width, height (tweak to preference)
-            doc.addImage(logoData, "jpg", 10, 8, 25, 25);
+            const { dataUrl, fmt } = await loadImageAsDataURL(LOGO_URL);
+            doc.addImage(dataUrl, fmt, 10, 8, 25, 25); // x,y,w,h
           } catch (e) {
-            console.warn(e);
-            // fall back silently (no logo)
+            console.warn("Logo skipped:", e.message);
           }
         }
 
@@ -1108,6 +1096,10 @@
         doc.text("PHONE: " + clientPhone, 10, 60);
         doc.text("EMAIL: " + clientEmail, 10, 70);
         doc.text("ADDRESS: " + clientAddress, 10, 80);
+
+        if (typeof doc.autoTable !== "function") {
+          throw new Error("jsPDF AutoTable not available (CDN not loaded).");
+        }
 
         // Line items
         doc.autoTable({
