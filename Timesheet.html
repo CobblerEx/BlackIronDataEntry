@@ -44,17 +44,43 @@
     .items-table td,.items-table th {vertical-align:middle;}
     .items-table input {min-width:90px;}
     .text-right {text-align:right;}
+    .selector-row {display:block;padding:.7rem .8rem;border-bottom:1px solid #444;cursor:pointer;}
+    .selector-row:hover {background:#333;}
+    .selector-row input[type="checkbox"] {width:auto;margin-right:.55rem;vertical-align:middle;}
+
+    .status-pill {
+      display:inline-block;
+      padding:.2rem .55rem;
+      border-radius:999px;
+      font-size:.82rem;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .status-unbilled {
+      background:rgba(40,167,69,.16);
+      color:#7CFF9B;
+      border:1px solid rgba(40,167,69,.4);
+    }
+    .status-draft {
+      background:rgba(255,193,7,.14);
+      color:#ffd86a;
+      border:1px solid rgba(255,193,7,.4);
+    }
+    .status-invoiced {
+      background:rgba(13,110,253,.14);
+      color:#87b7ff;
+      border:1px solid rgba(13,110,253,.4);
+    }
+
     @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
     @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;}}
 
-    /* ========= TABS ========= */
     .tabs {display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;margin:1rem 0 1.25rem 0;}
     .tab-btn {background:#2a2a2a;border:1px solid #ff4500;color:#ff4500;padding:.6rem 1rem;border-radius:999px;cursor:pointer;font-size:1rem;}
     .tab-btn.active {background:#ff4500;color:#fff;box-shadow:0 0 15px rgba(255,69,0,.6);}
     .tab-panel {display:none;}
     .tab-panel.active {display:block;}
 
-    /* ===== Invoice Summary ===== */
     #invoiceSummary {
       background:rgba(30,30,30,.95);
       border:1px solid #ff4500;
@@ -72,13 +98,29 @@
     #invoiceSummary .summary-item {font-size:1rem;}
     #invoiceSummary .summary-item b {color:#ff4500;}
 
-    /* ===== Import section (moved to bottom) ===== */
     #importSection{
       background:rgba(30,30,30,.95);
       padding:1.5rem;
       border-radius:10px;
       box-shadow:0 0 20px rgba(255,69,0,.3);
       margin:2rem 0;
+    }
+
+    #invoiceEntrySelector{
+      background:#2a2a2a;
+      border:1px solid #ff4500;
+      border-radius:8px;
+      padding:.3rem 0;
+      max-height:280px;
+      overflow-y:auto;
+      margin-top:.35rem;
+    }
+
+    .muted-note {
+      display:block;
+      opacity:.82;
+      margin-top:.25rem;
+      font-size:.88rem;
     }
   </style>
 </head>
@@ -93,15 +135,12 @@
 
   <h1>Timesheet Creator</h1>
 
-  <!-- ===== Tabs ===== -->
   <div class="tabs">
     <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
     <button type="button" class="tab-btn" data-tab="invoiceTab"><i class="fas fa-file-invoice-dollar"></i> Invoice</button>
   </div>
 
-  <!-- ===== Timesheet Tab ===== -->
   <div id="timesheetTab" class="tab-panel active">
-
     <div id="form">
       <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
       <label>Date: <input type="date" id="sessionDate"></label>
@@ -155,6 +194,7 @@
           <th>Time Out</th>
           <th>Hours</th>
           <th>Description</th>
+          <th>Status</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -167,7 +207,6 @@
       <button id="clearAllButton">Clear All</button>
     </div>
 
-    <!-- ✅ IMPORT EXCEL (moved to bottom of Timesheet tab) -->
     <div id="importSection">
       <h2>Import Timesheet (.xlsx)</h2>
       <label>
@@ -178,17 +217,14 @@
         Imports a file exported from this app (Job Name, Address, Time In/Out, Description). This will replace your current entries.
       </small>
     </div>
-
   </div>
 
-  <!-- ===== Invoice Tab ===== -->
   <div id="invoiceTab" class="tab-panel">
-    <!-- Small summary of total hours (and selected job hours) -->
     <div id="invoiceSummary">
       <div class="summary-grid">
-        <div class="summary-item"><b>Date:</b> <span id="sumDate">—</span></div>
+        <div class="summary-item"><b>Date Range:</b> <span id="sumDate">—</span></div>
         <div class="summary-item"><b>Employee:</b> <span id="sumEmployee">—</span></div>
-        <div class="summary-item"><b>Selected:</b> <span id="sumSelected">All entries</span></div>
+        <div class="summary-item"><b>Invoice:</b> <span id="sumSelected">Draft</span></div>
         <div class="summary-item"><b>Total Hours:</b> <span id="sumTotalHours">0 hrs 0 min</span></div>
         <div class="summary-item"><b>Regular:</b> <span id="sumRegularHours">0.00</span> hr</div>
         <div class="summary-item"><b>Overtime:</b> <span id="sumOvertimeHours">0.00</span> hr</div>
@@ -198,13 +234,23 @@
     <div id="invoiceBuilder">
       <h2>Quick Invoice Builder</h2>
 
-      <div class="invoice-grid">
-        <label>Invoice For:
-          <select id="invoiceJobFilter">
-            <option value="__ALL__">All entries (selected date)</option>
-          </select>
+      <div class="inline-group" style="margin-bottom:1rem;">
+        <label style="flex:1;min-width:240px;">
+          Invoice / Work Order:
+          <input type="text" id="invoiceId" placeholder="e.g. INV-1001 or Smith-Furnace">
         </label>
+        <button type="button" id="newInvoiceDraft" class="mini-btn">New Draft</button>
+        <button type="button" id="saveInvoiceDraft" class="mini-btn">Save Draft</button>
+        <button type="button" id="loadInvoiceDraft" class="mini-btn">Load Draft</button>
+      </div>
 
+      <label>Include Entries In This Invoice:</label>
+      <div id="invoiceEntrySelector"></div>
+      <small class="muted-note">
+        Invoiced entries are locked. Draft-linked entries stay selectable for their current draft.
+      </small>
+
+      <div class="invoice-grid" style="margin-top:1rem;">
         <label>Client Name: <input type="text" id="clientName" placeholder="Customer name"></label>
         <label>Client Phone: <input type="text" id="clientPhone" placeholder="Phone number"></label>
         <label>Client Email: <input type="email" id="clientEmail" placeholder="Email"></label>
@@ -215,14 +261,14 @@
       </div>
 
       <div class="inline-group" style="margin-top:1rem;">
-        <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Timesheet</button>
+        <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Selected Entries</button>
         <button type="button" id="addItem" class="mini-btn">Add Item</button>
         <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
         <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
       </div>
 
       <label style="margin-top:1rem;">Labor Description:
-        <textarea id="laborDescription" placeholder="Service summary auto-filled from your timesheet entries."></textarea>
+        <textarea id="laborDescription" placeholder="Service summary auto-filled from your selected timesheet entries."></textarea>
       </label>
 
       <table class="items-table" id="itemsTable">
@@ -248,12 +294,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
 
   <script>
-    // =========================
-    // ✅ LOGO CONFIG (your GitHub Pages image URL)
-    // =========================
     const LOGO_URL = "https://cobblerex.github.io/BlackIronDataEntry/archers_logo.jpg";
 
-    // ✅ Fetch-based loader (avoids "tainted canvas" issues)
     function detectFmt(url) {
       const u = String(url || "").toLowerCase();
       if (u.endsWith(".jpg") || u.endsWith(".jpeg")) return "JPEG";
@@ -263,9 +305,7 @@
     async function loadImageAsDataURL(url) {
       const res = await fetch(url, { mode: "cors", cache: "no-cache" });
       if (!res.ok) throw new Error(`Logo fetch failed: ${res.status} ${res.statusText}`);
-
       const blob = await res.blob();
-
       return await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve({ dataUrl: reader.result, fmt: detectFmt(url) });
@@ -274,7 +314,6 @@
       });
     }
 
-    // === JOB TYPE AUTO-DESCRIPTION TEMPLATES ===
     const jobTemplates = {
       "Furnace Tune-Up": "Inspected and cleaned furnace components including burner, heat exchanger, and blower. Checked thermostat operation, gas pressure, ignition system, and safety controls. Replaced air filter. Tested system for proper operation and carbon monoxide levels.",
       "AC Maintenance": "Performed seasonal maintenance on air conditioning system: cleaned condenser coils, checked refrigerant levels, inspected electrical components, lubricated moving parts, cleared drain line, and tested system performance.",
@@ -287,7 +326,6 @@
       "General Service Call": "Responded to customer service call. Diagnosed issue, performed necessary repairs/adjustments, and verified proper operation of equipment."
     };
 
-    // === 12-HOUR TIME WITH AM/PM ===
     const timeOptions = [];
     for (let h = 0; h < 24; h++) {
       for (let m of [0, 30]) {
@@ -322,38 +360,53 @@
       }
     });
 
+    function generateEntryId() {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return 'entry-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    }
+
     function to12hr(time24) {
       const opt = timeOptions.find(o => o.mil === time24);
       return opt ? opt.display : time24;
     }
+
     function timeToDecimal(t) {
       const [h, m] = t.split(':').map(Number);
-      return h + m/60;
+      return h + m / 60;
     }
+
     function decimalToHM(dec) {
       const totalMins = Math.round(dec * 60);
-      return {h: Math.floor(totalMins / 60), m: totalMins % 60};
+      return { h: Math.floor(totalMins / 60), m: totalMins % 60 };
     }
+
     function formatHours(dec) {
-      const {h, m} = decimalToHM(dec);
+      const { h, m } = decimalToHM(dec);
       return `${h}:${m.toString().padStart(2,'0')}`;
     }
+
     function getNextTime(current24) {
       const idx = timeOptions.findIndex(o => o.mil === current24);
       return timeOptions[(idx + 1) % timeOptions.length].mil;
     }
+
     function formatDate(d) {
       if (!d) return '';
       const [y, m, day] = d.split('-');
       return `${m}/${day}/${y}`;
     }
+
     function formatMoney(value) {
       return Number(value || 0).toFixed(2);
     }
 
-    // === DATA & STORAGE ===
     let entries = [];
     let addressHistory = JSON.parse(localStorage.getItem('addressHistory') || '[]');
+    let invoices = JSON.parse(localStorage.getItem('savedInvoices') || '{}');
+
+    function saveInvoicesToStorage() {
+      localStorage.setItem('savedInvoices', JSON.stringify(invoices));
+    }
 
     function saveData() {
       const data = {
@@ -371,12 +424,16 @@
         const d = JSON.parse(saved);
         document.getElementById('employee').value = d.employee || 'Lucas';
         document.getElementById('sessionDate').value = d.date || new Date().toISOString().split('T')[0];
-        entries = d.entries || [];
+        entries = (d.entries || []).map(e => ({
+          id: e.id || generateEntryId(),
+          billingStatus: e.billingStatus || 'unbilled',
+          invoiceId: e.invoiceId || '',
+          ...e
+        }));
       }
       renderTable();
     }
 
-    // === ADDRESS HISTORY ===
     const addrInput = document.getElementById('address');
     const dropdown = document.getElementById('addressHistory');
 
@@ -399,6 +456,7 @@
       }
       dropdown.style.display = 'block';
     }
+
     addrInput.addEventListener('input', () => showHistory(addrInput.value));
     addrInput.addEventListener('focus', () => showHistory());
     document.getElementById('historyBtn').onclick = () => showHistory();
@@ -408,9 +466,6 @@
       }
     });
 
-    // =========================
-    // ✅ EXCEL IMPORT (replaces current entries)
-    // =========================
     function parseDateFromMdy(mdy) {
       const m = String(mdy || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
       if (!m) return '';
@@ -419,20 +474,24 @@
       const yyyy = m[3];
       return `${yyyy}-${mm}-${dd}`;
     }
+
     function parseDateFromDateLabel(label) {
       const s = String(label || '');
       const m = s.match(/Date:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
       return m ? parseDateFromMdy(m[1]) : '';
     }
+
     function parseDateFromFilename(name) {
       const m = String(name || '').match(/(\d{4}-\d{2}-\d{2})/);
       return m ? m[1] : '';
     }
+
     function parseEmployeeFromTitleCell(a1) {
       const s = String(a1 || '');
       const m = s.match(/Timesheet\s*-\s*(.+)$/i);
       return m ? m[1].trim() : '';
     }
+
     function to24hMil(timeStr) {
       const s = String(timeStr || '').trim();
       if (!s) return '';
@@ -447,6 +506,7 @@
       if (ap === 'PM') h += 12;
       return `${String(h).padStart(2,'0')}:${min}`;
     }
+
     function findHeaderRowIndex(grid) {
       for (let r = 0; r < grid.length; r++) {
         const row = (grid[r] || []).map(v => String(v || '').trim().toLowerCase());
@@ -510,12 +570,15 @@
         if (!jobName || !timeInVal || !timeOutVal) continue;
 
         imported.push({
+          id: generateEntryId(),
           dateStr: date,
           jobName,
           address,
           timeIn: timeInVal,
           timeOut: timeOutVal,
-          description
+          description,
+          billingStatus: 'unbilled',
+          invoiceId: ''
         });
       }
 
@@ -526,7 +589,6 @@
 
       document.getElementById('sessionDate').value = date;
       entries = imported;
-
       renderTable();
       clearForm();
       alert(`Imported ${imported.length} entries for ${date}.`);
@@ -545,35 +607,6 @@
       }
     });
 
-    // === INVOICE FILTER (select which job to invoice) ===
-    function entryKey(e) {
-      const job = (e.jobName || '').trim();
-      const addr = (e.address || '').trim();
-      return `${job}||${addr}`;
-    }
-    function entryLabelFromKey(key) {
-      const [job, addr] = key.split('||');
-      return addr ? `${job} — ${addr}` : job;
-    }
-    function getFilteredEntries() {
-      const sel = document.getElementById('invoiceJobFilter').value;
-      if (sel === '__ALL__') return entries.slice();
-      return entries.filter(e => entryKey(e) === sel);
-    }
-    function refreshInvoiceJobFilterOptions(keepSelection = true) {
-      const select = document.getElementById('invoiceJobFilter');
-      const prev = select.value;
-      const keys = [...new Set(entries.map(entryKey))].filter(k => k && !k.startsWith('||'));
-
-      select.innerHTML = '';
-      select.add(new Option('All entries (selected date)', '__ALL__'));
-      keys.forEach(k => select.add(new Option(entryLabelFromKey(k), k)));
-
-      if (keepSelection && [...select.options].some(o => o.value === prev)) select.value = prev;
-      else select.value = '__ALL__';
-    }
-
-    // === INVOICE ITEMS TABLE HELPERS ===
     function createItemRow(item = {}) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -592,6 +625,7 @@
       function recalc() {
         amountCell.textContent = `$${formatMoney((+qty.value || 0) * (+price.value || 0))}`;
       }
+
       qty.addEventListener('input', recalc);
       price.addEventListener('input', recalc);
       tr.querySelector('.remove-item').onclick = () => tr.remove();
@@ -601,7 +635,6 @@
       return tr;
     }
 
-    // ✅ DEFAULT REMOVABLE $100 SERVICE CHARGE
     function ensureServiceChargeRow() {
       let row = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
       if (!row) {
@@ -649,7 +682,6 @@
       if (overtimeRow) overtimeRow.remove();
     }
 
-    // === HOURS / LABOR SUMMARY ===
     function isRegularBusinessTime(dt) {
       const day = dt.getDay();
       const hour = dt.getHours() + dt.getMinutes() / 60;
@@ -673,7 +705,7 @@
         else overtime += 0.5;
         cursor.setMinutes(cursor.getMinutes() + 30);
       }
-      return {regular, overtime};
+      return { regular, overtime };
     }
 
     function getLaborSummaryFrom(filtered) {
@@ -703,9 +735,139 @@
     function setClientAddressFromFiltered(filtered) {
       const addrField = document.getElementById('clientAddress');
       const uniqueAddrs = [...new Set(filtered.map(e => (e.address || '').trim()).filter(Boolean))];
-
       if (uniqueAddrs.length === 1) addrField.value = uniqueAddrs[0];
-      else addrField.value = '';
+    }
+
+    function getSelectedInvoiceEntryIds() {
+      return [...document.querySelectorAll('.invoice-entry-check:checked')].map(cb => cb.value);
+    }
+
+    function getSelectedInvoiceEntries() {
+      const ids = getSelectedInvoiceEntryIds();
+      return entries.filter(e => ids.includes(e.id));
+    }
+
+    function getFilteredEntries() {
+      return getSelectedInvoiceEntries();
+    }
+
+    function getSelectedDateRange(filtered) {
+      if (!filtered.length) return '—';
+      const dates = [...new Set(filtered.map(e => e.dateStr))].sort();
+      if (dates.length === 1) return formatDate(dates[0]);
+      return `${formatDate(dates[0])} to ${formatDate(dates[dates.length - 1])}`;
+    }
+
+    function syncEntryStatusesFromInvoices() {
+      const linkedMap = {};
+
+      Object.values(invoices).forEach(inv => {
+        const entryIds = inv.linkedEntryIds || [];
+        entryIds.forEach(id => {
+          linkedMap[id] = {
+            invoiceId: inv.id || '',
+            status: inv.status === 'invoiced' ? 'invoiced' : 'draft-linked'
+          };
+        });
+      });
+
+      entries = entries.map(entry => {
+        const linked = linkedMap[entry.id];
+        if (linked) {
+          return {
+            ...entry,
+            billingStatus: linked.status,
+            invoiceId: linked.invoiceId
+          };
+        }
+        return {
+          ...entry,
+          billingStatus: 'unbilled',
+          invoiceId: ''
+        };
+      });
+
+      saveData();
+    }
+
+    function markSelectedEntriesAsInvoiced(invoiceId) {
+      const selectedIds = getSelectedInvoiceEntryIds();
+
+      entries = entries.map(entry => {
+        if (selectedIds.includes(entry.id)) {
+          return {
+            ...entry,
+            billingStatus: 'invoiced',
+            invoiceId: invoiceId || entry.invoiceId || ''
+          };
+        }
+        return entry;
+      });
+
+      if (invoiceId && invoices[invoiceId]) {
+        invoices[invoiceId].status = 'invoiced';
+        invoices[invoiceId].updatedAt = new Date().toISOString();
+        saveInvoicesToStorage();
+      }
+
+      saveData();
+    }
+
+    function renderInvoiceEntrySelector(selectedIds = null) {
+      const box = document.getElementById('invoiceEntrySelector');
+      if (!box) return;
+
+      const currentInvoiceId = document.getElementById('invoiceId').value.trim();
+      const currentIds = selectedIds ?? getSelectedInvoiceEntryIds();
+      box.innerHTML = '';
+
+      if (!entries.length) {
+        box.innerHTML = '<div style="padding:.9rem;">No timesheet entries available.</div>';
+        return;
+      }
+
+      entries
+        .slice()
+        .sort((a, b) => {
+          const da = `${a.dateStr} ${a.timeIn}`;
+          const db = `${b.dateStr} ${b.timeIn}`;
+          return da.localeCompare(db);
+        })
+        .forEach(e => {
+          const row = document.createElement('label');
+          row.className = 'selector-row';
+
+          const isInvoiced = e.billingStatus === 'invoiced';
+          const linkedToOtherDraft = e.billingStatus === 'draft-linked' && e.invoiceId && e.invoiceId !== currentInvoiceId;
+          const isLocked = isInvoiced || linkedToOtherDraft;
+          const isChecked = currentIds.includes(e.id);
+
+          const statusNote =
+            e.billingStatus === 'invoiced' ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}` :
+            e.billingStatus === 'draft-linked' ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}` :
+            `Unbilled`;
+
+          row.innerHTML = `
+            <input
+              type="checkbox"
+              class="invoice-entry-check"
+              value="${e.id}"
+              ${isChecked ? 'checked' : ''}
+              ${isLocked ? 'disabled' : ''}
+            >
+            <strong>${formatDate(e.dateStr)}</strong> — ${e.jobName}${e.address ? ` <span style="opacity:.8;">(${e.address})</span>` : ''}
+            <br>
+            <small>${to12hr(e.timeIn)} - ${to12hr(e.timeOut)} | ${statusNote}</small>
+          `;
+          box.appendChild(row);
+        });
+
+      box.querySelectorAll('.invoice-entry-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          populateInvoiceFromEntries();
+          updateInvoiceSummary();
+        });
+      });
     }
 
     function updateInvoiceSummary() {
@@ -718,21 +880,21 @@
         const dur = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
         totalDec += dur;
       });
-      const {h, m} = decimalToHM(totalDec);
+
+      const { h, m } = decimalToHM(totalDec);
 
       const totals = filtered.reduce((acc, e) => {
         const split = getHoursBreakdown(e);
         acc.regular += split.regular;
         acc.overtime += split.overtime;
         return acc;
-      }, {regular: 0, overtime: 0});
+      }, { regular: 0, overtime: 0 });
 
-      const sel = document.getElementById('invoiceJobFilter').value;
-      const selectedLabel = sel === '__ALL__' ? 'All entries' : entryLabelFromKey(sel);
+      const invoiceId = document.getElementById('invoiceId').value.trim();
 
-      document.getElementById('sumDate').textContent = formatDate(document.getElementById('sessionDate').value) || '—';
+      document.getElementById('sumDate').textContent = getSelectedDateRange(filtered);
       document.getElementById('sumEmployee').textContent = document.getElementById('employee').value || '—';
-      document.getElementById('sumSelected').textContent = selectedLabel;
+      document.getElementById('sumSelected').textContent = invoiceId || `${filtered.length} selected entr${filtered.length === 1 ? 'y' : 'ies'}`;
       document.getElementById('sumTotalHours').textContent = `${h} hrs ${m} min`;
       document.getElementById('sumRegularHours').textContent = totals.regular.toFixed(2);
       document.getElementById('sumOvertimeHours').textContent = totals.overtime.toFixed(2);
@@ -749,7 +911,7 @@
         acc.regular += split.regular;
         acc.overtime += split.overtime;
         return acc;
-      }, {regular: 0, overtime: 0});
+      }, { regular: 0, overtime: 0 });
 
       let overtimeRow = null;
       if (totals.overtime > 0) overtimeRow = ensureOvertimeLaborRow();
@@ -760,14 +922,24 @@
 
       setClientAddressFromFiltered(filtered);
 
-      regularRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Regular Hours)`;
+      const lastClient = JSON.parse(localStorage.getItem('lastClient') || '{}');
+      const clientNameInput = document.getElementById('clientName');
+      if (!clientNameInput.value.trim()) clientNameInput.value = lastClient.name || '';
+      const clientPhoneInput = document.getElementById('clientPhone');
+      if (!clientPhoneInput.value.trim()) clientPhoneInput.value = lastClient.phone || '';
+      const clientEmailInput = document.getElementById('clientEmail');
+      if (!clientEmailInput.value.trim()) clientEmailInput.value = lastClient.email || '';
+      const clientAddressInput = document.getElementById('clientAddress');
+      if (!clientAddressInput.value.trim()) clientAddressInput.value = lastClient.address || '';
+
+      regularRow.querySelector('.item-desc').value = `${laborDescriptionField.value || 'Labor'} (Regular Hours)`;
       regularRow.querySelector('.item-qty').value = totals.regular.toFixed(2);
       regularRow.querySelector('.item-unit').value = 'hr';
       regularRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value);
       regularRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
 
       if (overtimeRow) {
-        overtimeRow.querySelector('.item-desc').value = `${laborDescriptionField.value} (Overtime Hours)`;
+        overtimeRow.querySelector('.item-desc').value = `${laborDescriptionField.value || 'Labor'} (Overtime Hours)`;
         overtimeRow.querySelector('.item-qty').value = totals.overtime.toFixed(2);
         overtimeRow.querySelector('.item-unit').value = 'hr';
         overtimeRow.querySelector('.item-price').value = formatMoney(document.getElementById('overtimeRate').value);
@@ -778,19 +950,121 @@
     }
 
     function clearInvoice() {
+      document.getElementById('invoiceId').value = '';
       document.getElementById('clientName').value = '';
       document.getElementById('clientPhone').value = '';
       document.getElementById('clientEmail').value = '';
       document.getElementById('clientAddress').value = '';
       document.getElementById('laborDescription').value = '';
-      document.getElementById('invoiceJobFilter').value = '__ALL__';
 
       const tbody = document.querySelector('#itemsTable tbody');
       tbody.innerHTML = '';
 
       ensureServiceChargeRow();
       ensureRegularLaborRow();
-      populateInvoiceFromEntries();
+      renderInvoiceEntrySelector([]);
+      updateInvoiceSummary();
+    }
+
+    function collectInvoiceItems() {
+      return [...document.querySelectorAll('#itemsTable tbody tr')].map(row => ({
+        desc: row.querySelector('.item-desc').value.trim(),
+        qty: +row.querySelector('.item-qty').value || 0,
+        unit: row.querySelector('.item-unit').value.trim() || 'ea',
+        price: +row.querySelector('.item-price').value || 0,
+        type: row.dataset.type || ''
+      }));
+    }
+
+    function saveCurrentInvoiceDraft() {
+      const invoiceId = document.getElementById('invoiceId').value.trim();
+      if (!invoiceId) {
+        alert('Enter an Invoice / Work Order ID first.');
+        return;
+      }
+
+      const selectedIds = getSelectedInvoiceEntryIds();
+
+      const conflicts = entries.filter(e =>
+        selectedIds.includes(e.id) &&
+        e.billingStatus === 'draft-linked' &&
+        e.invoiceId &&
+        e.invoiceId !== invoiceId
+      );
+
+      if (conflicts.length) {
+        alert(
+          'Some selected entries are already linked to another draft:\n\n' +
+          conflicts.map(e => `${formatDate(e.dateStr)} - ${e.jobName} (${e.invoiceId})`).join('\n')
+        );
+        return;
+      }
+
+      invoices[invoiceId] = {
+        id: invoiceId,
+        clientName: document.getElementById('clientName').value.trim(),
+        clientPhone: document.getElementById('clientPhone').value.trim(),
+        clientEmail: document.getElementById('clientEmail').value.trim(),
+        clientAddress: document.getElementById('clientAddress').value.trim(),
+        hourlyRate: +document.getElementById('hourlyRate').value || 0,
+        overtimeRate: +document.getElementById('overtimeRate').value || 0,
+        hstRate: +document.getElementById('hstRate').value || 0.13,
+        laborDescription: document.getElementById('laborDescription').value.trim(),
+        linkedEntryIds: selectedIds,
+        items: collectInvoiceItems(),
+        status: 'draft',
+        createdAt: invoices[invoiceId]?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      saveInvoicesToStorage();
+      syncEntryStatusesFromInvoices();
+      renderTable();
+      updateInvoiceSummary();
+      alert(`Invoice draft "${invoiceId}" saved.`);
+    }
+
+    function loadInvoiceDraftById(invoiceId) {
+      const inv = invoices[invoiceId];
+      if (!inv) {
+        alert('Invoice draft not found.');
+        return;
+      }
+
+      document.getElementById('invoiceId').value = inv.id || '';
+      document.getElementById('clientName').value = inv.clientName || '';
+      document.getElementById('clientPhone').value = inv.clientPhone || '';
+      document.getElementById('clientEmail').value = inv.clientEmail || '';
+      document.getElementById('clientAddress').value = inv.clientAddress || '';
+      document.getElementById('hourlyRate').value = inv.hourlyRate ?? 100;
+      document.getElementById('overtimeRate').value = inv.overtimeRate ?? 150;
+      document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
+      document.getElementById('laborDescription').value = inv.laborDescription || '';
+
+      renderInvoiceEntrySelector(inv.linkedEntryIds || []);
+
+      const tbody = document.querySelector('#itemsTable tbody');
+      tbody.innerHTML = '';
+      (inv.items || []).forEach(item => {
+        createItemRow(item);
+        const row = tbody.lastElementChild;
+        if (item.type) row.dataset.type = item.type;
+        if (item.type === 'regular-labor' || item.type === 'overtime-labor') {
+          row.querySelector('.remove-item').style.display = 'none';
+        }
+      });
+
+      updateInvoiceSummary();
+    }
+
+    function getStatusMarkup(entry) {
+      if (entry.billingStatus === 'invoiced') {
+        return `<span class="status-pill status-invoiced">Invoiced${entry.invoiceId ? ` (${entry.invoiceId})` : ''}</span>`;
+      }
+      if (entry.billingStatus === 'draft-linked') {
+        return `<span class="status-pill status-draft">Draft Linked${entry.invoiceId ? ` (${entry.invoiceId})` : ''}</span>`;
+      }
+      return `<span class="status-pill status-unbilled">Unbilled</span>`;
     }
 
     function setActiveTab(tabId) {
@@ -803,10 +1077,10 @@
       if (btn) btn.classList.add('active');
 
       if (tabId === 'invoiceTab') {
-        refreshInvoiceJobFilterOptions(true);
+        renderInvoiceEntrySelector();
         populateInvoiceFromEntries();
         updateInvoiceSummary();
-        window.scrollTo({top: 0, behavior: 'smooth'});
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
 
@@ -837,6 +1111,7 @@
           <td>${to12hr(e.timeOut)}</td>
           <td>${formatHours(duration)}</td>
           <td>${e.description || ''}</td>
+          <td>${getStatusMarkup(e)}</td>
           <td>
             <i class="fas fa-grip-lines drag-handle"></i>
             <select class="action-select">
@@ -844,25 +1119,29 @@
               <option value="edit">Edit</option>
               <option value="up">Up</option>
               <option value="down">Down</option>
+              <option value="mark-unbilled">Mark Unbilled</option>
               <option value="delete">Delete</option>
             </select>
           </td>`;
         tbody.appendChild(tr);
       });
 
-      const {h, m} = decimalToHM(totalDec);
+      const { h, m } = decimalToHM(totalDec);
       document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
 
       document.querySelectorAll('tr[data-index]').forEach(tr => {
-        tr.addEventListener('dragstart', e => { tr.classList.add('dragging'); e.dataTransfer.setData('text', tr.dataset.index); });
+        tr.addEventListener('dragstart', e => {
+          tr.classList.add('dragging');
+          e.dataTransfer.setData('text', tr.dataset.index);
+        });
         tr.addEventListener('dragover', e => e.preventDefault());
         tr.addEventListener('drop', e => {
           e.preventDefault();
           const from = +e.dataTransfer.getData('text');
           const to = +tr.dataset.index;
           if (from !== to) {
-            const [item] = entries.splice(from,1);
-            entries.splice(to,0,item);
+            const [item] = entries.splice(from, 1);
+            entries.splice(to, 0, item);
             renderTable();
           }
         });
@@ -877,7 +1156,7 @@
       });
 
       saveData();
-      refreshInvoiceJobFilterOptions(true);
+      renderInvoiceEntrySelector();
       populateInvoiceFromEntries();
       updateInvoiceSummary();
     }
@@ -894,11 +1173,42 @@
         document.getElementById('editIndex').value = i;
         document.getElementById('actionButton').textContent = 'Update Entry';
         document.getElementById('cancelButton').style.display = 'inline-block';
-        document.getElementById('form').scrollIntoView({behavior:'smooth'});
+        document.getElementById('form').scrollIntoView({ behavior:'smooth' });
       }
-      else if (act === 'up' && i > 0) { [entries[i-1], entries[i]] = [entries[i], entries[i-1]]; renderTable(); }
-      else if (act === 'down' && i < entries.length-1) { [entries[i], entries[i+1]] = [entries[i+1], entries[i]]; renderTable(); }
-      else if (act === 'delete' && confirm('Delete this entry?')) { entries.splice(i,1); renderTable(); }
+      else if (act === 'up' && i > 0) {
+        [entries[i - 1], entries[i]] = [entries[i], entries[i - 1]];
+        renderTable();
+      }
+      else if (act === 'down' && i < entries.length - 1) {
+        [entries[i], entries[i + 1]] = [entries[i + 1], entries[i]];
+        renderTable();
+      }
+      else if (act === 'mark-unbilled') {
+        entries[i].billingStatus = 'unbilled';
+        entries[i].invoiceId = '';
+
+        const currentInvoiceId = document.getElementById('invoiceId').value.trim();
+        if (currentInvoiceId && invoices[currentInvoiceId]) {
+          invoices[currentInvoiceId].linkedEntryIds = (invoices[currentInvoiceId].linkedEntryIds || []).filter(id => id !== entries[i].id);
+          invoices[currentInvoiceId].updatedAt = new Date().toISOString();
+          saveInvoicesToStorage();
+        }
+
+        saveData();
+        renderTable();
+      }
+      else if (act === 'delete' && confirm('Delete this entry?')) {
+        const entryId = entries[i].id;
+
+        Object.values(invoices).forEach(inv => {
+          inv.linkedEntryIds = (inv.linkedEntryIds || []).filter(id => id !== entryId);
+          inv.updatedAt = new Date().toISOString();
+        });
+        saveInvoicesToStorage();
+
+        entries.splice(i, 1);
+        renderTable();
+      }
     }
 
     document.getElementById('actionButton').onclick = () => {
@@ -914,7 +1224,19 @@
       if (!job) return alert('Enter job name');
       if (timeToDecimal(tOut) === timeToDecimal(tIn)) return alert('Time In and Time Out cannot be the same');
 
-      const entry = {dateStr: date, jobName: job, address: addr, timeIn: tIn, timeOut: tOut, description: desc};
+      const existing = idx === -1 ? null : entries[idx];
+
+      const entry = {
+        id: idx === -1 ? generateEntryId() : (entries[idx].id || generateEntryId()),
+        dateStr: date,
+        jobName: job,
+        address: addr,
+        timeIn: tIn,
+        timeOut: tOut,
+        description: desc,
+        billingStatus: existing?.billingStatus || 'unbilled',
+        invoiceId: existing?.invoiceId || ''
+      };
 
       if (idx === -1) entries.push(entry);
       else entries[idx] = entry;
@@ -937,17 +1259,18 @@
       document.getElementById('actionButton').textContent = 'Add Entry';
       document.getElementById('cancelButton').style.display = 'none';
       if (entries.length) {
-        const last = entries[entries.length-1];
+        const last = entries[entries.length - 1];
         document.getElementById('timeIn').value = last.timeOut;
         document.getElementById('timeOut').value = getNextTime(last.timeOut);
       }
       document.getElementById('jobName').focus();
     }
+
     document.getElementById('cancelButton').onclick = clearForm;
 
     document.getElementById('copyLast').onclick = () => {
       if (!entries.length) return alert('No previous job');
-      const l = entries[entries.length-1];
+      const l = entries[entries.length - 1];
       document.getElementById('jobName').value = l.jobName;
       document.getElementById('address').value = l.address || '';
       document.getElementById('description').value = l.description || '';
@@ -967,9 +1290,35 @@
     document.getElementById('addItem').onclick = () => createItemRow();
     document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
     document.getElementById('clearInvoice').onclick = () => clearInvoice();
+    document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
 
-    document.getElementById('invoiceJobFilter').addEventListener('change', () => {
-      populateInvoiceFromEntries();
+    document.getElementById('loadInvoiceDraft').onclick = () => {
+      const ids = Object.keys(invoices);
+      if (!ids.length) {
+        alert('No saved invoice drafts found.');
+        return;
+      }
+      const chosen = prompt('Enter Invoice / Work Order ID to load:\n\n' + ids.join('\n'));
+      if (!chosen) return;
+      loadInvoiceDraftById(chosen.trim());
+    };
+
+    document.getElementById('newInvoiceDraft').onclick = () => {
+      document.getElementById('invoiceId').value = '';
+      document.getElementById('clientName').value = '';
+      document.getElementById('clientPhone').value = '';
+      document.getElementById('clientEmail').value = '';
+      document.getElementById('clientAddress').value = '';
+      document.getElementById('laborDescription').value = '';
+      document.querySelector('#itemsTable tbody').innerHTML = '';
+      ensureServiceChargeRow();
+      ensureRegularLaborRow();
+      renderInvoiceEntrySelector([]);
+      updateInvoiceSummary();
+    };
+
+    document.getElementById('invoiceId').addEventListener('input', () => {
+      renderInvoiceEntrySelector();
       updateInvoiceSummary();
     });
 
@@ -989,7 +1338,6 @@
       populateInvoiceFromEntries();
     });
 
-    // === EXCEL EXPORT ===
     document.getElementById('generateExcel').onclick = () => {
       document.getElementById('loading').style.display = 'block';
       setTimeout(() => {
@@ -998,21 +1346,37 @@
           const data = [
             [`Timesheet - ${document.getElementById('employee').value}`, `Date: ${formatDate(document.getElementById('sessionDate').value)}`],
             [],
-            ['Job Name', 'Address', 'Time In', 'Time Out', 'Hours', 'Description']
+            ['Job Name', 'Address', 'Time In', 'Time Out', 'Hours', 'Description', 'Status', 'Invoice ID']
           ];
+
           let totalDec = 0;
           entries.forEach(e => {
             const dur = timeToDecimal(e.timeOut) >= timeToDecimal(e.timeIn)
               ? timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn)
               : timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn) + 24;
+
             totalDec += dur;
-            data.push([e.jobName, e.address || '', to12hr(e.timeIn), to12hr(e.timeOut), formatHours(dur), e.description || '']);
+
+            data.push([
+              e.jobName,
+              e.address || '',
+              to12hr(e.timeIn),
+              to12hr(e.timeOut),
+              formatHours(dur),
+              e.description || '',
+              e.billingStatus || 'unbilled',
+              e.invoiceId || ''
+            ]);
           });
-          const {h, m} = decimalToHM(totalDec);
+
+          const { h, m } = decimalToHM(totalDec);
           data.push([]);
-          data.push(['TOTAL', '', '', '', `${h}:${m.toString().padStart(2,'0')}`, '']);
+          data.push(['TOTAL', '', '', '', `${h}:${m.toString().padStart(2,'0')}`, '', '', '']);
+
           const ws = XLSX.utils.aoa_to_sheet(data);
-          ws['!cols'] = [{wch:20},{wch:30},{wch:14},{wch:14},{wch:10},{wch:40}];
+          ws['!cols'] = [
+            {wch:20},{wch:30},{wch:14},{wch:14},{wch:10},{wch:40},{wch:14},{wch:18}
+          ];
           XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
           XLSX.writeFile(wb, `${document.getElementById('employee').value}_Timesheet_${document.getElementById('sessionDate').value}.xlsx`);
         } catch(e) {
@@ -1023,9 +1387,6 @@
       }, 100);
     };
 
-    // =========================
-    // ✅ INVOICE PDF (Async, logo fetch-based)
-    // =========================
     document.getElementById('generateInvoice').onclick = async () => {
       document.getElementById('loading').innerHTML = '<div class="spinner"></div><br>Generating Invoice...';
       document.getElementById('loading').style.display = 'block';
@@ -1035,11 +1396,17 @@
         updateInvoiceSummary();
 
         const hstRate = parseFloat(document.getElementById('hstRate').value || '0.13');
-
+        const invoiceId = document.getElementById('invoiceId').value.trim();
         const clientName = document.getElementById('clientName').value.trim();
         const clientPhone = document.getElementById('clientPhone').value.trim();
         const clientEmail = document.getElementById('clientEmail').value.trim();
         const clientAddress = document.getElementById('clientAddress').value.trim();
+        const selectedEntries = getFilteredEntries();
+
+        if (!selectedEntries.length) {
+          document.getElementById('loading').style.display = 'none';
+          return alert('Select at least one timesheet entry for this invoice.');
+        }
 
         const lineRows = [...document.querySelectorAll('#itemsTable tbody tr')];
         const lines = lineRows
@@ -1064,63 +1431,116 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        // ===== Header Logo (FIXED) =====
+        let logoDrawn = false;
+        let logoBox = { x: 10, y: 8, w: 0, h: 0 };
+
         if (LOGO_URL && LOGO_URL.trim() !== "") {
           try {
             const { dataUrl, fmt } = await loadImageAsDataURL(LOGO_URL);
-            doc.addImage(dataUrl, fmt, 10, 8, 25, 20); // x,y,w,h
+            const logoW = 26;
+            const logoH = 20;
+            doc.addImage(dataUrl, fmt, logoBox.x, logoBox.y, logoW, logoH);
+            logoBox.w = logoW;
+            logoBox.h = logoH;
+            logoDrawn = true;
           } catch (e) {
             console.warn("Logo skipped:", e.message);
           }
         }
 
-        // Left header text
-        doc.setFontSize(20);
-        doc.text("ARCHER'S EQUIPMENT REPAIR", 10, 35);
+        const titleX = logoDrawn ? logoBox.x + logoBox.w + 8 : 10;
+        const titleY = 20;
 
-        // Right header block
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
+        doc.text("ARCHER'S EQUIPMENT REPAIR", titleX, titleY);
+
         doc.setFontSize(10);
-        doc.text("Archer's Equipment Repair Ltd.", 140, 10);
-        doc.text("TSSA #/ 000394614", 140, 15);
-        doc.text("HST #: 900518869RT0001", 140, 20);
-        doc.text("Phone Number: 519-383-9654", 140, 25);
+        doc.setFont("helvetica", "normal");
+        doc.text("Archer's Equipment Repair Ltd.", titleX, titleY + 7);
 
-        // Invoice label
+        doc.setFontSize(10);
+        doc.text("TSSA #: 000394614", 145, 12);
+        doc.text("HST #: 900518869RT0001", 145, 17);
+        doc.text("Phone: 519-383-9654", 145, 22);
+
         doc.setFontSize(20);
-        doc.text("INVOICE", 170, 35);
+        doc.setFont("helvetica", "bold");
+        doc.text("INVOICE", 170, 34);
 
-        // Client block
+        doc.setDrawColor(180);
+        doc.line(10, 38, 200, 38);
+
+        doc.setFont("helvetica", "normal");
         doc.setFontSize(12);
-        doc.text("DATE: " + formatDate(document.getElementById('sessionDate').value), 10, 40);
-        doc.text("NAME: " + clientName, 10, 50);
-        doc.text("PHONE: " + clientPhone, 10, 60);
-        doc.text("EMAIL: " + clientEmail, 10, 70);
-        doc.text("ADDRESS: " + clientAddress, 10, 80);
+        doc.text("DATE RANGE: " + getSelectedDateRange(selectedEntries), 10, 48);
+        doc.text("INVOICE ID: " + (invoiceId || '-'), 10, 58);
+        doc.text("NAME: " + (clientName || '-'), 10, 68);
+        doc.text("PHONE: " + (clientPhone || '-'), 10, 78);
+        doc.text("EMAIL: " + (clientEmail || '-'), 10, 88);
+
+        const splitAddress = doc.splitTextToSize("ADDRESS: " + (clientAddress || '-'), 190);
+        doc.text(splitAddress, 10, 98);
+
+        const entryLines = selectedEntries
+          .slice()
+          .sort((a, b) => (`${a.dateStr} ${a.timeIn}`).localeCompare(`${b.dateStr} ${b.timeIn}`))
+          .map(e => `${formatDate(e.dateStr)} - ${e.jobName} (${to12hr(e.timeIn)} to ${to12hr(e.timeOut)})`);
+
+        const splitEntryLines = doc.splitTextToSize("VISITS: " + entryLines.join(" | "), 190);
+        const visitsY = 108 + ((splitAddress.length - 1) * 6);
+        doc.text(splitEntryLines, 10, visitsY);
 
         if (typeof doc.autoTable !== "function") {
           throw new Error("jsPDF AutoTable not available (CDN not loaded).");
         }
 
-        // Line items
+        const tableStartY = visitsY + ((splitEntryLines.length - 1) * 6) + 8;
+
         doc.autoTable({
-          startY: 90,
+          startY: tableStartY,
           head: [['QUANTITY', 'DESCRIPTION', 'PRICE', 'UNIT', 'AMOUNT']],
-          body: lines.map(l => [l.quantity.toFixed(2), l.desc, '$' + formatMoney(l.price), l.unit, '$' + formatMoney(l.amount)]),
+          body: lines.map(l => [
+            l.quantity.toFixed(2),
+            l.desc,
+            '$' + formatMoney(l.price),
+            l.unit,
+            '$' + formatMoney(l.amount)
+          ]),
           theme: 'grid',
-          headStyles: {fillColor: [211, 211, 211], textColor: [0, 0, 0]},
-          styles: {cellPadding: 5, fontSize: 10, overflow: 'linebreak'},
-          columnStyles: {1: {cellWidth: 80}},
+          headStyles: { fillColor: [211, 211, 211], textColor: [0, 0, 0] },
+          styles: { cellPadding: 5, fontSize: 10, overflow: 'linebreak' },
+          columnStyles: { 1: { cellWidth: 80 } },
         });
 
         const finalY = doc.lastAutoTable.finalY + 10;
+
+        doc.setFont("helvetica", "bold");
         doc.text("SUBTOTAL: $" + formatMoney(subtotal), 140, finalY);
         doc.text("HST: $" + formatMoney(hst), 140, finalY + 8);
         doc.text("TOTAL: $" + formatMoney(total), 140, finalY + 16);
 
+        doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
-        doc.text("e-transfer accepted at Jason@archerser.ca", 105, 280, {align: 'center'});
+        doc.text("e-transfer accepted at Jason@archerser.ca", 105, 280, { align: 'center' });
 
-        doc.save(`${clientName || 'Client'}_Invoice_${document.getElementById('sessionDate').value}.pdf`);
+        doc.save(`${invoiceId || clientName || 'Client'}_Invoice.pdf`);
+
+        localStorage.setItem('lastClient', JSON.stringify({
+          name: clientName,
+          phone: clientPhone,
+          email: clientEmail,
+          address: clientAddress
+        }));
+
+        if (invoiceId && invoices[invoiceId]) {
+          invoices[invoiceId].status = 'invoiced';
+          invoices[invoiceId].updatedAt = new Date().toISOString();
+          saveInvoicesToStorage();
+        }
+
+        markSelectedEntriesAsInvoiced(invoiceId);
+        renderTable();
       } catch (err) {
         alert('Invoice generation failed. Please refresh and try again.');
         console.error(err);
@@ -1129,19 +1549,17 @@
       }
     };
 
-    // Ctrl+Enter shortcut
     document.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         document.getElementById('actionButton').click();
       }
     });
 
-    // Init
     loadData();
     clearForm();
     ensureServiceChargeRow();
     ensureRegularLaborRow();
-    refreshInvoiceJobFilterOptions(false);
+    renderInvoiceEntrySelector([]);
     populateInvoiceFromEntries();
     updateInvoiceSummary();
   </script>
