@@ -22,6 +22,7 @@
     button {background:#ff4500;color:white;border:none;padding:.8rem 1.5rem;border-radius:6px;cursor:pointer;font-size:1rem;margin:0 .5rem .5rem 0;transition:all .2s;}
     button:hover {transform:scale(1.05);box-shadow:0 0 15px rgba(255,69,0,.8);}
     #cancelButton,#clearAllButton {background:#dc3545;}
+    #newDayButton {background:#17a2b8;}
     #copyLast {background:#28a745;}
     #address {padding-right:50px !important;}
     .history-btn {position:absolute;right:8px;top:38px;background:#ff4500;color:white;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;}
@@ -273,6 +274,8 @@
     <div style="text-align:center;margin:2rem 0;">
       <button id="generateExcel">Generate Excel</button>
       <button id="goToInvoice" type="button">Go To Invoice</button>
+      <button id="newDayButton" type="button">New Day</button>
+      <button id="toggleArchiveButton" type="button">Archive ▼</button>
       <button id="clearAllButton">Clear All</button>
     </div>
 
@@ -287,6 +290,40 @@
       </small>
     </div>
   </div>
+
+    <div id="archivePanel" style="max-height:0;overflow:hidden;opacity:0;transform:translateY(-6px);transition:max-height .35s ease, opacity .25s ease, transform .25s ease;margin:0 auto 1.5rem;max-width:100%;">
+      <div id="invoiceBuilder" style="margin-top:1rem;">
+        <h2 style="margin-top:0;">Archived Timesheets</h2>
+        <div class="inline-group" style="margin-bottom:1rem;align-items:flex-end;gap:.5rem;flex-wrap:wrap;">
+          <label style="flex:1;min-width:260px;">
+            Archived Days:
+            <select id="archiveDates">
+              <option value="">Select an archived day...</option>
+            </select>
+          </label>
+          <button type="button" id="loadArchiveButton" class="mini-btn">Load</button>
+          <button type="button" id="deleteArchiveButton" class="mini-btn" style="background:#dc3545;">Delete</button>
+          <button type="button" id="restoreArchiveButton" class="mini-btn" style="background:#17a2b8;">Restore to Timesheet</button>
+        </div>
+        <div id="archiveMeta" class="muted-note" style="margin-bottom:1rem;">No archived day selected.</div>
+        <table id="archiveTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Job / Address</th>
+              <th>Time In</th>
+              <th>Time Out</th>
+              <th>Hours</th>
+              <th>Description</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="7" style="text-align:center;opacity:.8;">No archived timesheet loaded.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
   <div id="invoiceTab" class="tab-panel">
     <div id="invoiceSummary">
@@ -310,13 +347,23 @@
         </label>
         <button type="button" id="newInvoiceDraft" class="mini-btn">New Draft</button>
         <button type="button" id="saveInvoiceDraft" class="mini-btn">Save Draft</button>
+      </div>
+
+      <div class="inline-group" style="margin-bottom:1rem;align-items:flex-end;gap:0.5rem;flex-wrap:wrap;">
+        <label style="flex:1;min-width:260px;">
+          Saved Drafts:
+          <select id="invoiceDraftList">
+            <option value="">Select a saved draft...</option>
+          </select>
+        </label>
         <button type="button" id="loadInvoiceDraft" class="mini-btn">Load Draft</button>
+        <button type="button" id="deleteInvoiceDraft" class="mini-btn" style="background:#dc3545;">Delete Draft</button>
       </div>
 
       <label>Include Entries In This Invoice:</label>
       <div id="invoiceEntrySelector"></div>
       <small class="muted-note">
-        Invoiced entries are locked. Draft-linked entries stay selectable for their current draft.
+        Invoiced entries are locked unless they belong to the invoice ID you currently have open. Draft-linked entries stay selectable for their current draft.
       </small>
 
       <div class="invoice-grid" style="margin-top:1rem;">
@@ -760,6 +807,61 @@
     function saveInvoicesToStorage() {
       localStorage.setItem('savedInvoices', JSON.stringify(invoices));
     }
+    function getSortedInvoiceDraftIds() {
+      return Object.values(invoices)
+        .sort((a, b) => {
+          const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          return bTime - aTime || String(a.id || '').localeCompare(String(b.id || ''));
+        })
+        .map(inv => inv.id)
+        .filter(Boolean);
+    }
+
+    function refreshInvoiceDraftList(selectedId = '') {
+      const select = document.getElementById('invoiceDraftList');
+      if (!select) return;
+
+      const previous = selectedId || select.value || document.getElementById('invoiceId')?.value?.trim() || '';
+      select.innerHTML = '<option value="">Select a saved draft...</option>';
+
+      getSortedInvoiceDraftIds().forEach(id => {
+        const inv = invoices[id] || {};
+        const option = document.createElement('option');
+        option.value = id;
+        const client = inv.clientName ? ' — ' + inv.clientName : '';
+        option.textContent = `${id}${client}`;
+        select.appendChild(option);
+      });
+
+      if (previous && invoices[previous]) {
+        select.value = previous;
+      }
+    }
+
+    function deleteInvoiceDraftById(invoiceId) {
+      const inv = invoices[invoiceId];
+      if (!inv) {
+        alert('Invoice draft not found.');
+        return;
+      }
+
+      if (!confirm(`Delete invoice draft "${invoiceId}"?`)) return;
+
+      delete invoices[invoiceId];
+      saveInvoicesToStorage();
+      syncEntryStatusesFromInvoices();
+      renderTable();
+      renderInvoiceEntrySelector([]);
+      updateInvoiceSummary();
+      refreshInvoiceDraftList();
+
+      if (document.getElementById('invoiceId').value.trim() === invoiceId) {
+        clearInvoice();
+      }
+
+      alert(`Invoice draft "${invoiceId}" deleted.`);
+    }
 
     function saveData() {
       const data = {
@@ -785,7 +887,181 @@
         }));
       }
       renderTable();
+      refreshArchiveList();
     }
+
+    function getTodayDateString() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function getNextDateString(dateStr) {
+      const base = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+      if (Number.isNaN(base.getTime())) return getTodayDateString();
+      base.setDate(base.getDate() + 1);
+      return base.toISOString().split('T')[0];
+    }
+
+    function getArchivedDays() {
+      return JSON.parse(localStorage.getItem('timesheetArchive') || '[]');
+    }
+
+    function saveArchivedDays(days) {
+      localStorage.setItem('timesheetArchive', JSON.stringify(days));
+    }
+
+    function getArchiveLabel(day) {
+      if (!day) return '';
+      const employee = day.employee ? ` — ${day.employee}` : '';
+      const count = Array.isArray(day.entries) ? day.entries.length : 0;
+      const jobLabel = count === 1 ? 'entry' : 'entries';
+      return `${day.date || 'Unknown Date'}${employee} (${count} ${jobLabel})`;
+    }
+
+    function refreshArchiveList(selectedKey = '') {
+      const select = document.getElementById('archiveDates');
+      if (!select) return;
+
+      const archive = getArchivedDays();
+      const previous = selectedKey || select.value || '';
+      select.innerHTML = '<option value="">Select an archived day...</option>';
+
+      archive.forEach((day, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = getArchiveLabel(day);
+        select.appendChild(option);
+      });
+
+      if (previous !== '' && archive[+previous]) {
+        select.value = String(previous);
+      }
+    }
+
+    function renderArchiveTable(day) {
+      const tbody = document.querySelector('#archiveTable tbody');
+      const meta = document.getElementById('archiveMeta');
+      if (!tbody || !meta) return;
+
+      if (!day) {
+        meta.textContent = 'No archived day selected.';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;opacity:.8;">No archived timesheet loaded.</td></tr>';
+        return;
+      }
+
+      const count = Array.isArray(day.entries) ? day.entries.length : 0;
+      const archivedAt = day.archivedAt ? new Date(day.archivedAt).toLocaleString() : 'Unknown';
+      meta.textContent = `${day.date || 'Unknown Date'} — ${day.employee || 'Unknown Employee'} — ${count} ${count === 1 ? 'entry' : 'entries'} — archived ${archivedAt}`;
+
+      if (!count) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;opacity:.8;">This archived day has no entries.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      day.entries.forEach(entry => {
+        const inDec = timeToDecimal(entry.timeIn);
+        const outDec = timeToDecimal(entry.timeOut);
+        const duration = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${formatDate(entry.dateStr || day.date || '')}</td>
+          <td><strong>${entry.jobName || ''}</strong><br><small>${entry.address || ''}</small></td>
+          <td>${entry.timeIn ? to12hr(entry.timeIn) : ''}</td>
+          <td>${entry.timeOut ? to12hr(entry.timeOut) : ''}</td>
+          <td>${Number.isFinite(duration) ? formatHours(duration) : ''}</td>
+          <td>${entry.description || ''}</td>
+          <td>${getStatusMarkup(entry)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getSelectedArchiveDay() {
+      const select = document.getElementById('archiveDates');
+      const archive = getArchivedDays();
+      const index = select ? Number(select.value) : -1;
+      if (!Number.isInteger(index) || index < 0 || index >= archive.length) return null;
+      return { day: archive[index], index, archive };
+    }
+
+    function loadArchiveDay() {
+      const selected = getSelectedArchiveDay();
+      renderArchiveTable(selected ? selected.day : null);
+      const panel = document.getElementById('archivePanel');
+      if (panel && panel.dataset.open === 'true') {
+        requestAnimationFrame(() => {
+          panel.style.maxHeight = panel.scrollHeight + 40 + 'px';
+        });
+      }
+    }
+
+    function deleteArchiveDay() {
+      const selected = getSelectedArchiveDay();
+      if (!selected) {
+        alert('Select an archived day to delete.');
+        return;
+      }
+
+      const label = getArchiveLabel(selected.day);
+      if (!confirm(`Delete archived timesheet "${label}"?`)) return;
+
+      selected.archive.splice(selected.index, 1);
+      saveArchivedDays(selected.archive);
+      refreshArchiveList('');
+      renderArchiveTable(null);
+      alert('Archived timesheet deleted.');
+    }
+
+    function restoreArchiveDay() {
+      const selected = getSelectedArchiveDay();
+      if (!selected) {
+        alert('Select an archived day to restore.');
+        return;
+      }
+
+      entries = JSON.parse(JSON.stringify(selected.day.entries || []));
+      document.getElementById('employee').value = selected.day.employee || document.getElementById('employee').value || 'Lucas';
+      document.getElementById('sessionDate').value = selected.day.date || getTodayDateString();
+      saveData();
+      renderTable();
+      clearForm();
+      setActiveTab('timesheetTab');
+      toggleArchiveDrawer(true);
+      alert(`Restored ${selected.day.date || 'archived timesheet'} to the Timesheet tab.`);
+    }
+
+    function archiveCurrentTimesheetDay() {
+      const employee = document.getElementById('employee').value || 'Lucas';
+      const sessionDate = document.getElementById('sessionDate').value || getTodayDateString();
+      if (!entries.length) return false;
+
+      const archive = getArchivedDays();
+      archive.unshift({
+        archivedAt: new Date().toISOString(),
+        employee,
+        date: sessionDate,
+        entries: JSON.parse(JSON.stringify(entries))
+      });
+      saveArchivedDays(archive.slice(0, 60));
+      refreshArchiveList();
+      return true;
+    }
+
+    function startNewDay() {
+      const currentDate = document.getElementById('sessionDate').value || getTodayDateString();
+      const nextDate = getNextDateString(currentDate);
+      const archived = archiveCurrentTimesheetDay();
+
+      entries = [];
+      document.getElementById('sessionDate').value = nextDate;
+      saveData();
+      renderTable();
+      clearForm();
+
+      alert(archived
+        ? `Archived ${currentDate} and started a new day on ${nextDate}.`
+        : `Started a new day on ${nextDate}.`);
+    }
+
 
     const addrInput = document.getElementById('address');
     const dropdown = document.getElementById('addressHistory');
@@ -1341,14 +1617,18 @@
           row.className = 'selector-row';
 
           const isInvoiced = e.billingStatus === 'invoiced';
+          const isSameInvoice = !!(currentInvoiceId && e.invoiceId && e.invoiceId === currentInvoiceId);
           const linkedToOtherDraft = e.billingStatus === 'draft-linked' && e.invoiceId && e.invoiceId !== currentInvoiceId;
-          const isLocked = isInvoiced || linkedToOtherDraft;
-          const isChecked = currentIds.includes(e.id);
+          const invoicedToOtherInvoice = isInvoiced && !isSameInvoice;
+          const isLocked = invoicedToOtherInvoice || linkedToOtherDraft;
+          const isChecked = currentIds.includes(e.id) || isSameInvoice;
 
           const statusNote =
-            e.billingStatus === 'invoiced' ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}` :
-            e.billingStatus === 'draft-linked' ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}` :
-            `Unbilled`;
+            e.billingStatus === 'invoiced'
+              ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
+              : e.billingStatus === 'draft-linked'
+                ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
+                : `Unbilled`;
 
           row.innerHTML = `
             <input
@@ -1454,6 +1734,8 @@
       }
 
       updateInvoiceSummary();
+      const currentInvoiceId = document.getElementById('invoiceId').value.trim();
+      refreshInvoiceDraftList(currentInvoiceId);
     }
 
     function clearInvoice() {
@@ -1533,6 +1815,7 @@
       syncEntryStatusesFromInvoices();
       renderTable();
       updateInvoiceSummary();
+      refreshInvoiceDraftList(invoiceId);
       alert(`Invoice draft "${invoiceId}" saved.`);
     }
 
@@ -1580,6 +1863,31 @@
       return `<span class="status-pill status-unbilled">Unbilled</span>`;
     }
 
+    function toggleArchiveDrawer(forceOpen = null) {
+      const panel = document.getElementById('archivePanel');
+      const button = document.getElementById('toggleArchiveButton');
+      if (!panel || !button) return;
+
+      const isOpen = panel.dataset.open === 'true';
+      const shouldOpen = forceOpen === null ? !isOpen : !!forceOpen;
+
+      if (shouldOpen) {
+        refreshArchiveList();
+        loadArchiveDay();
+        panel.dataset.open = 'true';
+        panel.style.maxHeight = panel.scrollHeight + 40 + 'px';
+        panel.style.opacity = '1';
+        panel.style.transform = 'translateY(0)';
+        button.textContent = 'Archive ▲';
+      } else {
+        panel.dataset.open = 'false';
+        panel.style.maxHeight = '0';
+        panel.style.opacity = '0';
+        panel.style.transform = 'translateY(-6px)';
+        button.textContent = 'Archive ▼';
+      }
+    }
+
     function setActiveTab(tabId) {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1602,6 +1910,17 @@
     });
 
     document.getElementById('goToInvoice').addEventListener('click', () => setActiveTab('invoiceTab'));
+    document.getElementById('toggleArchiveButton').addEventListener('click', () => toggleArchiveDrawer());
+    document.getElementById('archiveDates').addEventListener('change', () => {
+      loadArchiveDay();
+      const panel = document.getElementById('archivePanel');
+      if (panel && panel.dataset.open === 'true') {
+        panel.style.maxHeight = panel.scrollHeight + 40 + 'px';
+      }
+    });
+    document.getElementById('loadArchiveButton').addEventListener('click', loadArchiveDay);
+    document.getElementById('deleteArchiveButton').addEventListener('click', deleteArchiveDay);
+    document.getElementById('restoreArchiveButton').addEventListener('click', restoreArchiveDay);
 
     function editEntry(i) {
       const e = entries[i];
@@ -1854,8 +2173,21 @@
     document.getElementById('clearAllButton').onclick = () => {
       if (confirm('Clear ALL entries?')) {
         entries = [];
+        document.getElementById('sessionDate').value = getTodayDateString();
+        saveData();
         renderTable();
         clearForm();
+      }
+    };
+
+    document.getElementById('newDayButton').onclick = () => {
+      if (!entries.length) {
+        startNewDay();
+        return;
+      }
+
+      if (confirm('Archive the current day, clear the timesheet, and move to the next date?')) {
+        startNewDay();
       }
     };
 
@@ -1865,14 +2197,21 @@
     document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
 
     document.getElementById('loadInvoiceDraft').onclick = () => {
-      const ids = Object.keys(invoices);
-      if (!ids.length) {
-        alert('No saved invoice drafts found.');
+      const chosen = document.getElementById('invoiceDraftList').value.trim();
+      if (!chosen) {
+        alert('Select a saved draft first.');
         return;
       }
-      const chosen = prompt('Enter Invoice / Work Order ID to load:\n\n' + ids.join('\n'));
-      if (!chosen) return;
-      loadInvoiceDraftById(chosen.trim());
+      loadInvoiceDraftById(chosen);
+    };
+
+    document.getElementById('deleteInvoiceDraft').onclick = () => {
+      const chosen = document.getElementById('invoiceDraftList').value.trim();
+      if (!chosen) {
+        alert('Select a saved draft first.');
+        return;
+      }
+      deleteInvoiceDraftById(chosen);
     };
 
     document.getElementById('newInvoiceDraft').onclick = () => {
@@ -2229,6 +2568,7 @@
     renderInvoiceEntrySelector([]);
     populateInvoiceFromEntries();
     updateInvoiceSummary();
+    refreshInvoiceDraftList();
   </script>
 
   <script>
@@ -2997,48 +3337,6 @@ document.addEventListener("DOMContentLoaded",function(){
   }
 });
 
-</script>
-
-
-<script>
-const nipplePriceMap={
-"1/2":{3:2.1,6:2.8,12:4.5},
-"3/4":{3:2.4,6:3.2,12:5.2},
-"1":{3:3.1,6:4.0,12:6.8},
-"1-1/4":{3:4.2,6:5.3,12:8.7},
-"1-1/2":{3:5.1,6:6.5,12:10.4}
-};
-
-function autoGenerateNipples(size,length){
-  let standard=[12,6,3];
-  let result=[];
-  let remaining=length;
-  for(let s of standard){
-    while(remaining>=s){
-      result.push(s);
-      remaining-=s;
-    }
-  }
-  if(remaining>0) result.push(3);
-  return result;
-}
-
-function addNipplesToBlackIron(size,length){
-  let nipples=autoGenerateNipples(size,length);
-  nipples.forEach(n=>{
-     let table=document.querySelector('#blackIronTable tbody');
-     if(!table) return;
-     let row=document.createElement('tr');
-     let price=(nipplePriceMap[size]&&nipplePriceMap[size][n])||0;
-     row.innerHTML=`<td>${size}" x ${n}" Nipple</td><td>1</td><td>${price.toFixed(2)}</td>`;
-     table.appendChild(row);
-  });
-}
-
-document.addEventListener("calculatorSendToBlackIron",function(e){
-   let {size,length}=e.detail||{size:"1",length:12};
-   addNipplesToBlackIron(size,length);
-});
 </script>
 
 </body>
