@@ -72,6 +72,24 @@
       border:1px solid rgba(13,110,253,.4);
     }
 
+    .entry-row {
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .entry-row.longpressing {
+      background:#4a2a1a !important;
+      box-shadow: inset 0 0 0 2px rgba(255,69,0,.5);
+    }
+
+    .table-help {
+      text-align:center;
+      margin-top:.5rem;
+      opacity:.8;
+      font-size:.9rem;
+    }
+
     @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
     @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;}}
 
@@ -200,6 +218,10 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <div class="table-help">
+      Tip: press and hold a row to edit on mobile, or double-click a row on desktop.
+    </div>
 
     <div style="text-align:center;margin:2rem 0;">
       <button id="generateExcel">Generate Excel</button>
@@ -1090,6 +1112,20 @@
 
     document.getElementById('goToInvoice').addEventListener('click', () => setActiveTab('invoiceTab'));
 
+    function editEntry(i) {
+      const e = entries[i];
+      document.getElementById('jobName').value = e.jobName;
+      document.getElementById('address').value = e.address || '';
+      document.getElementById('timeIn').value = e.timeIn;
+      document.getElementById('timeOut').value = e.timeOut;
+      document.getElementById('description').value = e.description || '';
+      document.getElementById('jobType').value = '';
+      document.getElementById('editIndex').value = i;
+      document.getElementById('actionButton').textContent = 'Update Entry';
+      document.getElementById('cancelButton').style.display = 'inline-block';
+      document.getElementById('form').scrollIntoView({ behavior:'smooth' });
+    }
+
     function renderTable() {
       const tbody = document.querySelector('#entriesTable tbody');
       tbody.innerHTML = '';
@@ -1104,6 +1140,8 @@
         const tr = document.createElement('tr');
         tr.draggable = true;
         tr.dataset.index = i;
+        tr.classList.add('entry-row');
+
         tr.innerHTML = `
           <td>${formatDate(e.dateStr)}</td>
           <td><strong>${e.jobName}</strong><br><small>${e.address || ''}</small></td>
@@ -1116,7 +1154,6 @@
             <i class="fas fa-grip-lines drag-handle"></i>
             <select class="action-select">
               <option value="" disabled selected>Actions</option>
-              <option value="edit">Edit</option>
               <option value="up">Up</option>
               <option value="down">Down</option>
               <option value="mark-unbilled">Mark Unbilled</option>
@@ -1124,12 +1161,63 @@
             </select>
           </td>`;
         tbody.appendChild(tr);
-      });
 
-      const { h, m } = decimalToHM(totalDec);
-      document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
+        let pressTimer = null;
+        let longPressTriggered = false;
+        let startX = 0;
+        let startY = 0;
 
-      document.querySelectorAll('tr[data-index]').forEach(tr => {
+        const startPress = (clientX, clientY) => {
+          longPressTriggered = false;
+          startX = clientX;
+          startY = clientY;
+          tr.classList.add('longpressing');
+
+          pressTimer = setTimeout(() => {
+            longPressTriggered = true;
+            tr.classList.remove('longpressing');
+            editEntry(i);
+          }, 600);
+        };
+
+        const cancelPress = () => {
+          tr.classList.remove('longpressing');
+          if (pressTimer) {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+          }
+        };
+
+        tr.addEventListener('mousedown', (ev) => {
+          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
+          startPress(ev.clientX, ev.clientY);
+        });
+
+        tr.addEventListener('mouseup', cancelPress);
+        tr.addEventListener('mouseleave', cancelPress);
+
+        tr.addEventListener('touchstart', (ev) => {
+          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
+          const t = ev.touches[0];
+          startPress(t.clientX, t.clientY);
+        }, { passive: true });
+
+        tr.addEventListener('touchmove', (ev) => {
+          if (!pressTimer) return;
+          const t = ev.touches[0];
+          const dx = Math.abs(t.clientX - startX);
+          const dy = Math.abs(t.clientY - startY);
+          if (dx > 10 || dy > 10) cancelPress();
+        }, { passive: true });
+
+        tr.addEventListener('touchend', cancelPress);
+        tr.addEventListener('touchcancel', cancelPress);
+
+        tr.addEventListener('dblclick', (ev) => {
+          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
+          editEntry(i);
+        });
+
         tr.addEventListener('dragstart', e => {
           tr.classList.add('dragging');
           e.dataTransfer.setData('text', tr.dataset.index);
@@ -1148,6 +1236,9 @@
         tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
       });
 
+      const { h, m } = decimalToHM(totalDec);
+      document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
+
       document.querySelectorAll('.action-select').forEach((select, idx) => {
         select.addEventListener('change', function() {
           handleAction(idx, this.value);
@@ -1163,17 +1254,7 @@
 
     function handleAction(i, act) {
       if (act === 'edit') {
-        const e = entries[i];
-        document.getElementById('jobName').value = e.jobName;
-        document.getElementById('address').value = e.address || '';
-        document.getElementById('timeIn').value = e.timeIn;
-        document.getElementById('timeOut').value = e.timeOut;
-        document.getElementById('description').value = e.description || '';
-        document.getElementById('jobType').value = '';
-        document.getElementById('editIndex').value = i;
-        document.getElementById('actionButton').textContent = 'Update Entry';
-        document.getElementById('cancelButton').style.display = 'inline-block';
-        document.getElementById('form').scrollIntoView({ behavior:'smooth' });
+        editEntry(i);
       }
       else if (act === 'up' && i > 0) {
         [entries[i - 1], entries[i]] = [entries[i], entries[i - 1]];
