@@ -140,6 +140,14 @@
       margin-top:.25rem;
       font-size:.88rem;
     }
+
+    .desc-cell {position:relative;}
+    .material-autocomplete {position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1f1f1f;border:1px solid #ff4500;border-radius:6px;box-shadow:0 8px 18px rgba(0,0,0,.35);max-height:220px;overflow-y:auto;z-index:50;display:none;}
+    .material-autocomplete.show {display:block;}
+    .material-option {padding:.6rem .7rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.18);}
+    .material-option:last-child {border-bottom:none;}
+    .material-option:hover,.material-option.active {background:rgba(255,69,0,.16);}
+
   </style>
 </head>
 <body>
@@ -297,15 +305,21 @@
         <thead>
           <tr>
             <th>Description</th>
-            <th style="width:120px;">Qty</th>
-            <th style="width:120px;">Unit</th>
-            <th style="width:140px;">Unit Price</th>
+            <th style="width:90px;">Qty</th>
+            <th style="width:90px;">Unit</th>
+            <th style="width:140px;">Distributor Cost</th>
+            <th style="width:110px;">Markup %</th>
+            <th style="width:140px;">Customer Price</th>
             <th style="width:140px;">Amount</th>
             <th style="width:90px;">Action</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
+      <datalist id="materialSuggestions"></datalist>
+      <small class="muted-note">
+        Material descriptions and their last saved costs are remembered on this device. Markup auto-calculates from distributor cost, and customer price can also be typed in directly.
+      </small>
     </div>
   </div>
 
@@ -425,6 +439,78 @@
     let entries = [];
     let addressHistory = JSON.parse(localStorage.getItem('addressHistory') || '[]');
     let invoices = JSON.parse(localStorage.getItem('savedInvoices') || '{}');
+    let materialCatalog = JSON.parse(localStorage.getItem('materialCatalog') || '{}');
+
+    function saveMaterialCatalog() {
+      localStorage.setItem('materialCatalog', JSON.stringify(materialCatalog));
+      renderMaterialSuggestions();
+    }
+
+    function normalizeMaterialKey(desc) {
+      return String(desc || '').trim().toLowerCase();
+    }
+
+    function saveMaterialFromValues(values = {}) {
+      const desc = String(values.desc || '').trim();
+      if (!desc) return;
+      const key = normalizeMaterialKey(desc);
+      materialCatalog[key] = {
+        desc,
+        unit: String(values.unit || 'ea').trim() || 'ea',
+        distributorCost: +values.distributorCost || 0,
+        markup: +values.markup || 0,
+        customerPrice: +values.customerPrice || 0
+      };
+      saveMaterialCatalog();
+    }
+
+    function getSavedMaterial(desc) {
+      const key = normalizeMaterialKey(desc);
+      return key ? materialCatalog[key] || null : null;
+    }
+
+    function findBestMaterialMatch(desc) {
+      const key = normalizeMaterialKey(desc);
+      if (!key) return null;
+      if (materialCatalog[key]) return materialCatalog[key];
+
+      const values = Object.values(materialCatalog);
+      const startsWithMatches = values.filter(item => normalizeMaterialKey(item.desc).startsWith(key));
+      if (startsWithMatches.length === 1) return startsWithMatches[0];
+
+      const includesMatches = values.filter(item => normalizeMaterialKey(item.desc).includes(key));
+      if (includesMatches.length === 1) return includesMatches[0];
+
+      return null;
+    }
+
+    function renderMaterialSuggestions() {
+      const list = document.getElementById('materialSuggestions');
+      if (!list) return;
+      list.innerHTML = '';
+      Object.values(materialCatalog)
+        .sort((a, b) => a.desc.localeCompare(b.desc))
+        .forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.desc;
+          list.appendChild(option);
+        });
+    }
+
+    function getDefaultMarkupPercent() {
+      return 25;
+    }
+
+    function customerPriceFromCost(cost, markupPercent) {
+      return (+cost || 0) * (1 + ((+markupPercent || 0) / 100));
+    }
+
+    function markupFromCostAndPrice(cost, price) {
+      const c = +cost || 0;
+      const p = +price || 0;
+      if (!c) return 0;
+      return ((p - c) / c) * 100;
+    }
 
     function saveInvoicesToStorage() {
       localStorage.setItem('savedInvoices', JSON.stringify(invoices));
@@ -630,26 +716,172 @@
     });
 
     function createItemRow(item = {}) {
+      const savedMaterial = getSavedMaterial(item.desc);
+      const defaultMarkup = item.markup ?? savedMaterial?.markup ?? getDefaultMarkupPercent();
+      const defaultDistributorCost = item.distributorCost ?? savedMaterial?.distributorCost ?? 0;
+      const fallbackCustomerPrice = item.customerPrice ?? item.price ?? savedMaterial?.customerPrice ?? customerPriceFromCost(defaultDistributorCost, defaultMarkup);
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="text" class="item-desc" value="${(item.desc || '').replace(/"/g, '&quot;')}" placeholder="Material / extra service"></td>
+        <td class="desc-cell">
+          <input type="text" class="item-desc" list="materialSuggestions" autocomplete="off" value="${(item.desc || '').replace(/"/g, '&quot;')}" placeholder="Material / extra service">
+          <div class="material-autocomplete"></div>
+        </td>
         <td><input type="number" class="item-qty" min="0" step="0.01" value="${item.qty ?? 1}"></td>
-        <td><input type="text" class="item-unit" value="${(item.unit || 'ea').replace(/"/g, '&quot;')}"></td>
-        <td><input type="number" class="item-price" min="0" step="0.01" value="${formatMoney(item.price ?? 0)}"></td>
+        <td><input type="text" class="item-unit" value="${(item.unit || savedMaterial?.unit || 'ea').replace(/"/g, '&quot;')}"></td>
+        <td><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></td>
+        <td><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></td>
+        <td><input type="number" class="item-customer-price select-on-focus" min="0" step="0.01" value="${formatMoney(fallbackCustomerPrice)}"></td>
         <td class="item-amount text-right">$0.00</td>
         <td><button type="button" class="mini-btn remove-item">Remove</button></td>
       `;
 
+      const desc = tr.querySelector('.item-desc');
       const qty = tr.querySelector('.item-qty');
-      const price = tr.querySelector('.item-price');
+      const unit = tr.querySelector('.item-unit');
+      const distributorCost = tr.querySelector('.item-distributor-cost');
+      const markup = tr.querySelector('.item-markup');
+      const customerPrice = tr.querySelector('.item-customer-price');
       const amountCell = tr.querySelector('.item-amount');
+      const autocompleteBox = tr.querySelector('.material-autocomplete');
 
-      function recalc() {
-        amountCell.textContent = `$${formatMoney((+qty.value || 0) * (+price.value || 0))}`;
+      function getMaterialMatches(term) {
+        const key = normalizeMaterialKey(term);
+        if (!key) return [];
+        return Object.values(materialCatalog)
+          .filter(item => normalizeMaterialKey(item.desc).includes(key))
+          .sort((a, b) => {
+            const aKey = normalizeMaterialKey(a.desc);
+            const bKey = normalizeMaterialKey(b.desc);
+            const aStarts = aKey.startsWith(key) ? 0 : 1;
+            const bStarts = bKey.startsWith(key) ? 0 : 1;
+            if (aStarts !== bStarts) return aStarts - bStarts;
+            return a.desc.localeCompare(b.desc);
+          })
+          .slice(0, 8);
       }
 
+      function hideMaterialDropdown() {
+        autocompleteBox.classList.remove('show');
+        autocompleteBox.innerHTML = '';
+      }
+
+      function applySelectedMaterial(saved) {
+        if (!saved) return;
+        desc.value = saved.desc;
+        unit.value = saved.unit || 'ea';
+        distributorCost.value = formatMoney(saved.distributorCost ?? 0);
+        markup.value = formatMoney(saved.markup ?? getDefaultMarkupPercent());
+        customerPrice.value = formatMoney(saved.customerPrice ?? customerPriceFromCost(saved.distributorCost, saved.markup));
+        recalc();
+        saveCurrentMaterial();
+      }
+
+      function showMaterialDropdown() {
+        const matches = getMaterialMatches(desc.value);
+        if (!matches.length) {
+          hideMaterialDropdown();
+          return;
+        }
+        autocompleteBox.innerHTML = '';
+        matches.forEach((saved, index) => {
+          const option = document.createElement('div');
+          option.className = 'material-option' + (index === 0 ? ' active' : '');
+          option.textContent = saved.desc;
+          option.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            applySelectedMaterial(saved);
+            hideMaterialDropdown();
+          });
+          autocompleteBox.appendChild(option);
+        });
+        autocompleteBox.classList.add('show');
+      }
+
+      function syncFromSaved(useBestMatch = false) {
+        const saved = useBestMatch ? findBestMaterialMatch(desc.value) : getSavedMaterial(desc.value);
+        if (!saved) return;
+        if (!unit.value.trim() || unit.value === 'ea') unit.value = saved.unit || 'ea';
+        distributorCost.value = formatMoney(saved.distributorCost ?? 0);
+        markup.value = formatMoney(saved.markup ?? getDefaultMarkupPercent());
+        customerPrice.value = formatMoney(saved.customerPrice ?? customerPriceFromCost(saved.distributorCost, saved.markup));
+        recalc();
+      }
+
+      function saveCurrentMaterial() {
+        if (tr.dataset.type === 'regular-labor' || tr.dataset.type === 'overtime-labor') return;
+        saveMaterialFromValues({
+          desc: desc.value,
+          unit: unit.value,
+          distributorCost: distributorCost.value,
+          markup: markup.value,
+          customerPrice: customerPrice.value
+        });
+      }
+
+      function recalc() {
+        amountCell.textContent = `$${formatMoney((+qty.value || 0) * (+customerPrice.value || 0))}`;
+      }
+
+      desc.addEventListener('input', () => {
+        syncFromSaved(true);
+        showMaterialDropdown();
+      });
+      desc.addEventListener('focus', showMaterialDropdown);
+      desc.addEventListener('keydown', (e) => {
+        const options = [...autocompleteBox.querySelectorAll('.material-option')];
+        if (!autocompleteBox.classList.contains('show') || !options.length) return;
+        let activeIndex = options.findIndex(opt => opt.classList.contains('active'));
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          activeIndex = Math.min(activeIndex + 1, options.length - 1);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          activeIndex = Math.max(activeIndex - 1, 0);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const active = options[activeIndex] || options[0];
+          if (active) active.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+          return;
+        } else if (e.key === 'Escape') {
+          hideMaterialDropdown();
+          return;
+        } else {
+          return;
+        }
+        options.forEach((opt, idx) => opt.classList.toggle('active', idx === activeIndex));
+        options[activeIndex]?.scrollIntoView({ block: 'nearest' });
+      });
+      desc.addEventListener('change', () => {
+        syncFromSaved();
+        hideMaterialDropdown();
+        saveCurrentMaterial();
+      });
+      desc.addEventListener('blur', () => {
+        setTimeout(hideMaterialDropdown, 120);
+        saveCurrentMaterial();
+      });
+      unit.addEventListener('blur', saveCurrentMaterial);
       qty.addEventListener('input', recalc);
-      price.addEventListener('input', recalc);
+      distributorCost.addEventListener('input', () => {
+        customerPrice.value = formatMoney(customerPriceFromCost(distributorCost.value, markup.value));
+        recalc();
+      });
+      markup.addEventListener('input', () => {
+        customerPrice.value = formatMoney(customerPriceFromCost(distributorCost.value, markup.value));
+        recalc();
+      });
+      customerPrice.addEventListener('input', () => {
+        markup.value = formatMoney(markupFromCostAndPrice(distributorCost.value, customerPrice.value));
+        recalc();
+      });
+      distributorCost.addEventListener('blur', saveCurrentMaterial);
+      markup.addEventListener('blur', saveCurrentMaterial);
+      customerPrice.addEventListener('blur', saveCurrentMaterial);
+      [distributorCost, markup, customerPrice].forEach(input => {
+        input.addEventListener('focus', () => setTimeout(() => input.select(), 0));
+        input.addEventListener('mouseup', (e) => e.preventDefault());
+      });
       tr.querySelector('.remove-item').onclick = () => tr.remove();
       recalc();
 
@@ -660,7 +892,7 @@
     function ensureServiceChargeRow() {
       let row = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
       if (!row) {
-        createItemRow({ desc: 'Service Charge', qty: 1, unit: 'ea', price: 100 });
+        createItemRow({ desc: 'Service Charge', qty: 1, unit: 'ea', distributorCost: 0, markup: 0, customerPrice: 100 });
         row = document.querySelector('#itemsTable tbody tr:last-child');
         row.dataset.type = 'service-charge';
       }
@@ -674,7 +906,9 @@
           desc: 'Labor (Regular Hours)',
           qty: 0,
           unit: 'hr',
-          price: document.getElementById('hourlyRate').value || 100
+          distributorCost: 0,
+          markup: 0,
+          customerPrice: document.getElementById('hourlyRate').value || 100
         });
         regularRow = document.querySelector('#itemsTable tbody tr:last-child');
         regularRow.dataset.type = 'regular-labor';
@@ -690,7 +924,9 @@
           desc: 'Labor (Overtime Hours)',
           qty: 0,
           unit: 'hr',
-          price: document.getElementById('overtimeRate').value || 150
+          distributorCost: 0,
+          markup: 0,
+          customerPrice: document.getElementById('overtimeRate').value || 150
         });
         overtimeRow = document.querySelector('#itemsTable tbody tr:last-child');
         overtimeRow.dataset.type = 'overtime-labor';
@@ -957,14 +1193,18 @@
       regularRow.querySelector('.item-desc').value = `${laborDescriptionField.value || 'Labor'} (Regular Hours)`;
       regularRow.querySelector('.item-qty').value = totals.regular.toFixed(2);
       regularRow.querySelector('.item-unit').value = 'hr';
-      regularRow.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value);
+      regularRow.querySelector('.item-distributor-cost').value = formatMoney(0);
+      regularRow.querySelector('.item-markup').value = formatMoney(0);
+      regularRow.querySelector('.item-customer-price').value = formatMoney(document.getElementById('hourlyRate').value);
       regularRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
 
       if (overtimeRow) {
         overtimeRow.querySelector('.item-desc').value = `${laborDescriptionField.value || 'Labor'} (Overtime Hours)`;
         overtimeRow.querySelector('.item-qty').value = totals.overtime.toFixed(2);
         overtimeRow.querySelector('.item-unit').value = 'hr';
-        overtimeRow.querySelector('.item-price').value = formatMoney(document.getElementById('overtimeRate').value);
+        overtimeRow.querySelector('.item-distributor-cost').value = formatMoney(0);
+        overtimeRow.querySelector('.item-markup').value = formatMoney(0);
+        overtimeRow.querySelector('.item-customer-price').value = formatMoney(document.getElementById('overtimeRate').value);
         overtimeRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
       }
 
@@ -993,7 +1233,10 @@
         desc: row.querySelector('.item-desc').value.trim(),
         qty: +row.querySelector('.item-qty').value || 0,
         unit: row.querySelector('.item-unit').value.trim() || 'ea',
-        price: +row.querySelector('.item-price').value || 0,
+        distributorCost: +row.querySelector('.item-distributor-cost').value || 0,
+        markup: +row.querySelector('.item-markup').value || 0,
+        customerPrice: +row.querySelector('.item-customer-price').value || 0,
+        price: +row.querySelector('.item-customer-price').value || 0,
         type: row.dataset.type || ''
       }));
     }
@@ -1368,7 +1611,7 @@
       }
     };
 
-    document.getElementById('addItem').onclick = () => createItemRow();
+    document.getElementById('addItem').onclick = () => createItemRow({ markup: getDefaultMarkupPercent() });
     document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
     document.getElementById('clearInvoice').onclick = () => clearInvoice();
     document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
@@ -1405,16 +1648,16 @@
 
     document.getElementById('hourlyRate').addEventListener('input', () => {
       const r = ensureRegularLaborRow();
-      r.querySelector('.item-price').value = formatMoney(document.getElementById('hourlyRate').value || 0);
-      r.querySelector('.item-price').dispatchEvent(new Event('input'));
+      r.querySelector('.item-customer-price').value = formatMoney(document.getElementById('hourlyRate').value || 0);
+      r.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
       populateInvoiceFromEntries();
     });
 
     document.getElementById('overtimeRate').addEventListener('input', () => {
       const otRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
       if (otRow) {
-        otRow.querySelector('.item-price').value = formatMoney(document.getElementById('overtimeRate').value || 0);
-        otRow.querySelector('.item-price').dispatchEvent(new Event('input'));
+        otRow.querySelector('.item-customer-price').value = formatMoney(document.getElementById('overtimeRate').value || 0);
+        otRow.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
       }
       populateInvoiceFromEntries();
     });
@@ -1493,10 +1736,12 @@
         const lines = lineRows
           .map(row => {
             const quantity = +row.querySelector('.item-qty').value || 0;
-            const price = +row.querySelector('.item-price').value || 0;
+            const distributorCost = +row.querySelector('.item-distributor-cost').value || 0;
+            const markup = +row.querySelector('.item-markup').value || 0;
+            const customerPrice = +row.querySelector('.item-customer-price').value || 0;
             const desc = row.querySelector('.item-desc').value.trim();
             const unit = row.querySelector('.item-unit').value.trim() || 'ea';
-            return { quantity, desc, price, unit, amount: quantity * price };
+            return { quantity, desc, unit, distributorCost, markup, customerPrice, price: customerPrice, amount: quantity * customerPrice };
           })
           .filter(l => (l.desc && l.quantity) || l.amount);
 
@@ -1580,11 +1825,11 @@
 
         doc.autoTable({
           startY: tableStartY,
-          head: [['QUANTITY', 'DESCRIPTION', 'PRICE', 'UNIT', 'AMOUNT']],
+          head: [['QUANTITY', 'DESCRIPTION', 'UNIT PRICE', 'UNIT', 'AMOUNT']],
           body: lines.map(l => [
             l.quantity.toFixed(2),
             l.desc,
-            '$' + formatMoney(l.price),
+            '$' + formatMoney(l.customerPrice ?? l.price),
             l.unit,
             '$' + formatMoney(l.amount)
           ]),
@@ -1636,6 +1881,7 @@
       }
     });
 
+    renderMaterialSuggestions();
     loadData();
     clearForm();
     ensureServiceChargeRow();
