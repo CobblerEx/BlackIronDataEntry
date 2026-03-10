@@ -148,6 +148,29 @@
     .material-option:last-child {border-bottom:none;}
     .material-option:hover,.material-option.active {background:rgba(255,69,0,.16);}
 
+  
+
+    /* Black Iron tab */
+    #blackIronTab .bi-wrap {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin:0 0 1.5rem 0;}
+    .bi-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;}
+    .bi-fit-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin:.75rem 0 1rem 0;}
+    .bi-fit-btn {background:#2a2a2a;border:1px solid #ff4500;color:#e0e0e0;padding:.8rem;border-radius:8px;cursor:pointer;font-size:.95rem;}
+    .bi-fit-btn.active {background:#ff4500;color:#fff;box-shadow:0 0 14px rgba(255,69,0,.5);}
+    .bi-inline {display:flex;gap:.6rem;flex-wrap:wrap;align-items:end;}
+    .bi-inline > * {flex:1 1 180px;}
+    .bi-actions {display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem;}
+    .bi-muted {opacity:.82;font-size:.9rem;margin-top:.35rem;display:block;}
+    .bi-list {display:grid;gap:.75rem;margin-top:1rem;}
+    .bi-card {background:#242424;border:1px solid rgba(255,69,0,.35);border-radius:10px;padding:1rem;display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;}
+    .bi-card-main {min-width:0;}
+    .bi-title {font-weight:700;color:#ffb184;display:block;margin-bottom:.25rem;}
+    .bi-meta {opacity:.9;word-break:break-word;}
+    .bi-card-actions {display:flex;gap:.4rem;flex-wrap:wrap;}
+    .bi-chip-row {display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem;}
+    .bi-chip {display:inline-block;padding:.35rem .7rem;border-radius:999px;background:rgba(255,69,0,.12);border:1px solid rgba(255,69,0,.35);}
+    .bi-hidden {display:none !important;}
+    .bi-voice-box {margin-top:.75rem;padding:.75rem;border-radius:8px;background:#222;border:1px solid rgba(255,69,0,.25);display:none;}
+
   </style>
 </head>
 <body>
@@ -164,6 +187,7 @@
   <div class="tabs">
     <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
     <button type="button" class="tab-btn" data-tab="invoiceTab"><i class="fas fa-file-invoice-dollar"></i> Invoice</button>
+    <button type="button" class="tab-btn" data-tab="blackIronTab"><i class="fas fa-wrench"></i> Black Iron</button>
   </div>
 
   <div id="timesheetTab" class="tab-panel active">
@@ -322,6 +346,145 @@
       </small>
     </div>
   </div>
+
+  
+
+  <div id="blackIronTab" class="tab-panel">
+    <div class="bi-wrap">
+      <h2>Black Iron Parts Builder</h2>
+      <div class="bi-grid">
+        <label>Job / Parts List Name:
+          <input type="text" id="biJobName" list="biJobHistory" placeholder="e.g. Smith Pool Heater Gas Line">
+          <datalist id="biJobHistory"></datalist>
+        </label>
+        <label>Pipe Size:
+          <select id="biOdSize">
+            <option value="3/8">3/8</option>
+            <option value="1/2">1/2</option>
+            <option value="3/4">3/4</option>
+            <option value="1">1</option>
+            <option value="1 1/4">1 1/4</option>
+            <option value="1 1/2">1 1/2</option>
+            <option value="2">2</option>
+            <option value="2 1/2">2 1/2</option>
+          </select>
+        </label>
+        <label>Quantity:
+          <input type="number" id="biQty" min="1" value="1" class="select-on-focus">
+        </label>
+      </div>
+
+      <div class="bi-wrap" style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,.03);">
+        <label>Quick Add:
+          <div class="bi-inline" style="width:100%;">
+            <input type="text" id="biQuickAdd" placeholder='Examples: 3/4 tee | 1 x 3/4 reducer | 3/4 x 6 nipple | qty 2 1/2 90 elbow' style="flex:1;">
+            <button type="button" id="biQuickAddBtn" class="mini-btn">Parse & Add</button>
+          </div>
+        </label>
+        <small class="bi-muted">Fast field entry also works with voice. Duplicates are grouped automatically when sent to the invoice.</small>
+      </div>
+
+      <label style="margin-top:1rem;">Fitting Type:</label>
+      <div id="biFitGrid" class="bi-fit-grid"></div>
+
+      <div class="bi-grid">
+        <label id="biReducerWrap" class="bi-hidden">Reducer To:
+          <select id="biReducerSize">
+            <option value="">Select size</option>
+            <option value="3/8">3/8</option>
+            <option value="1/2">1/2</option>
+            <option value="3/4">3/4</option>
+            <option value="1">1</option>
+            <option value="1 1/4">1 1/4</option>
+            <option value="1 1/2">1 1/2</option>
+            <option value="2">2</option>
+            <option value="2 1/2">2 1/2</option>
+          </select>
+        </label>
+        <label id="biNippleWrap" class="bi-hidden">Nipple Length:
+          <select id="biNippleSize">
+            <option value="">Select length</option>
+            <option value="1 1/2">1 1/2"</option>
+            <option value="2">2"</option>
+            <option value="2 1/2">2 1/2"</option>
+            <option value="3">3"</option>
+            <option value="3 1/2">3 1/2"</option>
+            <option value="4">4"</option>
+            <option value="4 1/2">4 1/2"</option>
+            <option value="5">5"</option>
+            <option value="5 1/2">5 1/2"</option>
+            <option value="6">6"</option>
+            <option value="7">7"</option>
+            <option value="8">8"</option>
+            <option value="9">9"</option>
+            <option value="10">10"</option>
+            <option value="12">12"</option>
+            <option value="18">18"</option>
+            <option value="24">24"</option>
+          </select>
+        </label>
+        <label id="biTeeWrap" class="bi-hidden">Custom Tee Sizes:
+          <div class="bi-inline">
+            <select id="biTee1"><option value="">Branch 1</option><option value="3/8">3/8</option><option value="1/2">1/2</option><option value="3/4">3/4</option><option value="1">1</option><option value="1 1/4">1 1/4</option><option value="1 1/2">1 1/2</option><option value="2">2</option><option value="2 1/2">2 1/2</option></select>
+            <select id="biTee2"><option value="">Branch 2</option><option value="3/8">3/8</option><option value="1/2">1/2</option><option value="3/4">3/4</option><option value="1">1</option><option value="1 1/4">1 1/4</option><option value="1 1/2">1 1/2</option><option value="2">2</option><option value="2 1/2">2 1/2</option></select>
+            <select id="biTee3"><option value="">Branch 3</option><option value="3/8">3/8</option><option value="1/2">1/2</option><option value="3/4">3/4</option><option value="1">1</option><option value="1 1/4">1 1/4</option><option value="1 1/2">1 1/2</option><option value="2">2</option><option value="2 1/2">2 1/2</option></select>
+          </div>
+          <small class="bi-muted">Leave blank to use a straight tee matching the main pipe size.</small>
+        </label>
+      </div>
+
+      <div class="bi-actions">
+        <button type="button" id="biAddItem">Add Item</button>
+        <button type="button" id="biVoiceBtn">Voice Add</button>
+        <button type="button" id="biSendInvoice">Send All To Invoice</button>
+        <button type="button" id="biExportCsv">Export CSV</button>
+        <button type="button" id="biClearList" style="background:#dc3545;">Clear List</button>
+      </div>
+      <div id="biVoiceBox" class="bi-voice-box"></div>
+
+      <div class="bi-wrap" style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,.03);">
+        <h3 style="margin-top:0;">Pipe Cut Length Helper</h3>
+        <div class="bi-grid">
+          <label>Pipe Size:
+            <select id="biCutPipeSize">
+              <option value="3/8">3/8</option><option value="1/2">1/2</option><option value="3/4">3/4</option><option value="1">1</option><option value="1 1/4">1 1/4</option><option value="1 1/2">1 1/2</option><option value="2">2</option><option value="2 1/2">2 1/2</option>
+            </select>
+          </label>
+          <label>Face-to-Face Length (in):
+            <input type="number" id="biFaceLength" min="0" step="0.125" value="12" class="select-on-focus">
+          </label>
+          <label>Takeout Each End (in):
+            <input type="number" id="biTakeoutEachEnd" min="0" step="0.125" value="0.75" class="select-on-focus">
+          </label>
+          <label>Qty:
+            <input type="number" id="biCutQty" min="1" value="1" class="select-on-focus">
+          </label>
+        </div>
+        <div class="bi-actions" style="margin-top:.75rem;">
+          <button type="button" id="biCalcCut">Add Cut Pipe</button>
+        </div>
+        <small class="bi-muted">Cut length = face-to-face length minus both fitting takeouts. Adjust the takeout value to match the fittings you are using.</small>
+      </div>
+
+      <div class="bi-chip-row">
+        <span class="bi-chip">Items: <b id="biItemCount">0</b></span>
+        <span class="bi-chip">Total Qty: <b id="biTotalQty">0</b></span>
+        <span class="bi-chip">Last Size Saved: <b id="biLastSize">—</b></span>
+      </div>
+      <small class="bi-muted">Quality-of-life upgrades added here: saved parts list, job-name memory, duplicate/edit/delete, last pipe size memory, and direct transfer into the invoice materials table.</small>
+    </div>
+
+    <div class="bi-wrap">
+      <h2>Grouped Summary</h2>
+      <div id="biGroupedList" class="bi-list"></div>
+    </div>
+
+    <div class="bi-wrap">
+      <h2>Parts List</h2>
+      <div id="biList" class="bi-list"></div>
+    </div>
+  </div>
+
 
   <div id="loading"><div class="spinner"></div><br>Generating...</div>
 
@@ -1985,5 +2148,404 @@
     populateInvoiceFromEntries();
     updateInvoiceSummary();
   </script>
+
+  <script>
+  (function(){
+    const FITTINGS = ['Nipple','90 degree elbow','45 degree elbow','Tee','Union','Shut-off','Reducer','Cap','Plug','Coupling','Bushing','Flexconnector','Gastiite','Stand Off (Long)','Stand Off (Short)','Paint'];
+    const STORAGE_KEY = 'blackIronMergedState';
+    const HISTORY_KEY = 'blackIronMergedJobHistory';
+    const els = {
+      tab: document.getElementById('blackIronTab'),
+      fitGrid: document.getElementById('biFitGrid'),
+      jobName: document.getElementById('biJobName'),
+      jobHistory: document.getElementById('biJobHistory'),
+      od: document.getElementById('biOdSize'),
+      qty: document.getElementById('biQty'),
+      quickAdd: document.getElementById('biQuickAdd'),
+      quickAddBtn: document.getElementById('biQuickAddBtn'),
+      reducerWrap: document.getElementById('biReducerWrap'),
+      reducer: document.getElementById('biReducerSize'),
+      nippleWrap: document.getElementById('biNippleWrap'),
+      nipple: document.getElementById('biNippleSize'),
+      teeWrap: document.getElementById('biTeeWrap'),
+      tee1: document.getElementById('biTee1'),
+      tee2: document.getElementById('biTee2'),
+      tee3: document.getElementById('biTee3'),
+      add: document.getElementById('biAddItem'),
+      voice: document.getElementById('biVoiceBtn'),
+      send: document.getElementById('biSendInvoice'),
+      export: document.getElementById('biExportCsv'),
+      clear: document.getElementById('biClearList'),
+      calcCut: document.getElementById('biCalcCut'),
+      cutPipeSize: document.getElementById('biCutPipeSize'),
+      faceLength: document.getElementById('biFaceLength'),
+      takeoutEachEnd: document.getElementById('biTakeoutEachEnd'),
+      cutQty: document.getElementById('biCutQty'),
+      list: document.getElementById('biList'),
+      groupedList: document.getElementById('biGroupedList'),
+      itemCount: document.getElementById('biItemCount'),
+      totalQty: document.getElementById('biTotalQty'),
+      lastSize: document.getElementById('biLastSize'),
+      voiceBox: document.getElementById('biVoiceBox')
+    };
+    let state = { selectedFitting:'', items:[], lastOd:'1/2', jobName:'' };
+    let recognition = null;
+
+    function esc(s){ return String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+    function saveState(){
+      state.jobName = els.jobName.value.trim();
+      state.lastOd = els.od.value;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      els.lastSize.textContent = state.lastOd || '—';
+      if (els.cutPipeSize) els.cutPipeSize.value = els.od.value || state.lastOd || '1/2';
+      renderJobHistory();
+    }
+    function loadState(){
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        if (saved && typeof saved === 'object') state = Object.assign(state, saved);
+      } catch(e) {}
+      els.jobName.value = state.jobName || '';
+      els.od.value = state.lastOd || '1/2';
+      renderFitButtons();
+      updateConditionalFields();
+      renderList();
+      renderJobHistory();
+      els.lastSize.textContent = state.lastOd || '—';
+    }
+    function getHistory(){
+      try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) { return []; }
+    }
+    function saveHistory(name){
+      name = String(name || '').trim();
+      if (!name) return;
+      const arr = getHistory().filter(v => v !== name);
+      arr.unshift(name);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 30)));
+      renderJobHistory();
+    }
+    function renderJobHistory(){
+      const list = els.jobHistory;
+      list.innerHTML = '';
+      getHistory().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        list.appendChild(opt);
+      });
+    }
+    function renderFitButtons(){
+      els.fitGrid.innerHTML = FITTINGS.map(name => `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}" data-fit="${esc(name)}">${esc(name)}</button>`).join('');
+    }
+    function updateConditionalFields(){
+      const f = state.selectedFitting;
+      els.reducerWrap.classList.toggle('bi-hidden', f !== 'Reducer');
+      els.nippleWrap.classList.toggle('bi-hidden', f !== 'Nipple');
+      els.teeWrap.classList.toggle('bi-hidden', f !== 'Tee');
+    }
+    function buildSizeDetail(){
+      if (state.selectedFitting === 'Nipple') {
+        if (!els.nipple.value) throw new Error('Select a nipple length.');
+        return `${els.nipple.value}"`;
+      }
+      if (state.selectedFitting === 'Reducer') {
+        if (!els.reducer.value) throw new Error('Select the reducer size.');
+        return `Reduced to ${els.reducer.value}"`;
+      }
+      if (state.selectedFitting === 'Tee') {
+        const vals = [els.tee1.value, els.tee2.value, els.tee3.value].filter(Boolean);
+        return vals.length === 3 ? `${vals[0]}" x ${vals[1]}" x ${vals[2]}"` : `${els.od.value}" x ${els.od.value}" x ${els.od.value}"`;
+      }
+      return '';
+    }
+    function formatInches(value){
+      const num = parseFloat(value);
+      if (!isFinite(num)) return String(value ?? '');
+      return Number.isInteger(num) ? String(num) : num.toFixed(3).replace(/0+$/,'').replace(/\.$/,'');
+    }
+    function buildDisplay(item){
+      if (item.fittingType === 'Pipe') return `${item.odSize}" Pipe, ${item.sizeDetail}, Qty: ${item.quantity}`;
+      let extra = item.sizeDetail ? `, ${item.sizeDetail}` : '';
+      if (item.fittingType === 'Tee' && item.sizeDetail.includes(' x ')) return `${item.fittingType}, ${item.sizeDetail}, Qty: ${item.quantity}`;
+      return `${item.fittingType}, ${item.odSize}"${extra}, Qty: ${item.quantity}`;
+    }
+    function buildInvoiceDescription(item){
+      if (item.fittingType === 'Pipe') return `${item.odSize}" Black Iron Gas Pipe - ${item.sizeDetail}`;
+      if (item.fittingType === 'Tee' && item.sizeDetail.includes(' x ')) return `${item.sizeDetail} Black Iron Tee - Supply & Install`;
+      if (item.fittingType === 'Reducer') return `${item.odSize}" Black Iron Reducing Fitting - ${item.sizeDetail}`;
+      if (item.fittingType === 'Nipple') return `${item.odSize}" Black Iron Pipe Nipple - ${item.sizeDetail}`;
+      if (item.sizeDetail) return `${item.odSize}" Black Iron ${item.fittingType} - ${item.sizeDetail}`;
+      return `${item.odSize}" Black Iron ${item.fittingType} - Supply & Install`;
+    }
+    function getGroupKey(item){
+      return JSON.stringify([item.fittingType, item.odSize, item.sizeDetail || '']);
+    }
+    function getGroupedItems(){
+      const map = new Map();
+      state.items.forEach(item => {
+        const key = getGroupKey(item);
+        if (!map.has(key)) map.set(key, { ...item, quantity: 0, sourceCount: 0 });
+        const grouped = map.get(key);
+        grouped.quantity += (+item.quantity || 0);
+        grouped.sourceCount += 1;
+      });
+      return [...map.values()];
+    }
+    function parseBlackIronCommand(raw){
+      let text = String(raw || '').toLowerCase().trim();
+      if (!text) throw new Error('Type a fitting command first.');
+      text = text.replace(/^add\s+/, '').replace(/×/g, ' x ').replace(/[“”]/g, '"');
+      [
+        ['three eighths','3/8'],['three eighth','3/8'],['one half','1/2'],['half','1/2'],
+        ['three quarters','3/4'],['three quarter','3/4'],['one and a quarter','1 1/4'],
+        ['one and a half','1 1/2'],['two and a half','2 1/2']
+      ].forEach(([a,b]) => text = text.replaceAll(a, b));
+      text = text.replace(/inches|inch/g,'').replace(/\s+/g,' ').trim();
+
+      let quantity = 1;
+      let m = text.match(/(?:qty|quantity)\s*(\d+)/);
+      if (m) quantity = parseInt(m[1], 10);
+      if (!m) {
+        m = text.match(/^(\d+)\s+(?=(?:3\/8|1\/2|3\/4|1|1 1\/4|1 1\/2|2|2 1\/2))/);
+        if (m) quantity = parseInt(m[1], 10);
+      }
+      if (!m) {
+        m = text.match(/x\s*(\d+)$/);
+        if (m) quantity = parseInt(m[1], 10);
+      }
+
+      const fittingDefs = [
+        ['90 degree elbow','90 degree elbow'],['90 elbow','90 degree elbow'],['elbow 90','90 degree elbow'],
+        ['45 degree elbow','45 degree elbow'],['45 elbow','45 degree elbow'],['tee','Tee'],['reducer','Reducer'],
+        ['reducing coupling','Reducer'],['nipple','Nipple'],['union','Union'],['shut off','Shut-off'],['shut-off','Shut-off'],
+        ['cap','Cap'],['plug','Plug'],['coupling','Coupling'],['bushing','Bushing'],['flex connector','Flexconnector'],
+        ['flexconnector','Flexconnector'],['gastiite','Gastiite'],['paint','Paint'],['stand off long','Stand Off (Long)'],
+        ['stand off short','Stand Off (Short)'],['pipe','Pipe']
+      ];
+      let fittingType = '';
+      for (const [needle, canonical] of fittingDefs) {
+        if (text.includes(needle)) { fittingType = canonical; break; }
+      }
+      if (!fittingType) throw new Error('Could not find the fitting type.');
+
+      const sizes = (text.match(/(?:2 1\/2|1 1\/2|1 1\/4|3\/4|1\/2|3\/8|\b2\b|\b1\b)/g) || []).map(s => s.trim());
+      let odSize = sizes[0] || els.od.value;
+      let sizeDetail = '';
+
+      if (fittingType === 'Reducer') {
+        if (sizes.length < 2) throw new Error('Reducer quick add needs two sizes, like 1 x 3/4 reducer.');
+        odSize = sizes[0];
+        sizeDetail = `Reduced to ${sizes[1]}"`;
+      } else if (fittingType === 'Nipple') {
+        const nm = text.match(/(?:x|by|length)\s*(1 1\/2|2 1\/2|3 1\/2|4 1\/2|5 1\/2|1 1\/4|2|3|4|5|6|7|8|9|10|12|18|24)\b/);
+        const fallbackMatches = text.match(/\b(1 1\/2|2 1\/2|3 1\/2|4 1\/2|5 1\/2|1 1\/4|2|3|4|5|6|7|8|9|10|12|18|24)\b/g) || [];
+        const length = nm ? nm[1] : fallbackMatches[1];
+        if (!length) throw new Error('Nipple quick add needs a length, like 3/4 x 6 nipple.');
+        sizeDetail = `${length}"`;
+      } else if (fittingType === 'Tee') {
+        if (sizes.length >= 3) sizeDetail = `${sizes[0]}" x ${sizes[1]}" x ${sizes[2]}"`;
+      } else if (fittingType === 'Pipe') {
+        const lm = text.match(/(?:x|length)\s*(\d+(?:\.\d+)?)\b/) || text.match(/\b(\d+(?:\.\d+)?)\s*(?:ft|foot|feet)\b/);
+        if (!lm) throw new Error('Pipe quick add needs a length, like 3/4 pipe x 8.');
+        sizeDetail = `Cut & Threaded (${formatInches(lm[1])} ft)`;
+      }
+
+      return { fittingType, odSize, sizeDetail, quantity };
+    }
+    function addCutPipe(){
+      const face = parseFloat(els.faceLength.value || '0');
+      const takeout = parseFloat(els.takeoutEachEnd.value || '0');
+      const quantity = Math.max(1, parseInt(els.cutQty.value || '1', 10));
+      if (!(face > 0)) return alert('Enter a face-to-face length.');
+      const cut = face - (takeout * 2);
+      if (!(cut > 0)) return alert('Cut length must be greater than zero.');
+      addItem({
+        fittingType: 'Pipe',
+        odSize: els.cutPipeSize.value,
+        sizeDetail: `Cut & Threaded (${formatInches(cut)}\" cut length from ${formatInches(face)}\" face-to-face)`,
+        quantity
+      });
+    }
+    function addItem(prefill){
+      try {
+        if (!state.selectedFitting) throw new Error('Choose a fitting type first.');
+        const quantity = Math.max(1, parseInt((prefill && prefill.quantity) || els.qty.value || '1', 10));
+        const item = {
+          id: 'bi-' + Date.now() + '-' + Math.random().toString(36).slice(2,8),
+          fittingType: (prefill && prefill.fittingType) || state.selectedFitting,
+          odSize: (prefill && prefill.odSize) || els.od.value,
+          sizeDetail: (prefill && 'sizeDetail' in prefill) ? prefill.sizeDetail : buildSizeDetail(),
+          quantity
+        };
+        state.items.unshift(item);
+        saveHistory(els.jobName.value.trim());
+        saveState();
+        renderList();
+        els.qty.value = 1;
+      } catch(err) {
+        alert(err.message || 'Could not add item.');
+      }
+    }
+    function renderList(){
+      els.itemCount.textContent = state.items.length;
+      els.totalQty.textContent = state.items.reduce((n, item) => n + (+item.quantity || 0), 0);
+      const groupedItems = getGroupedItems();
+      if (!groupedItems.length) {
+        els.groupedList.innerHTML = '<div class="bi-card"><div class="bi-card-main">No grouped items yet.</div></div>';
+        els.list.innerHTML = '<div class="bi-card"><div class="bi-card-main">No parts added yet.</div></div>';
+        return;
+      }
+      els.groupedList.innerHTML = groupedItems.map(item => `
+        <div class="bi-card">
+          <div class="bi-card-main">
+            <span class="bi-title">${esc(buildDisplay(item))}</span>
+            <div class="bi-meta">Invoice text: ${esc(buildInvoiceDescription(item))}${item.sourceCount > 1 ? ` · grouped from ${item.sourceCount} entries` : ''}</div>
+          </div>
+        </div>
+      `).join('');
+      els.list.innerHTML = state.items.map((item, index) => `
+        <div class="bi-card" data-index="${index}">
+          <div class="bi-card-main">
+            <span class="bi-title">${esc(buildDisplay(item))}</span>
+            <div class="bi-meta">Invoice text: ${esc(buildInvoiceDescription(item))}</div>
+          </div>
+          <div class="bi-card-actions">
+            <button type="button" class="mini-btn bi-dup">Duplicate</button>
+            <button type="button" class="mini-btn bi-edit">Edit</button>
+            <button type="button" class="mini-btn bi-del" style="background:#dc3545;">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    function editItem(index){
+      const item = state.items[index];
+      if (!item) return;
+      const qty = prompt('Quantity:', item.quantity);
+      if (qty === null) return;
+      const parsedQty = parseInt(qty, 10);
+      if (!parsedQty || parsedQty < 1) return alert('Enter a valid quantity.');
+      item.quantity = parsedQty;
+      const custom = prompt('Size detail / custom text:', item.sizeDetail || '');
+      if (custom === null) return;
+      item.sizeDetail = custom.trim();
+      saveState(); renderList();
+    }
+    function deleteItem(index){ state.items.splice(index,1); saveState(); renderList(); }
+    function duplicateItem(index){ const item = state.items[index]; if (!item) return; addItem(Object.assign({}, item, {id:undefined})); }
+    function clearList(){ if (!state.items.length) return; if (!confirm('Clear the whole Black Iron list?')) return; state.items=[]; saveState(); renderList(); }
+    function sendToInvoice(){
+      const groupedItems = getGroupedItems();
+      if (!groupedItems.length) return alert('No Black Iron items to send.');
+      const tbody = document.querySelector('#itemsTable tbody');
+      groupedItems.forEach(item => {
+        const row = createItemRow({ desc: buildInvoiceDescription(item), qty: item.quantity, unit: item.fittingType === 'Pipe' ? 'ft' : 'ea' });
+        tbody.appendChild(row);
+      });
+      if (!document.getElementById('invoiceId').value.trim() && els.jobName.value.trim()) {
+        document.getElementById('invoiceId').value = els.jobName.value.trim().replace(/\s+/g,'-');
+      }
+      if (!document.getElementById('clientName').value.trim() && els.jobName.value.trim()) {
+        document.getElementById('clientName').value = els.jobName.value.trim();
+      }
+      setActiveTab('invoiceTab');
+      updateInvoiceSummary();
+      alert('Grouped Black Iron items were added to the invoice materials table.');
+    }
+    function exportCsv(){
+      if (!state.items.length) return alert('No items to export.');
+      const rows = [['Fitting Type','OD Size','Size Details','Quantity']].concat(state.items.map(item => [item.fittingType, item.odSize, item.sizeDetail || '', item.quantity]));
+      const content = '﻿' + rows.map(r => r.map(v => {
+        const s = String(v ?? '');
+        return /[\",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+      }).join(',')).join('\n');
+      const blob = new Blob([content], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = `${(els.jobName.value.trim() || 'black_iron_parts').replace(/[^a-z0-9-_]+/gi,'_')}.csv`;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+    function selectFitting(name){ state.selectedFitting = name; renderFitButtons(); updateConditionalFields(); saveState(); }
+    function initVoice(){
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { els.voice.disabled = true; els.voice.title = 'Voice input is not supported in this browser'; return; }
+      recognition = new SR();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognition.onstart = () => { els.voiceBox.style.display='block'; els.voiceBox.textContent='Listening… Say something like: add 3/4 tee quantity 2'; };
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results).map(r => r[0].transcript).join(' ');
+        els.voiceBox.textContent = transcript;
+        if (event.results[0].isFinal) handleVoiceTranscript(transcript.toLowerCase());
+      };
+      recognition.onend = () => { setTimeout(() => { els.voiceBox.style.display='none'; }, 1200); };
+      recognition.onerror = (e) => { els.voiceBox.style.display='block'; els.voiceBox.textContent = 'Voice error: ' + e.error; };
+      els.voice.addEventListener('click', () => recognition.start());
+    }
+    function handleVoiceTranscript(text){
+      try {
+        const parsed = parseBlackIronCommand(text);
+        if (parsed.fittingType && parsed.fittingType !== 'Pipe') selectFitting(parsed.fittingType);
+        addItem(parsed);
+        els.voiceBox.textContent = 'Added: ' + buildDisplay(parsed);
+      } catch(err) {
+        els.voiceBox.textContent = 'Could not parse: ' + text;
+      }
+    }
+
+    els.fitGrid.addEventListener('click', e => {
+      const btn = e.target.closest('.bi-fit-btn');
+      if (btn) selectFitting(btn.dataset.fit);
+    });
+    els.add.addEventListener('click', () => addItem());
+    els.quickAddBtn.addEventListener('click', () => {
+      try {
+        const parsed = parseBlackIronCommand(els.quickAdd.value);
+        if (parsed.fittingType && parsed.fittingType !== 'Pipe') selectFitting(parsed.fittingType);
+        addItem(parsed);
+        els.quickAdd.value = '';
+      } catch(err) {
+        alert(err.message || 'Could not parse quick add entry.');
+      }
+    });
+    els.quickAdd.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        els.quickAddBtn.click();
+      }
+    });
+    els.send.addEventListener('click', sendToInvoice);
+    els.export.addEventListener('click', exportCsv);
+    els.clear.addEventListener('click', clearList);
+    els.calcCut.addEventListener('click', addCutPipe);
+    els.jobName.addEventListener('change', () => { saveHistory(els.jobName.value); saveState(); });
+    els.jobName.addEventListener('input', saveState);
+    els.od.addEventListener('change', () => { els.cutPipeSize.value = els.od.value; saveState(); });
+    els.qty.addEventListener('focus', () => els.qty.select());
+    els.list.addEventListener('click', e => {
+      const card = e.target.closest('.bi-card');
+      if (!card) return;
+      const index = +card.dataset.index;
+      if (e.target.closest('.bi-del')) deleteItem(index);
+      else if (e.target.closest('.bi-edit')) editItem(index);
+      else if (e.target.closest('.bi-dup')) duplicateItem(index);
+    });
+    const originalSetActiveTab = window.setActiveTab;
+    window.setActiveTab = function(tabId){
+      originalSetActiveTab(tabId);
+      if (tabId === 'blackIronTab') {
+        if (!els.jobName.value.trim()) {
+          const inv = document.getElementById('invoiceId').value.trim();
+          const client = document.getElementById('clientName').value.trim();
+          els.jobName.value = inv || client || els.jobName.value;
+          saveState();
+        }
+      }
+    };
+    loadState();
+    initVoice();
+  })();
+  </script>
+
 </body>
 </html>
