@@ -150,6 +150,20 @@
 
   
 
+
+    /* Black Iron calculator */
+    .bi-calc-toolbar {display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.75rem;align-items:end;}
+    .bi-calc-list {list-style:none;padding:0;margin:1rem 0 0 0;display:grid;gap:.65rem;}
+    .bi-calc-list li {background:#242424;border:1px solid rgba(255,69,0,.28);border-radius:10px;padding:.85rem;}
+    .bi-calc-sub {margin-left:1rem;margin-top:.45rem;}
+    .bi-calc-results {margin-top:1rem;padding:1rem;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,69,0,.25);}
+    .bi-calc-results h3 {margin:.1rem 0 .6rem 0;color:#ffb184;}
+    .bi-calc-results p {margin:.35rem 0;}
+    .bi-calc-error {color:#ff9f9f;}
+    #biCanvasContainer {width:100%;overflow:hidden;position:relative;margin-top:1rem;}
+    #biPipeCanvas {width:100%;max-width:100%;border:1px solid rgba(255,69,0,.35);border-radius:10px;background:#fff;cursor:grab;}
+    #biPipeCanvas.dragging {cursor:grabbing;}
+
     /* Black Iron tab */
     #blackIronTab .bi-wrap {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin:0 0 1.5rem 0;}
     .bi-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;}
@@ -187,6 +201,7 @@
   <div class="tabs">
     <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
     <button type="button" class="tab-btn" data-tab="invoiceTab"><i class="fas fa-file-invoice-dollar"></i> Invoice</button>
+    <button type="button" class="tab-btn" data-tab="blackIronCalcTab"><i class="fas fa-calculator"></i> Pipe Calculator</button>
     <button type="button" class="tab-btn" data-tab="blackIronTab"><i class="fas fa-wrench"></i> Black Iron</button>
   </div>
 
@@ -349,8 +364,75 @@
 
   
 
-  <div id="blackIronTab" class="tab-panel">
-    <div class="bi-wrap">
+  <div id="blackIronCalcTab" class="tab-panel">
+<div class="bi-wrap">
+      <h2>Black Iron Length Calculator</h2>
+      <div class="bi-calc-toolbar">
+        <label>Pipe Size:
+          <select id="biCalcPipeSize">
+            <option value="0.5">1/2"</option>
+            <option value="0.75">3/4"</option>
+            <option value="1">1"</option>
+            <option value="1.25">1-1/4"</option>
+          </select>
+        </label>
+        <label>Assembled Length (in):
+          <input type="number" id="biCalcMeasurement" step="0.01" min="0" class="select-on-focus">
+        </label>
+        <label>Starting Fitting:
+          <select id="biCalcStartFitting">
+            <option value="none">None</option>
+            <option value="elbow">90° Elbow</option>
+            <option value="tee">Tee</option>
+            <option value="coupling">Coupling</option>
+            <option value="shutoff">Shut-Off Valve</option>
+          </select>
+        </label>
+        <label>Ending Fitting:
+          <select id="biCalcEndFitting">
+            <option value="none">None</option>
+            <option value="elbow">90° Elbow</option>
+            <option value="tee">Tee</option>
+            <option value="coupling">Coupling</option>
+            <option value="shutoff">Shut-Off Valve</option>
+          </select>
+        </label>
+        <label>Mid-Segment Shut-Off (in):
+          <input type="number" id="biCalcShutoffPosition" step="0.01" min="0" placeholder="Optional" class="select-on-focus">
+        </label>
+        <label style="display:flex;align-items:center;gap:.6rem;margin-top:1.6rem;">
+          <input type="checkbox" id="biCalcAutoTransfer" checked style="width:auto;">
+          Auto-add fittings to parts list
+        </label>
+      </div>
+      <div class="bi-actions">
+        <button type="button" id="biCalcAddLength">Add Length</button>
+        <button type="button" id="biCalcTotal">Calculate Total</button>
+        <button type="button" id="biSendToParts" style="background:#28a745;">Send to Black Iron</button>
+        <button type="button" id="biCalcReset" style="background:#6c757d;">Reset</button>
+      </div>
+      <small class="bi-muted">Uses fitting takeout/engagement to suggest the closest nipple sizes, and can push those fittings straight into your Black Iron parts list.</small>
+
+      <ul id="biCalcLengthList" class="bi-calc-list"></ul>
+
+      <div id="biCanvasContainer">
+        <canvas id="biPipeCanvas" width="900" height="320"></canvas>
+        <div class="bi-actions" style="margin-top:.75rem;">
+          <button type="button" id="biCanvasZoomIn">Zoom In</button>
+          <button type="button" id="biCanvasZoomOut">Zoom Out</button>
+          <button type="button" id="biCanvasResetView" style="background:#6c757d;">Reset View</button>
+        </div>
+      </div>
+
+      <div id="biCalcResults" class="bi-calc-results"></div>
+    </div>
+  </div>
+
+<div id="blackIronTab" class="tab-panel">
+    
+    
+
+<div class="bi-wrap">
       <h2>Black Iron Parts Builder</h2>
       <div class="bi-grid">
         <label>Job / Parts List Name:
@@ -2186,10 +2268,37 @@
       itemCount: document.getElementById('biItemCount'),
       totalQty: document.getElementById('biTotalQty'),
       lastSize: document.getElementById('biLastSize'),
-      voiceBox: document.getElementById('biVoiceBox')
+      voiceBox: document.getElementById('biVoiceBox'),
+      calcPipeSize: document.getElementById('biCalcPipeSize'),
+      calcMeasurement: document.getElementById('biCalcMeasurement'),
+      calcStartFitting: document.getElementById('biCalcStartFitting'),
+      calcEndFitting: document.getElementById('biCalcEndFitting'),
+      calcShutoffPosition: document.getElementById('biCalcShutoffPosition'),
+      calcAutoTransfer: document.getElementById('biCalcAutoTransfer'),
+      calcAdd: document.getElementById('biCalcAddLength'),
+      calcTotal: document.getElementById('biCalcTotal'),
+      calcReset: document.getElementById('biCalcReset'),
+      calcLengthList: document.getElementById('biCalcLengthList'),
+      calcResults: document.getElementById('biCalcResults'),
+      pipeCanvas: document.getElementById('biPipeCanvas'),
+      canvasZoomIn: document.getElementById('biCanvasZoomIn'),
+      canvasZoomOut: document.getElementById('biCanvasZoomOut'),
+      canvasResetView: document.getElementById('biCanvasResetView')
     };
-    let state = { selectedFitting:'', items:[], lastOd:'1/2', jobName:'' };
+
+    let state = { selectedFitting:'', items:[], lastOd:'1/2', jobName:'', calcEntries:[], calcPreviousFitting:null, calcZoom:1, calcOffsetX:0, calcOffsetY:0 };
     let recognition = null;
+    const calcFittingData = {
+      0.5: { elbow: { engagement: 0.64, body: 1.2 }, tee: { engagement: 0.64, body: 1.25 }, coupling: { engagement: 0.64, body: 1.12 }, shutoff: { engagement: 0.64, body: 2.0 } },
+      0.75: { elbow: { engagement: 0.81, body: 1.4 }, tee: { engagement: 0.81, body: 2.0 }, coupling: { engagement: 0.67, body: 1.2 }, shutoff: { engagement: 0.81, body: 2.5 } },
+      1: { elbow: { engagement: 0.92, body: 1.6 }, tee: { engagement: 0.92, body: 2.2 }, coupling: { engagement: 0.78, body: 1.4 }, shutoff: { engagement: 0.92, body: 3.0 } },
+      1.25: { elbow: { engagement: 1.05, body: 1.8 }, tee: { engagement: 1.05, body: 2.4 }, coupling: { engagement: 0.89, body: 1.6 }, shutoff: { engagement: 1.05, body: 3.5 } }
+    };
+    const calcNippleSizes = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 10, 12, 18, 24, 36, 48];
+    let calcDragging = false;
+    let calcDragStartX = 0;
+    let calcDragStartY = 0;
+
 
     function esc(s){ return String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
     function saveState(){
@@ -2212,6 +2321,9 @@
       renderList();
       renderJobHistory();
       els.lastSize.textContent = state.lastOd || '—';
+      if (els.calcPipeSize && !['0.5','0.75','1','1.25'].includes(els.calcPipeSize.value)) els.calcPipeSize.value = '0.5';
+      calcUpdateLengthList();
+      calcDrawLayout();
     }
     function getHistory(){
       try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) { return []; }
@@ -2290,6 +2402,322 @@
       });
       return [...map.values()];
     }
+
+    function calcGcd(a,b){ while (b) [a,b] = [b, a % b]; return a; }
+    function calcToFraction(inches){
+      const value = Number(inches || 0);
+      const sixteenths = Math.round(value * 16);
+      const whole = Math.floor(sixteenths / 16);
+      let numerator = Math.abs(sixteenths % 16);
+      if (numerator === 0) return `${whole}`;
+      const divisor = calcGcd(numerator, 16);
+      return whole ? `${whole} ${numerator / divisor}/${16 / divisor}` : `${numerator / divisor}/${16 / divisor}`;
+    }
+    function calcToFeetAndFraction(inches){
+      const value = Number(inches || 0);
+      const feet = Math.floor(value / 12);
+      const remaining = value % 12;
+      return `${feet} ft ${calcToFraction(remaining)} in`;
+    }
+    function calcGetNippleOptions(cutLength, startingEngagement, endingEngagement, endingAdjustment){
+      const sorted = calcNippleSizes
+        .map(size => ({ size, diff: Math.abs(size - cutLength) }))
+        .sort((a,b) => a.diff - b.diff)
+        .slice(0, 3)
+        .map(item => item.size);
+      return sorted.map(nipple => ({
+        nipple,
+        assembled: nipple - startingEngagement - endingEngagement + endingAdjustment,
+        isClosest: nipple === sorted[0]
+      }));
+    }
+    function calcAddTransferItem(fittingType, odSize, sizeDetail, quantity){
+      addItem({ fittingType, odSize, sizeDetail, quantity });
+    }
+    function calcUpdateLengthList(){
+      if (!els.calcLengthList) return;
+      els.calcLengthList.innerHTML = '';
+      state.calcEntries.forEach((entry, index) => {
+        const sizeText = `${entry.pipeSize}"`;
+        if (entry.segments) {
+          const li = document.createElement('li');
+          li.innerHTML = `<b>Length ${index + 1}:</b> ${calcToFraction(entry.assembledLength)} in (${sizeText} pipe) with mid-segment shut-off`;
+          els.calcLengthList.appendChild(li);
+          entry.segments.forEach((seg, subIndex) => {
+            const sub = document.createElement('li');
+            sub.className = 'bi-calc-sub';
+            const startText = seg.startingFitting !== 'none' ? `from ${seg.startingFitting} (-${calcToFraction(seg.startingEngagement)} in)` : '';
+            const endText = seg.endingFittingType !== 'none' ? ` to ${seg.endingFittingType} (${seg.endingFittingAdjustment >= 0 ? '+' : ''}${calcToFraction(Math.abs(seg.endingFittingAdjustment))} in)` : '';
+            const nippleText = seg.nippleOptions.map(opt => opt.isClosest ? `<b>${opt.nipple} → ${calcToFraction(opt.assembled)}</b>` : `${opt.nipple} → ${calcToFraction(opt.assembled)}`).join(', ');
+            sub.innerHTML = `Segment ${subIndex + 1}: ${calcToFraction(seg.assembledLength)} in ${startText}${endText}<br>Cut Length: ${calcToFraction(seg.cutLength)} in<br>Nipple Options: ${nippleText}`;
+            els.calcLengthList.appendChild(sub);
+          });
+        } else {
+          const li = document.createElement('li');
+          const startText = entry.startingFitting !== 'none' ? `from ${entry.startingFitting} (-${calcToFraction(entry.startingEngagement)} in)` : '';
+          const endText = entry.endingFittingType !== 'none' ? ` to ${entry.endingFittingType} (${entry.endingFittingAdjustment >= 0 ? '+' : ''}${calcToFraction(Math.abs(entry.endingFittingAdjustment))} in)` : '';
+          const nippleText = entry.nippleOptions.map(opt => opt.isClosest ? `<b>${opt.nipple} → ${calcToFraction(opt.assembled)}</b>` : `${opt.nipple} → ${calcToFraction(opt.assembled)}`).join(', ');
+          li.innerHTML = `<b>Length ${index + 1}:</b> ${calcToFraction(entry.assembledLength)} in (${sizeText} pipe) ${startText}${endText}<br>Cut Length: ${calcToFraction(entry.cutLength)} in<br>Nipple Options: ${nippleText}`;
+          els.calcLengthList.appendChild(li);
+        }
+      });
+    }
+    function calcCalculateTotal(){
+      if (!state.calcEntries.length) {
+        els.calcResults.innerHTML = '<div class="bi-calc-error">No measurements added yet.</div>';
+        return;
+      }
+      let totalAssembledLength = 0, totalCutLength = 0, totalStartingEngagement = 0, totalEndingAdjustment = 0;
+      state.calcEntries.forEach(entry => {
+        if (entry.segments) {
+          entry.segments.forEach(seg => {
+            totalAssembledLength += seg.assembledLength;
+            totalCutLength += seg.cutLength;
+            totalStartingEngagement += seg.startingEngagement;
+            totalEndingAdjustment += seg.endingFittingAdjustment;
+          });
+        } else {
+          totalAssembledLength += entry.assembledLength;
+          totalCutLength += entry.cutLength;
+          totalStartingEngagement += entry.startingEngagement;
+          totalEndingAdjustment += entry.endingFittingAdjustment;
+        }
+      });
+      els.calcResults.innerHTML = `
+        <h3>Results</h3>
+        <p>Base Length Total: ${calcToFeetAndFraction(totalAssembledLength)}</p>
+        <p>Cut Length Total: ${calcToFeetAndFraction(totalCutLength)}</p>
+        <p>Total Starting Engagement: ${calcToFraction(totalStartingEngagement)} in</p>
+        <p>Total Ending Adjustment: ${calcToFraction(totalEndingAdjustment)} in</p>
+      `;
+    }
+    function calcTurnDirection(direction){
+      if (direction === 'right') return 'down';
+      if (direction === 'down') return 'left';
+      if (direction === 'left') return 'up';
+      return 'right';
+    }
+    function calcDrawLayout(){
+      const canvas = els.pipeCanvas;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!state.calcEntries.length) return;
+
+      let maxX = 0, maxY = 0, minY = 0;
+      let segments = [];
+      state.calcEntries.forEach(entry => { segments = segments.concat(entry.segments || [entry]); });
+
+      let x = 20, y = canvas.height / 2, direction = 'right';
+      segments.forEach(seg => {
+        const length = seg.assembledLength;
+        if (direction === 'right') maxX = Math.max(maxX, x + length);
+        if (direction === 'left') maxX = Math.max(maxX, x);
+        if (direction === 'down') maxY = Math.max(maxY, y + length);
+        if (direction === 'up') minY = Math.min(minY, y - length);
+        if (seg.endingFittingType === 'elbow') direction = calcTurnDirection(direction);
+      });
+
+      const spreadX = Math.max(maxX, 50);
+      const spreadY = Math.max(maxY - minY, 50);
+      const baseScale = Math.min((canvas.width - 40) / spreadX, (canvas.height - 40) / spreadY);
+
+      ctx.save();
+      ctx.translate(state.calcOffsetX || 0, state.calcOffsetY || 0);
+      ctx.scale(state.calcZoom || 1, state.calcZoom || 1);
+
+      x = 20;
+      y = canvas.height / (2 * (state.calcZoom || 1)) - (minY < 0 ? minY * baseScale : 0);
+      direction = 'right';
+
+      ctx.beginPath();
+      ctx.lineWidth = 2 / (state.calcZoom || 1);
+      ctx.font = `${10 / (state.calcZoom || 1)}px Arial`;
+      ctx.strokeStyle = '#c2410c';
+      ctx.fillStyle = '#111';
+
+      segments.forEach(seg => {
+        const len = seg.assembledLength * baseScale;
+        const startX = x, startY = y;
+        if (direction === 'right') x += len;
+        else if (direction === 'left') x -= len;
+        else if (direction === 'down') y += len;
+        else if (direction === 'up') y -= len;
+
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(x, y);
+
+        const midX = (startX + x) / 2;
+        const midY = (startY + y) / 2;
+        ctx.fillText(`${calcToFraction(seg.assembledLength)}"`, midX + 4 / (state.calcZoom || 1), midY - 6 / (state.calcZoom || 1));
+
+        if (seg.endingFittingType === 'elbow') {
+          direction = calcTurnDirection(direction);
+        }
+      });
+
+      ctx.stroke();
+      ctx.restore();
+    }
+    function calcResetView(){
+      state.calcZoom = 1;
+      state.calcOffsetX = 0;
+      state.calcOffsetY = 0;
+      saveState();
+      calcDrawLayout();
+    }
+    function calcZoom(factor){
+      state.calcZoom = Math.max(0.4, Math.min(3, (state.calcZoom || 1) * factor));
+      saveState();
+      calcDrawLayout();
+    }
+    function calcResetCalculator(){
+      state.calcEntries = [];
+      state.calcPreviousFitting = null;
+      els.calcMeasurement.value = '';
+      els.calcShutoffPosition.value = '';
+      els.calcStartFitting.value = 'none';
+      els.calcEndFitting.value = 'none';
+      els.calcResults.innerHTML = '';
+      calcResetView();
+      saveState();
+      calcUpdateLengthList();
+      calcDrawLayout();
+    }
+    function calcAddMeasurement(){
+      const pipeSize = parseFloat(els.calcPipeSize.value);
+      const assembledLength = parseFloat(els.calcMeasurement.value);
+      const startingFittingType = els.calcStartFitting.value;
+      const endingFittingType = els.calcEndFitting.value;
+      const shutoffPosition = parseFloat(els.calcShutoffPosition.value) || 0;
+      const autoTransfer = !!els.calcAutoTransfer.checked;
+      const odSizeMap = { 0.5: '1/2', 0.75: '3/4', 1: '1', 1.25: '1 1/4' };
+      const odSize = odSizeMap[pipeSize];
+      const fittingMap = { elbow: '90 degree elbow', tee: 'Tee', coupling: 'Coupling', shutoff: 'Shut-off' };
+
+      if (!(assembledLength > 0)) {
+        els.calcResults.innerHTML = '<div class="bi-calc-error">Please enter a valid positive length.</div>';
+        return;
+      }
+      if (shutoffPosition && (shutoffPosition <= 0 || shutoffPosition >= assembledLength)) {
+        els.calcResults.innerHTML = '<div class="bi-calc-error">Shut-off position must be between 0 and the assembled length.</div>';
+        return;
+      }
+
+      const startingEngagement = startingFittingType !== 'none'
+        ? calcFittingData[pipeSize][startingFittingType].engagement
+        : (state.calcEntries.length === 0 ? calcFittingData[pipeSize].elbow.engagement : state.calcPreviousFitting ? calcFittingData[pipeSize][state.calcPreviousFitting].engagement : 0);
+
+      let endingFittingAdjustment = endingFittingType !== 'none' ? calcFittingData[pipeSize][endingFittingType].body - calcFittingData[pipeSize][endingFittingType].engagement : 0;
+      let endingEngagement = endingFittingType !== 'none' ? calcFittingData[pipeSize][endingFittingType].engagement : 0;
+
+      if (shutoffPosition) {
+        const shutoffFitting = calcFittingData[pipeSize].shutoff;
+        const shutoffAdjustment = shutoffFitting.body - shutoffFitting.engagement;
+
+        const firstAssembled = shutoffPosition;
+        const firstBase = firstAssembled + startingEngagement - shutoffAdjustment;
+        const firstCut = firstBase + shutoffFitting.engagement;
+        const firstNippleOptions = calcGetNippleOptions(firstCut, startingEngagement, shutoffFitting.engagement, shutoffAdjustment);
+
+        const secondAssembled = assembledLength - shutoffPosition;
+        const secondBase = secondAssembled + shutoffFitting.engagement - endingFittingAdjustment;
+        const secondCut = secondBase + endingEngagement;
+        const secondNippleOptions = calcGetNippleOptions(secondCut, shutoffFitting.engagement, endingEngagement, endingFittingAdjustment);
+
+        state.calcEntries.push({
+          pipeSize, assembledLength,
+          segments: [
+            {
+              assembledLength: firstAssembled,
+              baseLength: firstBase,
+              cutLength: firstCut,
+              nippleOptions: firstNippleOptions,
+              startingFitting: startingFittingType !== 'none' ? startingFittingType : (state.calcEntries.length === 0 ? 'elbow' : state.calcPreviousFitting || 'none'),
+              endingFittingType: 'shutoff',
+              startingEngagement,
+              endingFittingAdjustment: shutoffAdjustment,
+              endingEngagement: shutoffFitting.engagement
+            },
+            {
+              assembledLength: secondAssembled,
+              baseLength: secondBase,
+              cutLength: secondCut,
+              nippleOptions: secondNippleOptions,
+              startingFitting: 'shutoff',
+              endingFittingType,
+              startingEngagement: shutoffFitting.engagement,
+              endingFittingAdjustment,
+              endingEngagement
+            }
+          ]
+        });
+
+        if (autoTransfer) {
+          if (state.calcEntries.length === 1 && startingFittingType !== 'none') calcAddTransferItem(fittingMap[startingFittingType], odSize, '', 1);
+          calcAddTransferItem('Shut-off', odSize, '', 1);
+          calcAddTransferItem('Nipple', odSize, `${firstNippleOptions[0].nipple}"`, 1);
+          calcAddTransferItem('Nipple', odSize, `${secondNippleOptions[0].nipple}"`, 1);
+          if (endingFittingType !== 'none') calcAddTransferItem(fittingMap[endingFittingType], odSize, '', 1);
+        }
+      } else {
+        const baseLength = assembledLength + startingEngagement - endingFittingAdjustment;
+        const cutLength = baseLength + endingEngagement;
+        const nippleOptions = calcGetNippleOptions(cutLength, startingEngagement, endingEngagement, endingFittingAdjustment);
+
+        state.calcEntries.push({
+          pipeSize, assembledLength, baseLength, cutLength, nippleOptions,
+          startingFitting: startingFittingType !== 'none' ? startingFittingType : (state.calcEntries.length === 0 ? 'elbow' : state.calcPreviousFitting || 'none'),
+          endingFittingType, startingEngagement, endingFittingAdjustment, endingEngagement
+        });
+
+        if (autoTransfer) {
+          if (state.calcEntries.length === 1 && startingFittingType !== 'none') calcAddTransferItem(fittingMap[startingFittingType], odSize, '', 1);
+          calcAddTransferItem('Nipple', odSize, `${nippleOptions[0].nipple}"`, 1);
+          if (endingFittingType !== 'none') calcAddTransferItem(fittingMap[endingFittingType], odSize, '', 1);
+        }
+      }
+
+      if (state.calcPreviousFitting) els.calcStartFitting.value = state.calcPreviousFitting;
+      state.calcPreviousFitting = endingFittingType !== 'none' ? endingFittingType : null;
+
+      saveState();
+      calcUpdateLengthList();
+      calcDrawLayout();
+      els.calcMeasurement.value = '';
+      els.calcShutoffPosition.value = '';
+      els.calcResults.innerHTML = '';
+    }
+    function initCalcCanvas(){
+      const canvas = els.pipeCanvas;
+      if (!canvas) return;
+      canvas.addEventListener('mousedown', e => {
+        calcDragging = true;
+        calcDragStartX = e.clientX - (state.calcOffsetX || 0);
+        calcDragStartY = e.clientY - (state.calcOffsetY || 0);
+        canvas.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', e => {
+        if (!calcDragging) return;
+        state.calcOffsetX = e.clientX - calcDragStartX;
+        state.calcOffsetY = e.clientY - calcDragStartY;
+        calcDrawLayout();
+      });
+      window.addEventListener('mouseup', () => {
+        if (!calcDragging) return;
+        calcDragging = false;
+        canvas.classList.remove('dragging');
+        saveState();
+      });
+      canvas.addEventListener('mouseleave', () => {
+        if (!calcDragging) return;
+        calcDragging = false;
+        canvas.classList.remove('dragging');
+        saveState();
+      });
+    }
+
+
     function parseBlackIronCommand(raw){
       let text = String(raw || '').toLowerCase().trim();
       if (!text) throw new Error('Type a fitting command first.');
@@ -2367,7 +2795,7 @@
     }
     function addItem(prefill){
       try {
-        if (!state.selectedFitting) throw new Error('Choose a fitting type first.');
+        if (!state.selectedFitting && !prefill) throw new Error('Choose a fitting type first.');
         const quantity = Math.max(1, parseInt((prefill && prefill.quantity) || els.qty.value || '1', 10));
         const item = {
           id: 'bi-' + Date.now() + '-' + Math.random().toString(36).slice(2,8),
@@ -2518,6 +2946,14 @@
     els.export.addEventListener('click', exportCsv);
     els.clear.addEventListener('click', clearList);
     els.calcCut.addEventListener('click', addCutPipe);
+    els.calcAdd.addEventListener('click', calcAddMeasurement);
+    els.calcTotal.addEventListener('click', calcCalculateTotal);
+    els.calcReset.addEventListener('click', calcResetCalculator);
+    els.canvasZoomIn.addEventListener('click', () => calcZoom(1.2));
+    els.canvasZoomOut.addEventListener('click', () => calcZoom(0.8));
+    els.canvasResetView.addEventListener('click', calcResetView);
+    els.calcMeasurement.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); calcAddMeasurement(); } });
+    els.calcShutoffPosition.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); calcAddMeasurement(); } });
     els.jobName.addEventListener('change', () => { saveHistory(els.jobName.value); saveState(); });
     els.jobName.addEventListener('input', saveState);
     els.od.addEventListener('change', () => { els.cutPipeSize.value = els.od.value; saveState(); });
@@ -2534,6 +2970,7 @@
     window.setActiveTab = function(tabId){
       originalSetActiveTab(tabId);
       if (tabId === 'blackIronTab') {
+        calcDrawLayout();
         if (!els.jobName.value.trim()) {
           const inv = document.getElementById('invoiceId').value.trim();
           const client = document.getElementById('clientName').value.trim();
@@ -2542,10 +2979,67 @@
         }
       }
     };
+    initCalcCanvas();
     loadState();
     initVoice();
   })();
-  </script>
+  
+document.addEventListener("DOMContentLoaded",function(){
+  const sendBtn=document.getElementById("biSendToParts");
+  if(sendBtn){
+    sendBtn.addEventListener("click",function(){
+      const calcBtn=document.getElementById("biCalcTotal");
+      if(calcBtn){calcBtn.click();}
+      const tabBtn=[...document.querySelectorAll('.tab-btn')].find(b=>b.dataset.tab==="blackIronTab");
+      if(tabBtn){tabBtn.click();}
+      alert("Calculated items sent. Review them in the Black Iron tab.");
+    });
+  }
+});
+
+</script>
+
+
+<script>
+const nipplePriceMap={
+"1/2":{3:2.1,6:2.8,12:4.5},
+"3/4":{3:2.4,6:3.2,12:5.2},
+"1":{3:3.1,6:4.0,12:6.8},
+"1-1/4":{3:4.2,6:5.3,12:8.7},
+"1-1/2":{3:5.1,6:6.5,12:10.4}
+};
+
+function autoGenerateNipples(size,length){
+  let standard=[12,6,3];
+  let result=[];
+  let remaining=length;
+  for(let s of standard){
+    while(remaining>=s){
+      result.push(s);
+      remaining-=s;
+    }
+  }
+  if(remaining>0) result.push(3);
+  return result;
+}
+
+function addNipplesToBlackIron(size,length){
+  let nipples=autoGenerateNipples(size,length);
+  nipples.forEach(n=>{
+     let table=document.querySelector('#blackIronTable tbody');
+     if(!table) return;
+     let row=document.createElement('tr');
+     let price=(nipplePriceMap[size]&&nipplePriceMap[size][n])||0;
+     row.innerHTML=`<td>${size}" x ${n}" Nipple</td><td>1</td><td>${price.toFixed(2)}</td>`;
+     table.appendChild(row);
+  });
+}
+
+document.addEventListener("calculatorSendToBlackIron",function(e){
+   let {size,length}=e.detail||{size:"1",length:12};
+   addNipplesToBlackIron(size,length);
+});
+</script>
 
 </body>
 </html>
