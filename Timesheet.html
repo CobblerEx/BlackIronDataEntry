@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2886,6 +2887,7 @@
 
     let state = { selectedFitting:'', items:[], lastOd:'1/2', jobName:'', calcEntries:[], calcPreviousFitting:null, calcZoom:1, calcOffsetX:0, calcOffsetY:0 };
     let recognition = null;
+    let pendingVoiceParsed = null;
     const calcFittingData = {
       0.5: { elbow: { engagement: 0.64, body: 1.2 }, tee: { engagement: 0.64, body: 1.25 }, coupling: { engagement: 0.64, body: 1.12 }, shutoff: { engagement: 0.64, body: 2.0 } },
       0.75: { elbow: { engagement: 0.81, body: 1.4 }, tee: { engagement: 0.81, body: 2.0 }, coupling: { engagement: 0.67, body: 1.2 }, shutoff: { engagement: 0.81, body: 2.5 } },
@@ -3391,7 +3393,6 @@
         ['three quarters','3/4'],['three quarter','3/4'],['one and a quarter','1 1/4'],
         ['one and a half','1 1/2'],['two and a half','2 1/2'],
         ['90 degree ell','90 degree elbow'],['45 degree ell','45 degree elbow'],
-        [' ell ',' elbow '],[' ell$',' elbow'],['^ell ','elbow '],
         [' shutoff ',' shut off '],[' shut off valve ',' shut off '],
         [' gas tight ',' gastiite '],[' gas tite ',' gastiite '],[' gas tight',' gastiite'],[' gas tite',' gastiite'],
         [' stand off long',' stand off long'],[' stand off short',' stand off short']
@@ -3402,17 +3403,24 @@
           text = text.replaceAll(a, b);
         }
       });
+
       text = ` ${text} `;
-      text = text
-        .replace(/tea/g, 'tee')
-        .replace(/tee's/g, 'tees')
-        .replace(/(?<=(?:3\/8|1\/2|3\/4|1|1 1\/4|1 1\/2|2|2 1\/2)\s)t/g, 'tee')
-        .replace(/t(?=\s+(?:3\/8|1\/2|3\/4|1|1 1\/4|1 1\/2|2|2 1\/2))/g, 'tee')
-        .replace(/t/g, 'tee')
-        .replace(/ts/g, 'tees')
-        .replace(/90(?=\s*(?:deg|degree)?\s*(?:elbow|ell))/g, '90')
-        .replace(/45(?=\s*(?:deg|degree)?\s*(?:elbow|ell))/g, '45');
-      text = text.replace(/inches|inch/g,'').replace(/\s+/g,' ').trim();
+      const voiceFixes = [
+        [/\btea\b/g, 'tee'],
+        [/\btee's\b/g, 'tees'],
+        [/\bts\b/g, 'tees'],
+        [/\bt\b/g, 'tee'],
+        [/\bell\b/g, 'elbow'],
+        [/\bl\b/g, 'elbow'],
+        [/\bninety\b/g, '90'],
+        [/\bforty[ -]?five\b/g, '45']
+      ];
+      voiceFixes.forEach(([pattern, replacement]) => {
+        text = text.replace(pattern, replacement);
+      });
+
+      text = text.replace(/\binches?\b/g,'');
+      text = text.replace(/\s+/g,' ').trim();
       return text;
     }
 
@@ -3584,6 +3592,30 @@
       document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     }
     function selectFitting(name){ state.selectedFitting = name; renderFitButtons(); updateConditionalFields(); saveState(); }
+    function showVoicePreview(parsed, originalText){
+      pendingVoiceParsed = parsed;
+      els.voiceBox.style.display = 'block';
+      els.voiceBox.innerHTML = `
+        <div><strong>Recognized:</strong> ${esc(buildDisplay(parsed))}</div>
+        <div class="bi-muted" style="margin-top:.35rem;">Heard: ${esc(originalText)}</div>
+        <div style="margin-top:.65rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+          <button type="button" id="voiceConfirmAdd" class="mini-btn">Add</button>
+          <button type="button" id="voiceConfirmCancel" class="mini-btn" style="background:#6c757d;">Cancel</button>
+        </div>`;
+    }
+
+    function clearVoicePreview(message=''){
+      pendingVoiceParsed = null;
+      if (message) {
+        els.voiceBox.style.display = 'block';
+        els.voiceBox.textContent = message;
+        setTimeout(() => { els.voiceBox.style.display='none'; }, 1400);
+      } else {
+        els.voiceBox.style.display = 'none';
+        els.voiceBox.textContent = '';
+      }
+    }
+
     function initVoice(){
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) { els.voice.disabled = true; els.voice.title = 'Voice input is not supported in this browser'; return; }
@@ -3591,26 +3623,45 @@
       recognition.continuous = false;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
-      recognition.onstart = () => { els.voiceBox.style.display='block'; els.voiceBox.textContent='Listening… Say something like: add 3/4 tee quantity 2. Saying just T will be treated as tee.'; };
+      recognition.onstart = () => {
+        pendingVoiceParsed = null;
+        els.voiceBox.style.display='block';
+        els.voiceBox.textContent='Listening… Say something like: add 3/4 tee quantity 2.';
+      };
       recognition.onresult = (event) => {
         const transcript = Array.from(event.results).map(r => r[0].transcript).join(' ');
-        els.voiceBox.textContent = transcript;
-        if (event.results[0].isFinal) handleVoiceTranscript(transcript.toLowerCase());
+        if (event.results[0].isFinal) {
+          handleVoiceTranscript(transcript);
+        } else {
+          els.voiceBox.textContent = transcript;
+        }
       };
-      recognition.onend = () => { setTimeout(() => { els.voiceBox.style.display='none'; }, 1200); };
-      recognition.onerror = (e) => { els.voiceBox.style.display='block'; els.voiceBox.textContent = 'Voice error: ' + e.error; };
+      recognition.onend = () => {
+        if (!pendingVoiceParsed && !els.voiceBox.querySelector('#voiceConfirmAdd')) {
+          setTimeout(() => { els.voiceBox.style.display='none'; }, 1200);
+        }
+      };
+      recognition.onerror = (e) => {
+        pendingVoiceParsed = null;
+        els.voiceBox.style.display='block';
+        els.voiceBox.textContent = 'Voice error: ' + e.error;
+      };
       els.voice.addEventListener('click', () => recognition.start());
     }
     function handleVoiceTranscript(text){
       try {
-        const parsed = parseBlackIronCommand(text);
+        const normalized = normalizeBlackIronVoiceText(text);
+        const parsed = parseBlackIronCommand(normalized);
         if (parsed.fittingType && parsed.fittingType !== 'Pipe') selectFitting(parsed.fittingType);
-        addItem(parsed);
-        els.voiceBox.textContent = 'Added: ' + buildDisplay(parsed);
+        showVoicePreview(parsed, normalized);
       } catch(err) {
+        pendingVoiceParsed = null;
+        els.voiceBox.style.display = 'block';
         els.voiceBox.textContent = 'Could not parse: ' + text;
       }
     }
+
+
 
     els.fitGrid.addEventListener('click', e => {
       const btn = e.target.closest('.bi-fit-btn');
@@ -3631,6 +3682,15 @@
       if (e.key === 'Enter') {
         e.preventDefault();
         els.quickAddBtn.click();
+      }
+    });
+    els.voiceBox.addEventListener('click', e => {
+      if (e.target && e.target.id === 'voiceConfirmAdd' && pendingVoiceParsed) {
+        addItem(pendingVoiceParsed);
+        clearVoicePreview('Added: ' + buildDisplay(pendingVoiceParsed));
+      }
+      if (e.target && e.target.id === 'voiceConfirmCancel') {
+        clearVoicePreview('Cancelled voice add.');
       }
     });
     els.send.addEventListener('click', sendToInvoice);
