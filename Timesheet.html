@@ -387,6 +387,7 @@
         <button type="button" id="addItem" class="mini-btn">Add Item</button>
         <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
         <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
+        <button id="generateBossCopy" type="button" class="mini-btn">Generate Boss Copy PDF</button>
       </div>
 
       <label style="margin-top:1rem;">Labor Description:
@@ -2289,14 +2290,6 @@
       }
     };
 
-    document.getElementById('backupDataButton').onclick = () => window.downloadBackupData && window.downloadBackupData();
-    document.getElementById('restoreDataButton').onclick = () => window.openRestorePicker && window.openRestorePicker();
-    document.getElementById('restoreDataInput').addEventListener('change', (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (file && window.restoreBackupData) window.restoreBackupData(file);
-      e.target.value = '';
-    });
-
     document.getElementById('addItem').onclick = () => createItemRow({ markup: getDefaultMarkupPercent() });
     document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
     document.getElementById('clearInvoice').onclick = () => clearInvoice();
@@ -2404,9 +2397,66 @@
       }, 100);
     };
 
-    document.getElementById('generateInvoice').onclick = async () => {
-      document.getElementById('loading').innerHTML = '<div class="spinner"></div><br>Generating Invoice...';
-      document.getElementById('loading').style.display = 'block';
+
+    function collectInvoiceLines(mode = 'customer') {
+      const lineRows = [...document.querySelectorAll('#itemsTable tbody tr')];
+      const rawLines = lineRows
+        .map(row => {
+          const quantity = +row.querySelector('.item-qty').value || 0;
+          const distributorCost = +row.querySelector('.item-distributor-cost').value || 0;
+          const markup = +row.querySelector('.item-markup').value || 0;
+          const customerPrice = +row.querySelector('.item-customer-price').value || 0;
+          const desc = row.querySelector('.item-desc').value.trim();
+          const unit = row.querySelector('.item-unit').value.trim() || 'ea';
+          return {
+            quantity,
+            desc,
+            unit,
+            distributorCost,
+            markup,
+            customerPrice,
+            price: customerPrice,
+            amount: quantity * customerPrice
+          };
+        })
+        .filter(l => (l.desc && l.quantity) || l.amount);
+
+      if (mode !== 'customer') return rawLines;
+
+      const summarized = [];
+      let blackIronAmount = 0;
+      let blackIronQty = 0;
+      const isBlackIron = (line) => /black iron|gas pipe/i.test(line.desc || '');
+
+      rawLines.forEach(line => {
+        if (isBlackIron(line)) {
+          blackIronAmount += line.amount;
+          blackIronQty += line.quantity;
+        } else {
+          summarized.push(line);
+        }
+      });
+
+      if (blackIronAmount > 0) {
+        summarized.push({
+          quantity: blackIronQty || 1,
+          desc: 'Gas Piping Materials',
+          unit: 'lot',
+          distributorCost: 0,
+          markup: 0,
+          customerPrice: blackIronAmount,
+          price: blackIronAmount,
+          amount: blackIronAmount
+        });
+      }
+
+      return summarized;
+    }
+
+    async function generateInvoicePdf(copyType = 'customer') {
+      const loading = document.getElementById('loading');
+      loading.innerHTML = '<div class="spinner"></div><br>' + (copyType === 'boss' ? 'Generating Boss Copy...' : 'Generating Invoice...');
+      loading.style.display = 'block';
 
       try {
         populateInvoiceFromEntries();
@@ -2421,31 +2471,25 @@
         const selectedEntries = getFilteredEntries();
 
         if (!selectedEntries.length) {
-          document.getElementById('loading').style.display = 'none';
           return alert('Select at least one timesheet entry for this invoice.');
         }
 
-        const lineRows = [...document.querySelectorAll('#itemsTable tbody tr')];
-        const lines = lineRows
-          .map(row => {
-            const quantity = +row.querySelector('.item-qty').value || 0;
-            const distributorCost = +row.querySelector('.item-distributor-cost').value || 0;
-            const markup = +row.querySelector('.item-markup').value || 0;
-            const customerPrice = +row.querySelector('.item-customer-price').value || 0;
-            const desc = row.querySelector('.item-desc').value.trim();
-            const unit = row.querySelector('.item-unit').value.trim() || 'ea';
-            return { quantity, desc, unit, distributorCost, markup, customerPrice, price: customerPrice, amount: quantity * customerPrice };
-          })
-          .filter(l => (l.desc && l.quantity) || l.amount);
+        const lines = collectInvoiceLines(copyType === 'boss' ? 'boss' : 'customer');
+        const detailedLines = collectInvoiceLines('boss');
 
         if (!lines.length) {
-          document.getElementById('loading').style.display = 'none';
           return alert('Add at least one invoice line item.');
         }
 
         const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
         const hst = subtotal * hstRate;
         const total = subtotal + hst;
+        const materialCostTotal = detailedLines
+          .filter(l => /black iron|gas pipe/i.test(l.desc || ''))
+          .reduce((sum, l) => sum + ((+l.distributorCost || 0) * (+l.quantity || 0)), 0);
+        const materialSellTotal = detailedLines
+          .filter(l => /black iron|gas pipe/i.test(l.desc || ''))
+          .reduce((sum, l) => sum + (+l.amount || 0), 0);
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
@@ -2485,7 +2529,7 @@
 
         doc.setFontSize(20);
         doc.setFont("helvetica", "bold");
-        doc.text("INVOICE", 170, 34);
+        doc.text(copyType === 'boss' ? 'INTERNAL MATERIAL COPY' : 'INVOICE', 128, 34);
 
         doc.setDrawColor(180);
         doc.line(10, 38, 200, 38);
@@ -2493,7 +2537,7 @@
         doc.setFont("helvetica", "normal");
         doc.setFontSize(12);
         doc.text("DATE RANGE: " + getSelectedDateRange(selectedEntries), 10, 48);
-        doc.text("INVOICE ID: " + (invoiceId || '-'), 10, 58);
+        if (invoiceId) doc.text("INVOICE ID: " + invoiceId, 10, 58);
         doc.text("NAME: " + (clientName || '-'), 10, 68);
         doc.text("PHONE: " + (clientPhone || '-'), 10, 78);
         doc.text("EMAIL: " + (clientEmail || '-'), 10, 88);
@@ -2532,7 +2576,34 @@
           columnStyles: { 1: { cellWidth: 80 } },
         });
 
-        const finalY = doc.lastAutoTable.finalY + 10;
+        let finalY = doc.lastAutoTable.finalY + 10;
+
+        if (copyType === 'boss') {
+          const detailedBlackIron = detailedLines.filter(l => /black iron|gas pipe/i.test(l.desc || ''));
+          if (detailedBlackIron.length) {
+            doc.autoTable({
+              startY: finalY,
+              head: [['MATERIAL', 'QTY', 'COST EA', 'COST TOTAL', 'SELL TOTAL']],
+              body: detailedBlackIron.map(l => [
+                l.desc,
+                l.quantity.toFixed(2),
+                '$' + formatMoney(l.distributorCost || 0),
+                '$' + formatMoney((+l.distributorCost || 0) * (+l.quantity || 0)),
+                '$' + formatMoney(l.amount || 0)
+              ]),
+              theme: 'grid',
+              headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0] },
+              styles: { cellPadding: 4, fontSize: 9, overflow: 'linebreak' },
+              columnStyles: { 0: { cellWidth: 82 } },
+            });
+            finalY = doc.lastAutoTable.finalY + 10;
+            doc.setFont("helvetica", "bold");
+            doc.text("MATERIAL COST TOTAL: $" + formatMoney(materialCostTotal), 120, finalY);
+            doc.text("MATERIAL SELL TOTAL: $" + formatMoney(materialSellTotal), 120, finalY + 8);
+            doc.text("MATERIAL MARGIN: $" + formatMoney(materialSellTotal - materialCostTotal), 120, finalY + 16);
+            finalY += 22;
+          }
+        }
 
         doc.setFont("helvetica", "bold");
         doc.text("SUBTOTAL: $" + formatMoney(subtotal), 140, finalY);
@@ -2541,12 +2612,12 @@
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
-        doc.text("e-transfer accepted at Jason@archerser.ca", 105, 280, { align: 'center' });
+        doc.text(copyType === 'boss' ? 'Internal copy for costing review' : 'e-transfer accepted at Jason@archerser.ca', 105, 280, { align: 'center' });
 
         const d = new Date();
         const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const safeClientName = (clientName || 'Client').replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-        doc.save(`${safeClientName || 'Client'}_${dateStr}_Invoice.pdf`);
+        doc.save(`${safeClientName || 'Client'}_${dateStr}_${copyType === 'boss' ? 'Boss_Copy' : 'Invoice'}.pdf`);
 
         localStorage.setItem('lastClient', JSON.stringify({
           name: clientName,
@@ -2563,15 +2634,20 @@
           saveInvoicesToStorage();
         }
 
-        markSelectedEntriesAsInvoiced(invoiceId);
-        renderTable();
+        if (copyType !== 'boss') {
+          markSelectedEntriesAsInvoiced(invoiceId);
+          renderTable();
+        }
       } catch (err) {
-        alert('Invoice generation failed. Please refresh and try again.');
+        alert((copyType === 'boss' ? 'Boss copy' : 'Invoice') + ' generation failed. Please refresh and try again.');
         console.error(err);
       } finally {
-        document.getElementById('loading').style.display = 'none';
+        loading.style.display = 'none';
       }
-    };
+    }
+
+    document.getElementById('generateInvoice').onclick = async () => generateInvoicePdf('customer');
+    document.getElementById('generateBossCopy').onclick = async () => generateInvoicePdf('boss');
 
 
     function getClientProfiles() {
@@ -2932,10 +3008,6 @@
       };
       reader.readAsText(file);
     }
-
-    window.downloadBackupData = downloadBackupData;
-    window.openRestorePicker = openRestorePicker;
-    window.restoreBackupData = restoreBackupData;
 
     function renderFitButtons(){
       els.fitGrid.innerHTML = FITTINGS.map(name => `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}" data-fit="${esc(name)}">${esc(name)}</button>`).join('\n');
@@ -3310,16 +3382,43 @@
     }
 
 
-    function parseBlackIronCommand(raw){
+    function normalizeBlackIronVoiceText(raw){
       let text = String(raw || '').toLowerCase().trim();
-      if (!text) throw new Error('Type a fitting command first.');
+      if (!text) return '';
       text = text.replace(/^add\s+/, '').replace(/×/g, ' x ').replace(/[“”]/g, '"');
       [
         ['three eighths','3/8'],['three eighth','3/8'],['one half','1/2'],['half','1/2'],
         ['three quarters','3/4'],['three quarter','3/4'],['one and a quarter','1 1/4'],
-        ['one and a half','1 1/2'],['two and a half','2 1/2']
-      ].forEach(([a,b]) => text = text.replaceAll(a, b));
+        ['one and a half','1 1/2'],['two and a half','2 1/2'],
+        ['90 degree ell','90 degree elbow'],['45 degree ell','45 degree elbow'],
+        [' ell ',' elbow '],[' ell$',' elbow'],['^ell ','elbow '],
+        [' shutoff ',' shut off '],[' shut off valve ',' shut off '],
+        [' gas tight ',' gastiite '],[' gas tite ',' gastiite '],[' gas tight',' gastiite'],[' gas tite',' gastiite'],
+        [' stand off long',' stand off long'],[' stand off short',' stand off short']
+      ].forEach(([a,b]) => {
+        if (a.startsWith('^') || a.endsWith('$') || a.includes(' ')) {
+          text = text.replace(new RegExp(a, 'g'), b);
+        } else {
+          text = text.replaceAll(a, b);
+        }
+      });
+      text = ` ${text} `;
+      text = text
+        .replace(/tea/g, 'tee')
+        .replace(/tee's/g, 'tees')
+        .replace(/(?<=(?:3\/8|1\/2|3\/4|1|1 1\/4|1 1\/2|2|2 1\/2)\s)t/g, 'tee')
+        .replace(/t(?=\s+(?:3\/8|1\/2|3\/4|1|1 1\/4|1 1\/2|2|2 1\/2))/g, 'tee')
+        .replace(/t/g, 'tee')
+        .replace(/ts/g, 'tees')
+        .replace(/90(?=\s*(?:deg|degree)?\s*(?:elbow|ell))/g, '90')
+        .replace(/45(?=\s*(?:deg|degree)?\s*(?:elbow|ell))/g, '45');
       text = text.replace(/inches|inch/g,'').replace(/\s+/g,' ').trim();
+      return text;
+    }
+
+    function parseBlackIronCommand(raw){
+      let text = normalizeBlackIronVoiceText(raw);
+      if (!text) throw new Error('Type a fitting command first.');
 
       let quantity = 1;
       let m = text.match(/(?:qty|quantity)\s*(\d+)/);
@@ -3492,7 +3591,7 @@
       recognition.continuous = false;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
-      recognition.onstart = () => { els.voiceBox.style.display='block'; els.voiceBox.textContent='Listening… Say something like: add 3/4 tee quantity 2'; };
+      recognition.onstart = () => { els.voiceBox.style.display='block'; els.voiceBox.textContent='Listening… Say something like: add 3/4 tee quantity 2. Saying just T will be treated as tee.'; };
       recognition.onresult = (event) => {
         const transcript = Array.from(event.results).map(r => r[0].transcript).join(' ');
         els.voiceBox.textContent = transcript;
@@ -3576,6 +3675,17 @@
     initVoice();
   })();
   
+document.addEventListener("DOMContentLoaded",function(){
+  const backupBtn = document.getElementById('backupDataButton');
+  const restoreBtn = document.getElementById('restoreDataButton');
+  const restoreInput = document.getElementById('restoreDataInput');
+  if (backupBtn) backupBtn.addEventListener('click', downloadBackupData);
+  if (restoreBtn) restoreBtn.addEventListener('click', openRestorePicker);
+  if (restoreInput) restoreInput.addEventListener('change', function(){
+    if (this.files && this.files[0]) restoreBackupData(this.files[0]);
+  });
+});
+
 document.addEventListener("DOMContentLoaded",function(){
   const sendBtn=document.getElementById("biSendToParts");
   if(sendBtn){
