@@ -2437,7 +2437,10 @@
         doc.setFontSize(8);
         doc.text("e-transfer accepted at Jason@archerser.ca", 105, 280, { align: 'center' });
 
-        doc.save(`${invoiceId || clientName || 'Client'}_Invoice.pdf`);
+        const d = new Date();
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const safeClientName = (clientName || 'Client').replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        doc.save(`${safeClientName || 'Client'}_${dateStr}_Invoice.pdf`);
 
         localStorage.setItem('lastClient', JSON.stringify({
           name: clientName,
