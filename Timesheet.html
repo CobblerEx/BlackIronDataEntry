@@ -1330,7 +1330,7 @@
       }
 
       function saveCurrentMaterial() {
-        if (tr.dataset.type === 'regular-labor' || tr.dataset.type === 'overtime-labor') return;
+        if ((tr.dataset.type || '').startsWith('labor-')) return;
         saveMaterialFromValues({
           desc: desc.value,
           unit: unit.value,
@@ -1469,22 +1469,45 @@
     }
 
     function getHoursBreakdown(entry) {
-      const [y, m, d] = (entry.dateStr || document.getElementById('sessionDate').value).split('-').map(Number);
-      const [inH, inM] = entry.timeIn.split(':').map(Number);
-      const [outH, outM] = entry.timeOut.split(':').map(Number);
-      const start = new Date(y, (m - 1), d, inH, inM, 0, 0);
-      let end = new Date(y, (m - 1), d, outH, outM, 0, 0);
-      if (end <= start) end.setDate(end.getDate() + 1);
-
-      let regular = 0;
-      let overtime = 0;
-      const cursor = new Date(start);
-      while (cursor < end) {
-        if (isRegularBusinessTime(cursor)) regular += 0.5;
-        else overtime += 0.5;
-        cursor.setMinutes(cursor.getMinutes() + 30);
+      if (entry && Number(entry.overtimeHours) > 0) {
+        const overtime = Number(entry.overtimeHours) || 0;
+        const total = Number(entry.totalHours) || 0;
+        return { regular: Math.max(0, total - overtime), overtime };
       }
-      return { regular, overtime };
+
+      const inDec = timeToDecimal(entry.timeIn);
+      const outDec = timeToDecimal(entry.timeOut);
+      const total = outDec >= inDec ? (outDec - inDec) : (outDec - inDec + 24);
+      return { regular: total, overtime: 0 };
+    }
+
+    function getLaborRows() {
+      return [...document.querySelectorAll('#itemsTable tbody tr')].filter(row => (row.dataset.type || '').startsWith('labor-'));
+    }
+
+    function clearLaborRows() {
+      getLaborRows().forEach(row => row.remove());
+    }
+
+    function createLaborEntryRow(entry, kind, qty) {
+      createItemRow({
+        desc: `${((entry.jobName || '').trim() && (entry.description || '').trim()) ? `${entry.jobName.trim()}: ${entry.description.trim()}` : ((entry.description || '').trim() || (entry.jobName || '').trim() || 'Labor')} (${kind === 'regular' ? 'Reg' : 'Overtime'})`,
+        qty: qty,
+        unit: 'hr',
+        distributorCost: 0,
+        markup: 0,
+        customerPrice: kind === 'regular' ? (document.getElementById('hourlyRate').value || 100) : (document.getElementById('overtimeRate').value || 150)
+      });
+      const row = document.querySelector('#itemsTable tbody tr:last-child');
+      row.dataset.type = `labor-${kind}-${entry.id}`;
+      row.dataset.laborKind = kind;
+      row.dataset.entryId = String(entry.id);
+      row.querySelector('.remove-item').style.display = 'none';
+      row.querySelector('.item-distributor-cost').value = formatMoney(0);
+      row.querySelector('.item-markup').value = formatMoney(0);
+      row.querySelector('.item-customer-price').value = formatMoney(kind === 'regular' ? document.getElementById('hourlyRate').value : document.getElementById('overtimeRate').value);
+      row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      return row;
     }
 
     function getLaborSummaryFrom(filtered) {
@@ -1511,10 +1534,19 @@
       return lines.join('\n');
     }
 
+    function getUniqueFilteredAddresses(filtered) {
+      return [...new Set(filtered.map(e => (e.address || '').trim()).filter(Boolean))];
+    }
+
+    function getSingleFilteredAddress(filtered) {
+      const uniqueAddrs = getUniqueFilteredAddresses(filtered);
+      return uniqueAddrs.length === 1 ? uniqueAddrs[0] : '';
+    }
+
     function setClientAddressFromFiltered(filtered) {
       const addrField = document.getElementById('clientAddress');
-      const uniqueAddrs = [...new Set(filtered.map(e => (e.address || '').trim()).filter(Boolean))];
-      if (uniqueAddrs.length === 1) addrField.value = uniqueAddrs[0];
+      const singleAddress = getSingleFilteredAddress(filtered);
+      if (singleAddress) addrField.value = singleAddress;
     }
 
     function getSelectedInvoiceEntryIds() {
@@ -1535,6 +1567,75 @@
       const dates = [...new Set(filtered.map(e => e.dateStr))].sort();
       if (dates.length === 1) return formatDate(dates[0]);
       return `${formatDate(dates[0])} to ${formatDate(dates[dates.length - 1])}`;
+    }
+
+
+    function mergeLaborDescriptions(existingText, appendedText) {
+      const existingLines = String(existingText || '').split('\n').map(s => s.trim()).filter(Boolean);
+      const appendedLines = String(appendedText || '').split('\n').map(s => s.trim()).filter(Boolean);
+      const merged = [...existingLines];
+      appendedLines.forEach(line => {
+        if (!merged.includes(line)) merged.push(line);
+      });
+      return merged.join('\n');
+    }
+
+    function populateInvoiceFromDraftAppend(existingDraft, newSelectedIds) {
+      const existingIds = (existingDraft?.linkedEntryIds || []).map(String);
+      const incomingIds = (newSelectedIds || []).map(String);
+      const mergedIds = [...new Set([...existingIds, ...incomingIds])];
+      const addedIds = mergedIds.filter(id => !existingIds.includes(id));
+
+      const existingEntries = entries.filter(e => existingIds.includes(String(e.id)));
+      const addedEntries = entries.filter(e => addedIds.includes(String(e.id)));
+      const mergedEntries = entries.filter(e => mergedIds.includes(String(e.id)));
+
+      document.getElementById('invoiceId').value = existingDraft.id || document.getElementById('invoiceId').value || '';
+      document.getElementById('clientName').value = document.getElementById('clientName').value.trim() || existingDraft.clientName || '';
+      document.getElementById('clientPhone').value = document.getElementById('clientPhone').value.trim() || existingDraft.clientPhone || '';
+      document.getElementById('clientEmail').value = document.getElementById('clientEmail').value.trim() || existingDraft.clientEmail || '';
+      document.getElementById('clientAddress').value = document.getElementById('clientAddress').value.trim() || existingDraft.clientAddress || '';
+      document.getElementById('hourlyRate').value = document.getElementById('hourlyRate').value || (existingDraft.hourlyRate ?? 100);
+      document.getElementById('overtimeRate').value = document.getElementById('overtimeRate').value || (existingDraft.overtimeRate ?? 150);
+      document.getElementById('hstRate').value = document.getElementById('hstRate').value || (existingDraft.hstRate ?? 0.13);
+
+      renderInvoiceEntrySelector(mergedIds);
+
+      const tbody = document.querySelector('#itemsTable tbody');
+      tbody.innerHTML = '';
+      (existingDraft.items || []).forEach(item => {
+        if (!(item.type || '').startsWith('labor-')) {
+          createItemRow(item);
+          const row = tbody.lastElementChild;
+          if (item.type) row.dataset.type = item.type;
+        }
+      });
+
+      const mergedDescription = mergeLaborDescriptions(
+        existingDraft.laborDescription || getLaborDescriptionFromTimesheet(existingEntries),
+        getLaborDescriptionFromTimesheet(addedEntries)
+      ) || getLaborDescriptionFromTimesheet(mergedEntries);
+      document.getElementById('laborDescription').value = mergedDescription;
+
+      const matchedClientFromAddress = fillClientProfileFromFilteredEntries(mergedEntries, false);
+      if (!document.getElementById('clientAddress').value.trim() && matchedClientFromAddress) {
+        document.getElementById('clientAddress').value = matchedClientFromAddress;
+      }
+
+      existingEntries.forEach(entry => {
+        const split = getHoursBreakdown(entry);
+        if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
+        if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
+      });
+      addedEntries.forEach(entry => {
+        const split = getHoursBreakdown(entry);
+        if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
+        if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
+      });
+
+      updateInvoiceSummary();
+      refreshInvoiceDraftList(existingDraft.id || '');
+      return mergedIds;
     }
 
     function syncEntryStatusesFromInvoices() {
@@ -1686,23 +1787,12 @@
     function populateInvoiceFromEntries() {
       const filtered = getFilteredEntries();
 
-      const regularRow = ensureRegularLaborRow();
-
-      const totals = filtered.reduce((acc, e) => {
-        const split = getHoursBreakdown(e);
-        acc.regular += split.regular;
-        acc.overtime += split.overtime;
-        return acc;
-      }, { regular: 0, overtime: 0 });
-
-      let overtimeRow = null;
-      if (totals.overtime > 0) overtimeRow = ensureOvertimeLaborRow();
-      else removeOvertimeLaborRowIfExists();
+      clearLaborRows();
 
       const laborDescriptionField = document.getElementById('laborDescription');
       laborDescriptionField.value = getLaborDescriptionFromTimesheet(filtered);
 
-      setClientAddressFromFiltered(filtered);
+      const matchedClientFromAddress = fillClientProfileFromFilteredEntries(filtered, false);
 
       const lastClient = JSON.parse(localStorage.getItem('lastClient') || '{}');
       const clientNameInput = document.getElementById('clientName');
@@ -1712,25 +1802,13 @@
       const clientEmailInput = document.getElementById('clientEmail');
       if (!clientEmailInput.value.trim()) clientEmailInput.value = lastClient.email || '';
       const clientAddressInput = document.getElementById('clientAddress');
-      if (!clientAddressInput.value.trim()) clientAddressInput.value = lastClient.address || '';
+      if (!clientAddressInput.value.trim()) clientAddressInput.value = matchedClientFromAddress || lastClient.address || '';
 
-      regularRow.querySelector('.item-desc').value = `${laborDescriptionField.value || 'Labor'} (Regular Hours)`;
-      regularRow.querySelector('.item-qty').value = totals.regular.toFixed(2);
-      regularRow.querySelector('.item-unit').value = 'hr';
-      regularRow.querySelector('.item-distributor-cost').value = formatMoney(0);
-      regularRow.querySelector('.item-markup').value = formatMoney(0);
-      regularRow.querySelector('.item-customer-price').value = formatMoney(document.getElementById('hourlyRate').value);
-      regularRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
-
-      if (overtimeRow) {
-        overtimeRow.querySelector('.item-desc').value = `${laborDescriptionField.value || 'Labor'} (Overtime Hours)`;
-        overtimeRow.querySelector('.item-qty').value = totals.overtime.toFixed(2);
-        overtimeRow.querySelector('.item-unit').value = 'hr';
-        overtimeRow.querySelector('.item-distributor-cost').value = formatMoney(0);
-        overtimeRow.querySelector('.item-markup').value = formatMoney(0);
-        overtimeRow.querySelector('.item-customer-price').value = formatMoney(document.getElementById('overtimeRate').value);
-        overtimeRow.querySelector('.item-qty').dispatchEvent(new Event('input'));
-      }
+      filtered.forEach(entry => {
+        const split = getHoursBreakdown(entry);
+        if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
+        if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
+      });
 
       updateInvoiceSummary();
       const currentInvoiceId = document.getElementById('invoiceId').value.trim();
@@ -1749,7 +1827,6 @@
       tbody.innerHTML = '';
 
       ensureServiceChargeRow();
-      ensureRegularLaborRow();
       renderInvoiceEntrySelector([]);
       updateInvoiceSummary();
     }
@@ -1774,7 +1851,21 @@
         return;
       }
 
-      const selectedIds = getSelectedInvoiceEntryIds();
+      let selectedIds = getSelectedInvoiceEntryIds();
+      const existingDraft = invoices[invoiceId];
+
+      if (existingDraft) {
+        const existingIds = (existingDraft.linkedEntryIds || []).map(String);
+        const incomingIds = selectedIds.map(String);
+        const mergedIds = [...new Set([...existingIds, ...incomingIds])];
+        const isAppendingToExistingDraft = mergedIds.some(id => !existingIds.includes(id));
+
+        if (isAppendingToExistingDraft) {
+          selectedIds = populateInvoiceFromDraftAppend(existingDraft, selectedIds);
+        } else {
+          selectedIds = mergedIds;
+        }
+      }
 
       const conflicts = entries.filter(e =>
         selectedIds.includes(e.id) &&
@@ -1792,6 +1883,7 @@
       }
 
       rememberCurrentClient(true);
+      rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(e.id))));
 
       invoices[invoiceId] = {
         id: invoiceId,
@@ -1815,7 +1907,7 @@
       renderTable();
       updateInvoiceSummary();
       refreshInvoiceDraftList(invoiceId);
-      alert(`Invoice draft "${invoiceId}" saved.`);
+      alert(existingDraft ? `Invoice draft "${invoiceId}" updated and appended.` : `Invoice draft "${invoiceId}" saved.`);
     }
 
     function loadInvoiceDraftById(invoiceId) {
@@ -1831,6 +1923,7 @@
       document.getElementById('clientEmail').value = inv.clientEmail || '';
       document.getElementById('clientAddress').value = inv.clientAddress || '';
       rememberCurrentClient(true);
+      rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(entries.filter(e => (inv.linkedEntryIds || []).includes(e.id))));
       document.getElementById('hourlyRate').value = inv.hourlyRate ?? 100;
       document.getElementById('overtimeRate').value = inv.overtimeRate ?? 150;
       document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
@@ -1844,7 +1937,7 @@
         createItemRow(item);
         const row = tbody.lastElementChild;
         if (item.type) row.dataset.type = item.type;
-        if (item.type === 'regular-labor' || item.type === 'overtime-labor') {
+        if ((item.type || '').startsWith('labor-')) {
           row.querySelector('.remove-item').style.display = 'none';
         }
       });
@@ -2448,6 +2541,7 @@
           address: clientAddress
         }));
         rememberCurrentClient(true);
+        rememberCurrentLocationProfile(true, getSingleFilteredAddress(selectedEntries));
 
         if (invoiceId && invoices[invoiceId]) {
           invoices[invoiceId].status = 'invoiced';
@@ -2474,8 +2568,20 @@
       localStorage.setItem('clientProfiles', JSON.stringify(profiles));
     }
 
+    function getLocationProfiles() {
+      return JSON.parse(localStorage.getItem('locationProfiles') || '{}');
+    }
+
+    function saveLocationProfiles(profiles) {
+      localStorage.setItem('locationProfiles', JSON.stringify(profiles));
+    }
+
     function normalizeClientKey(name) {
       return String(name || '').trim().toLowerCase();
+    }
+
+    function normalizeAddressKey(address) {
+      return String(address || '').trim().toLowerCase();
     }
 
     function renderClientNameSuggestions() {
@@ -2520,6 +2626,25 @@
       renderClientNameSuggestions();
     }
 
+    function rememberCurrentLocationProfile(force = false, preferredAddress = '') {
+      const profile = getCurrentClientProfile();
+      const address = String(preferredAddress || profile.address || '').trim();
+      const key = normalizeAddressKey(address);
+      if (!key) return;
+      if (!force && !profile.name && !profile.phone && !profile.email) return;
+
+      const profiles = getLocationProfiles();
+      const existing = profiles[key] || {};
+      profiles[key] = {
+        address,
+        name: profile.name || existing.name || '',
+        phone: profile.phone || existing.phone || '',
+        email: profile.email || existing.email || '',
+        billingAddress: profile.address || existing.billingAddress || address
+      };
+      saveLocationProfiles(profiles);
+    }
+
     function fillClientProfileByName(name) {
       const key = normalizeClientKey(name);
       if (!key) return false;
@@ -2530,6 +2655,36 @@
       document.getElementById('clientEmail').value = profile.email || '';
       document.getElementById('clientAddress').value = profile.address || '';
       return true;
+    }
+
+    function fillClientProfileByAddress(address, overwrite = false) {
+      const normalizedAddress = String(address || '').trim();
+      const key = normalizeAddressKey(normalizedAddress);
+      if (!key) return false;
+
+      const profile = getLocationProfiles()[key];
+      if (!profile) return false;
+
+      const clientName = document.getElementById('clientName');
+      const clientPhone = document.getElementById('clientPhone');
+      const clientEmail = document.getElementById('clientEmail');
+      const clientAddress = document.getElementById('clientAddress');
+
+      if (!clientName || !clientPhone || !clientEmail || !clientAddress) return false;
+
+      if (overwrite || !clientName.value.trim()) clientName.value = profile.name || '';
+      if (overwrite || !clientPhone.value.trim()) clientPhone.value = profile.phone || '';
+      if (overwrite || !clientEmail.value.trim()) clientEmail.value = profile.email || '';
+      if (overwrite || !clientAddress.value.trim()) clientAddress.value = profile.billingAddress || profile.address || normalizedAddress;
+      return true;
+    }
+
+    function fillClientProfileFromFilteredEntries(filtered, overwrite = false) {
+      const singleAddress = getSingleFilteredAddress(filtered);
+      if (!singleAddress) return '';
+      setClientAddressFromFiltered(filtered);
+      fillClientProfileByAddress(singleAddress, overwrite);
+      return singleAddress;
     }
 
     function setupClientAutoFill() {
@@ -2543,15 +2698,25 @@
 
       clientName.addEventListener('change', () => {
         if (!fillClientProfileByName(clientName.value)) rememberCurrentClient(true);
+        rememberCurrentLocationProfile(true);
       });
 
       clientName.addEventListener('blur', () => {
         if (!fillClientProfileByName(clientName.value)) rememberCurrentClient(true);
+        rememberCurrentLocationProfile(true);
       });
 
       [clientPhone, clientEmail, clientAddress].forEach(el => {
-        el.addEventListener('change', () => rememberCurrentClient(true));
-        el.addEventListener('blur', () => rememberCurrentClient(true));
+        el.addEventListener('change', () => {
+          if (el === clientAddress) fillClientProfileByAddress(clientAddress.value, false);
+          rememberCurrentClient(true);
+          rememberCurrentLocationProfile(true);
+        });
+        el.addEventListener('blur', () => {
+          if (el === clientAddress) fillClientProfileByAddress(clientAddress.value, false);
+          rememberCurrentClient(true);
+          rememberCurrentLocationProfile(true);
+        });
       });
     }
 
@@ -2688,7 +2853,7 @@
       });
     }
     function renderFitButtons(){
-      els.fitGrid.innerHTML = FITTINGS.map(name => `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}" data-fit="${esc(name)}">${esc(name)}</button>`).join('');
+      els.fitGrid.innerHTML = FITTINGS.map(name => `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}" data-fit="${esc(name)}">${esc(name)}</button>`).join('\n');
     }
     function updateConditionalFields(){
       const f = state.selectedFitting;
@@ -3171,7 +3336,7 @@
             <div class="bi-meta">Invoice text: ${esc(buildInvoiceDescription(item))}${item.sourceCount > 1 ? ` · grouped from ${item.sourceCount} entries` : ''}</div>
           </div>
         </div>
-      `).join('');
+      `).join('\n');
       els.list.innerHTML = state.items.map((item, index) => `
         <div class="bi-card" data-index="${index}">
           <div class="bi-card-main">
@@ -3184,7 +3349,7 @@
             <button type="button" class="mini-btn bi-del" style="background:#dc3545;">Delete</button>
           </div>
         </div>
-      `).join('');
+      `).join('\n');
     }
     function editItem(index){
       const item = state.items[index];
