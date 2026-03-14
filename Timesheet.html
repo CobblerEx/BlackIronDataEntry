@@ -276,7 +276,10 @@
       <button id="goToInvoice" type="button">Go To Invoice</button>
       <button id="newDayButton" type="button">New Day</button>
       <button id="toggleArchiveButton" type="button">Archive ▼</button>
+      <button id="backupDataButton" type="button">Backup Data</button>
+      <button id="restoreDataButton" type="button">Restore Data</button>
       <button id="clearAllButton">Clear All</button>
+      <input type="file" id="restoreDataInput" accept="application/json,.json" style="display:none;">
     </div>
 
     <div id="importSection">
@@ -287,6 +290,9 @@
       </label>
       <small style="display:block;opacity:.85;margin-top:.4rem;">
         Imports a file exported from this app (Job Name, Address, Time In/Out, Description). This will replace your current entries.
+      </small>
+      <small style="display:block;opacity:.85;margin-top:.6rem;">
+        Backup Data saves your timesheets, archive, invoices, clients, materials, and black iron data to a JSON file. Restore Data loads that backup back into the app.
       </small>
     </div>
   </div>
@@ -2283,6 +2289,14 @@
       }
     };
 
+    document.getElementById('backupDataButton').onclick = () => window.downloadBackupData && window.downloadBackupData();
+    document.getElementById('restoreDataButton').onclick = () => window.openRestorePicker && window.openRestorePicker();
+    document.getElementById('restoreDataInput').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file && window.restoreBackupData) window.restoreBackupData(file);
+      e.target.value = '';
+    });
+
     document.getElementById('addItem').onclick = () => createItemRow({ markup: getDefaultMarkupPercent() });
     document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
     document.getElementById('clearInvoice').onclick = () => clearInvoice();
@@ -2743,6 +2757,7 @@
     const FITTINGS = ['Nipple','90 degree elbow','45 degree elbow','Tee','Union','Shut-off','Reducer','Cap','Plug','Coupling','Bushing','Flexconnector','Gastiite','Stand Off (Long)','Stand Off (Short)','Paint'];
     const STORAGE_KEY = 'blackIronMergedState';
     const HISTORY_KEY = 'blackIronMergedJobHistory';
+    const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', STORAGE_KEY, HISTORY_KEY];
     const els = {
       tab: document.getElementById('blackIronTab'),
       fitGrid: document.getElementById('biFitGrid'),
@@ -2852,6 +2867,76 @@
         list.appendChild(opt);
       });
     }
+
+    function buildBackupPayload(){
+      const storage = {};
+      APP_STORAGE_KEYS.forEach(key => {
+        const value = localStorage.getItem(key);
+        if (value !== null) storage[key] = value;
+      });
+      return {
+        app: 'timesheet-blackiron-suite',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        storage
+      };
+    }
+
+    function downloadBackupData(){
+      try {
+        const payload = buildBackupPayload();
+        const stamp = new Date().toISOString().slice(0,10);
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `timesheet_blackiron_backup_${stamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.error(err);
+        alert('Backup failed. Please try again.');
+      }
+    }
+
+    function openRestorePicker(){
+      const input = document.getElementById('restoreDataInput');
+      if (!input) return;
+      input.value = '';
+      input.click();
+    }
+
+    function restoreBackupData(file){
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt){
+        try {
+          const payload = JSON.parse(String(evt.target.result || '{}'));
+          const storage = payload && payload.storage && typeof payload.storage === 'object' ? payload.storage : null;
+          if (!storage) throw new Error('Invalid backup file.');
+          if (!confirm('Restore backup data now? This will replace the app data currently saved in this browser.')) return;
+          APP_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+          Object.entries(storage).forEach(([key, value]) => {
+            if (APP_STORAGE_KEYS.includes(key) && typeof value === 'string') {
+              localStorage.setItem(key, value);
+            }
+          });
+          alert('Backup restored successfully. The app will now reload.');
+          location.reload();
+        } catch (err) {
+          console.error(err);
+          alert('Restore failed. Please choose a valid backup JSON file from this app.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    window.downloadBackupData = downloadBackupData;
+    window.openRestorePicker = openRestorePicker;
+    window.restoreBackupData = restoreBackupData;
+
     function renderFitButtons(){
       els.fitGrid.innerHTML = FITTINGS.map(name => `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}" data-fit="${esc(name)}">${esc(name)}</button>`).join('\n');
     }
