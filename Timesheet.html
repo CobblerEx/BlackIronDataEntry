@@ -283,6 +283,11 @@
       <input type="file" id="restoreDataInput" accept="application/json,.json" style="display:none;">
     </div>
 
+    <div id="backupWarning" style="display:none;background:#8b1e1e;color:#fff;padding:.8rem 1rem;border-radius:8px;margin:0 auto 1rem;max-width:900px;text-align:center;">
+      You have not backed up your data in the last 7 days.
+      <button type="button" id="backupNowButton" style="margin-left:.75rem;background:#fff;color:#8b1e1e;padding:.45rem .8rem;border:none;border-radius:6px;cursor:pointer;font-weight:700;">Backup Now</button>
+    </div>
+
     <div id="importSection">
       <h2>Import Timesheet (.xlsx)</h2>
       <label>
@@ -2838,7 +2843,7 @@
     const FITTINGS = ['Nipple','90 degree elbow','45 degree elbow','Tee','Union','Shut-off','Reducer','Cap','Plug','Coupling','Bushing','Flexconnector','Gastiite','Stand Off (Long)','Stand Off (Short)','Paint'];
     const STORAGE_KEY = 'blackIronMergedState';
     const HISTORY_KEY = 'blackIronMergedJobHistory';
-    const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', STORAGE_KEY, HISTORY_KEY];
+    const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', 'lastBackupDate', STORAGE_KEY, HISTORY_KEY];
     const els = {
       tab: document.getElementById('blackIronTab'),
       fitGrid: document.getElementById('biFitGrid'),
@@ -2964,6 +2969,24 @@
       };
     }
 
+    function setBackupReminderVisibility(show){
+      const warning = document.getElementById('backupWarning');
+      if (!warning) return;
+      warning.style.display = show ? 'block' : 'none';
+    }
+
+    function checkBackupReminder(){
+      const lastBackup = localStorage.getItem('lastBackupDate');
+      if (!lastBackup) {
+        setBackupReminderVisibility(true);
+        return;
+      }
+      const last = new Date(lastBackup);
+      const now = new Date();
+      const diffDays = (now - last) / (1000 * 60 * 60 * 24);
+      setBackupReminderVisibility(!(diffDays >= 0 && diffDays <= 7));
+    }
+
     function downloadBackupData(){
       try {
         const payload = buildBackupPayload();
@@ -2976,6 +2999,8 @@
         document.body.appendChild(a);
         a.click();
         a.remove();
+        localStorage.setItem('lastBackupDate', new Date().toISOString());
+        checkBackupReminder();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       } catch (err) {
         console.error(err);
@@ -3018,6 +3043,7 @@
     window.downloadBackupData = downloadBackupData;
     window.openRestorePicker = openRestorePicker;
     window.restoreBackupData = restoreBackupData;
+    window.checkBackupReminder = checkBackupReminder;
 
     function renderFitButtons(){
       els.fitGrid.innerHTML = FITTINGS.map(name => `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}" data-fit="${esc(name)}">${esc(name)}</button>`).join('\n');
@@ -3400,6 +3426,8 @@
         .replace(/×/g, ' x ')
         .replace(/[“”]/g, '"')
         .replace(/-/g, ' ')
+        .replace(/,/g, ' , ')
+        .replace(/\band then\b/g, ' and ')
         .replace(/\bby\b/g, ' x ');
 
       const phraseFixes = [
@@ -3484,20 +3512,54 @@
       return text;
     }
 
+    function splitBlackIronVoiceChunks(raw){
+      const text = normalizeBlackIronVoiceText(raw);
+      if (!text) return [];
+      const separators = /\s*,\s*|\s+and\s+/g;
+      const preliminary = text.split(separators).map(s => s.trim()).filter(Boolean);
+      const fittingPhrases = [
+        '90 degree elbow','45 degree elbow','stand off long','stand off short',
+        'flex connector','flexconnector','shut off','tee','reducer','nipple',
+        'union','cap','plug','coupling','bushing','gastiite','paint','pipe'
+      ].sort((a, b) => b.length - a.length);
+
+      const output = [];
+      preliminary.forEach(segment => {
+        if (!segment) return;
+        const tokens = segment.split(/\s+/).filter(Boolean);
+        let chunk = [];
+        for (let i = 0; i < tokens.length; i++) {
+          chunk.push(tokens[i]);
+          const joined = chunk.join(' ');
+          const matched = fittingPhrases.find(phrase => joined.endsWith(phrase));
+          if (matched) {
+            output.push(joined.trim());
+            chunk = [];
+          }
+        }
+        if (chunk.length) {
+          output.push(chunk.join(' ').trim());
+        }
+      });
+      return output.filter(Boolean);
+    }
+
+    function parseMultipleBlackIronCommands(raw){
+      const chunks = splitBlackIronVoiceChunks(raw);
+      if (!chunks.length) throw new Error('Type a fitting command first.');
+      return chunks.map(chunk => parseBlackIronCommand(chunk));
+    }
+
     function parseBlackIronCommand(raw){
       let text = normalizeBlackIronVoiceText(raw);
       if (!text) throw new Error('Type a fitting command first.');
 
-      let quantity = 1;
+      let explicitQuantity = null;
       let m = text.match(/(?:qty|quantity)\s*(\d+)/);
-      if (m) quantity = parseInt(m[1], 10);
-      if (!m) {
-        m = text.match(/^(1|2|3|4|5|6|7|8|9|10|11|12)\s+(?=(?:3\/8|1\/4|1\/2|3\/4|1|1 1\/4|1 1\/2|2|2 1\/2)\b|(?:tee|elbow|reducer|nipple|union|shut off|cap|plug|coupling|bushing|flex connector|flexconnector|gastiite|paint|stand off long|stand off short|pipe)\b)/);
-        if (m) quantity = parseInt(m[1], 10);
-      }
+      if (m) explicitQuantity = parseInt(m[1], 10);
       if (!m) {
         m = text.match(/x\s*(\d+)$/);
-        if (m) quantity = parseInt(m[1], 10);
+        if (m) explicitQuantity = parseInt(m[1], 10);
       }
 
       const fittingDefs = [
@@ -3518,8 +3580,15 @@
 
       const sizePattern = /(?:2 1\/2|1 1\/2|1 1\/4|3\/4|1\/2|3\/8|1\/4|\b2\b|\b1\b)/g;
       const sizes = (text.match(sizePattern) || []).map(s => s.trim());
-      let odSize = sizes[0] || els.od.value;
+      const allNumbers = text.match(/\b(?:2 1\/2|1 1\/2|1 1\/4|3\/4|1\/2|3\/8|1\/4|1|2|3|4|5|6|7|8|9|10|11|12|18|24)\b/g) || [];
+      let quantity = explicitQuantity || 1;
       let sizeDetail = '';
+      let odSize = sizes[0] || els.od.value;
+
+      if (explicitQuantity == null) {
+        const leadingQtyMatch = text.match(/^(1|2|3|4|5|6|7|8|9|10|11|12)\s+(?=(?:3\/8|1\/4|1\/2|3\/4|1|1 1\/4|1 1\/2|2|2 1\/2)\b|(?:tee|elbow|reducer|nipple|union|shut off|cap|plug|coupling|bushing|flex connector|flexconnector|gastiite|paint|stand off long|stand off short|pipe)\b)/);
+        if (leadingQtyMatch) quantity = parseInt(leadingQtyMatch[1], 10);
+      }
 
       if (fittingType === 'Reducer') {
         if (sizes.length < 2) throw new Error('Reducer quick add needs two sizes, like 1 x 3/4 reducer.');
@@ -3534,6 +3603,9 @@
           length = nm[1];
         } else if (sizes.length > 1) {
           length = fallbackMatches.find(v => v !== sizes[0]) || '';
+        } else if (fallbackMatches.length === 1) {
+          length = fallbackMatches[0];
+          quantity = explicitQuantity || 1;
         } else {
           length = fallbackMatches[0] || '';
         }
@@ -3549,8 +3621,16 @@
         sizeDetail = `Cut & Threaded (${formatInches(lm[1])} ft)`;
       }
 
+      if (fittingType !== 'Nipple' && explicitQuantity == null && quantity === 1 && allNumbers.length >= 1) {
+        const leadingQtyMatch = text.match(/^(1|2|3|4|5|6|7|8|9|10|11|12)\s+/);
+        if (leadingQtyMatch && !sizes.length) {
+          quantity = parseInt(leadingQtyMatch[1], 10);
+        }
+      }
+
       return { fittingType, odSize, sizeDetail, quantity };
     }
+
     function addCutPipe(){
       const face = parseFloat(els.faceLength.value || '0');
       const takeout = parseFloat(els.takeoutEachEnd.value || '0');
@@ -3699,7 +3779,7 @@
       recognition.onstart = () => {
         pendingVoiceParsed = null;
         els.voiceBox.style.display='block';
-        els.voiceBox.textContent='Listening… Say something like: add 3/4 tee quantity 2.';
+        els.voiceBox.textContent='Listening… Say something like: two tees, three elbows, one six inch nipple.';
       };
       recognition.onresult = (event) => {
         const transcript = Array.from(event.results).map(r => r[0].transcript).join(' ');
@@ -3724,9 +3804,10 @@
     function handleVoiceTranscript(text){
       try {
         const normalized = normalizeBlackIronVoiceText(text);
-        const parsed = parseBlackIronCommand(normalized);
-        if (parsed.fittingType && parsed.fittingType !== 'Pipe') selectFitting(parsed.fittingType);
-        showVoicePreview(parsed, normalized);
+        const parsed = parseMultipleBlackIronCommands(normalized);
+        const previewItems = Array.isArray(parsed) ? parsed : [parsed];
+        if (previewItems[0] && previewItems[0].fittingType && previewItems[0].fittingType !== 'Pipe') selectFitting(previewItems[0].fittingType);
+        showVoicePreview(previewItems, normalized);
       } catch(err) {
         pendingVoiceParsed = null;
         els.voiceBox.style.display = 'block';
@@ -3759,8 +3840,10 @@
     });
     els.voiceBox.addEventListener('click', e => {
       if (e.target && e.target.id === 'voiceConfirmAdd' && pendingVoiceParsed) {
-        addItem(pendingVoiceParsed);
-        clearVoicePreview('Added: ' + buildDisplay(pendingVoiceParsed));
+        const itemsToAdd = Array.isArray(pendingVoiceParsed) ? pendingVoiceParsed : [pendingVoiceParsed];
+        itemsToAdd.forEach(item => addItem(item));
+        const summary = itemsToAdd.length === 1 ? buildDisplay(itemsToAdd[0]) : `${itemsToAdd.length} items`;
+        clearVoicePreview('Added: ' + summary);
       }
       if (e.target && e.target.id === 'voiceConfirmCancel') {
         clearVoicePreview('Cancelled voice add.');
@@ -3812,11 +3895,14 @@ document.addEventListener("DOMContentLoaded",function(){
   const backupBtn = document.getElementById('backupDataButton');
   const restoreBtn = document.getElementById('restoreDataButton');
   const restoreInput = document.getElementById('restoreDataInput');
+  const backupNowBtn = document.getElementById('backupNowButton');
   if (backupBtn) backupBtn.addEventListener('click', downloadBackupData);
+  if (backupNowBtn) backupNowBtn.addEventListener('click', downloadBackupData);
   if (restoreBtn) restoreBtn.addEventListener('click', openRestorePicker);
   if (restoreInput) restoreInput.addEventListener('change', function(){
     if (this.files && this.files[0]) restoreBackupData(this.files[0]);
   });
+  if (typeof checkBackupReminder === 'function') checkBackupReminder();
 });
 
 document.addEventListener("DOMContentLoaded",function(){
