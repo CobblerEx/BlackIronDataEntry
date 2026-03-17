@@ -1064,6 +1064,8 @@
       saveData();
       renderTable();
       clearForm();
+      document.getElementById('timeIn').value = '08:00';
+      document.getElementById('timeOut').value = '08:30';
 
       alert(archived
         ? `Archived ${currentDate} and started a new day on ${nextDate}.`
@@ -2277,6 +2279,8 @@
         saveData();
         renderTable();
         clearForm();
+        document.getElementById('timeIn').value = '08:00';
+        document.getElementById('timeOut').value = '08:30';
       }
     };
 
