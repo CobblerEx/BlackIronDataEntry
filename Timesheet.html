@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -426,6 +427,7 @@
         </label>
         <button type="button" id="newInvoiceDraft" class="mini-btn">New Draft</button>
         <button type="button" id="saveInvoiceDraft" class="mini-btn">Save Draft</button>
+        <button type="button" id="appendInvoiceDraft" class="mini-btn" style="background:#17a2b8;">Append Work To Draft</button>
       </div>
 
       <div class="inline-group" style="margin-bottom:1rem;align-items:flex-end;gap:0.5rem;flex-wrap:wrap;">
@@ -438,6 +440,9 @@
         <button type="button" id="loadInvoiceDraft" class="mini-btn">Load Draft</button>
         <button type="button" id="deleteInvoiceDraft" class="mini-btn" style="background:#dc3545;">Delete Draft</button>
       </div>
+      <small class="muted-note" style="margin-top:-.35rem;margin-bottom:.85rem;">
+        To keep adding work on another day: load the draft, check the new timesheet entries, then click <b>Append Work To Draft</b>.
+      </small>
 
       <label>Include Entries In This Invoice:</label>
       <div id="invoiceEntrySelector"></div>
@@ -1926,15 +1931,21 @@
       }));
     }
 
-    function saveCurrentInvoiceDraft() {
+    function saveCurrentInvoiceDraft(options = {}) {
+      const appendMode = !!options.appendMode;
       const invoiceId = document.getElementById('invoiceId').value.trim();
       if (!invoiceId) {
-        alert('Enter an Invoice / Work Order ID first.');
+        alert('Enter or load an Invoice / Work Order ID first.');
         return;
       }
 
       let selectedIds = getSelectedInvoiceEntryIds();
       const existingDraft = invoices[invoiceId];
+
+      if (appendMode && !existingDraft) {
+        alert('Load an existing draft first, then append the new work to it.');
+        return;
+      }
 
       if (existingDraft) {
         const existingIds = (existingDraft.linkedEntryIds || []).map(String);
@@ -1987,9 +1998,29 @@
       saveInvoicesToStorage();
       syncEntryStatusesFromInvoices();
       renderTable();
+      renderInvoiceEntrySelector(selectedIds);
       updateInvoiceSummary();
       refreshInvoiceDraftList(invoiceId);
-      alert(existingDraft ? `Invoice draft "${invoiceId}" updated and appended.` : `Invoice draft "${invoiceId}" saved.`);
+      alert(existingDraft ? `Invoice draft "${invoiceId}" updated${appendMode ? ' with the newly selected work' : ' and appended'}.` : `Invoice draft "${invoiceId}" saved.`);
+    }
+
+    function appendWorkToLoadedDraft() {
+      const invoiceId = document.getElementById('invoiceId').value.trim();
+      if (!invoiceId || !invoices[invoiceId]) {
+        alert('Load the draft you want to continue first.');
+        return;
+      }
+
+      const currentIds = (invoices[invoiceId].linkedEntryIds || []).map(String);
+      const selectedIds = getSelectedInvoiceEntryIds().map(String);
+      const newIds = selectedIds.filter(id => !currentIds.includes(id));
+
+      if (!newIds.length) {
+        alert('Select the new timesheet entries you want to add to this draft first.');
+        return;
+      }
+
+      saveCurrentInvoiceDraft({ appendMode: true });
     }
 
     function loadInvoiceDraftById(invoiceId) {
@@ -2371,6 +2402,7 @@
     document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
     document.getElementById('clearInvoice').onclick = () => clearInvoice();
     document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
+    document.getElementById('appendInvoiceDraft').onclick = () => appendWorkToLoadedDraft();
 
     document.getElementById('loadInvoiceDraft').onclick = () => {
       const chosen = document.getElementById('invoiceDraftList').value.trim();
