@@ -820,11 +820,6 @@
     let entries = [];
     let addressHistory = JSON.parse(localStorage.getItem('addressHistory') || '[]');
     let invoices = JSON.parse(localStorage.getItem('savedInvoices') || '{}');
-    let invoiceSelectionOverride = null;
-
-    function setInvoiceSelectionOverride(ids = null) {
-      invoiceSelectionOverride = Array.isArray(ids) ? ids.map(String) : null;
-    }
 
     function hydrateInvoiceServiceDates() {
       let changed = false;
@@ -1692,14 +1687,12 @@
     }
 
     function getSelectedInvoiceEntryIds() {
-      const checkedIds = [...document.querySelectorAll('.invoice-entry-check:checked')].map(cb => String(cb.value));
-      if (checkedIds.length) return checkedIds;
-      return Array.isArray(invoiceSelectionOverride) ? invoiceSelectionOverride.map(String) : [];
+      return [...document.querySelectorAll('.invoice-entry-check:checked')].map(cb => cb.value);
     }
 
     function getSelectedInvoiceEntries() {
       const ids = getSelectedInvoiceEntryIds();
-      return entries.filter(e => ids.includes(String(e.id)));
+      return entries.filter(e => ids.includes(e.id));
     }
 
     function getFilteredEntries() {
@@ -1832,7 +1825,7 @@
       const selectedIds = getSelectedInvoiceEntryIds();
 
       entries = entries.map(entry => {
-        if (selectedIds.includes(String(entry.id))) {
+        if (selectedIds.includes(entry.id)) {
           return {
             ...entry,
             billingStatus: 'invoiced',
@@ -1856,7 +1849,7 @@
       if (!box) return;
 
       const currentInvoiceId = document.getElementById('invoiceId').value.trim();
-      const currentIds = (selectedIds ?? invoiceSelectionOverride ?? getSelectedInvoiceEntryIds()).map(String);
+      const currentIds = (selectedIds ?? getSelectedInvoiceEntryIds()).map(String);
       const lockedDraftAddress = getLockedDraftAddress(currentInvoiceId);
       const normalizedLockedDraftAddress = normalizeDraftAddress(lockedDraftAddress);
       box.innerHTML = '';
@@ -1939,7 +1932,6 @@
 
         cb.addEventListener('change', () => {
           syncRowState();
-          setInvoiceSelectionOverride([...document.querySelectorAll('.invoice-entry-check:checked')].map(input => String(input.value)));
           populateInvoiceFromEntries();
           updateInvoiceSummary();
         });
@@ -2036,7 +2028,6 @@
       tbody.innerHTML = '';
 
       ensureServiceChargeRow();
-      setInvoiceSelectionOverride([]);
       renderInvoiceEntrySelector([]);
       updateInvoiceSummary();
     }
@@ -2062,36 +2053,27 @@
         return;
       }
 
-      let selectedIds = getSelectedInvoiceEntryIds().map(String);
       const existingDraft = invoices[invoiceId];
+      let selectedIds = getSelectedInvoiceEntryIds().map(String);
+      let addedIds = [];
 
-      if (appendMode && !existingDraft) {
-        alert('Load an existing draft first, then append the new work to it.');
-        return;
-      }
+      if (appendMode) {
+        if (!existingDraft) {
+          alert('Load an existing draft first, then append the new work to it.');
+          return;
+        }
 
-      if (appendMode && existingDraft) {
         const existingIds = (existingDraft.linkedEntryIds || []).map(String);
-        const mergedIds = [...new Set([...existingIds, ...selectedIds])];
-        const addedIds = mergedIds.filter(id => !existingIds.includes(id));
+        const incomingIds = selectedIds.filter(id => !existingIds.includes(id));
 
-        if (!addedIds.length) {
+        if (!incomingIds.length) {
           alert('Select the new timesheet entries you want to add to this draft first.');
           return;
         }
 
-        selectedIds = populateInvoiceFromDraftAppend(existingDraft, mergedIds).map(String);
-      } else if (existingDraft) {
-        const existingIds = (existingDraft.linkedEntryIds || []).map(String);
-        const incomingIds = selectedIds.map(String);
-        const mergedIds = [...new Set([...existingIds, ...incomingIds])];
-        const isAppendingToExistingDraft = mergedIds.some(id => !existingIds.includes(id));
-
-        if (isAppendingToExistingDraft) {
-          selectedIds = populateInvoiceFromDraftAppend(existingDraft, incomingIds).map(String);
-        } else {
-          selectedIds = mergedIds;
-        }
+        addedIds = incomingIds;
+        selectedIds = [...new Set([...existingIds, ...incomingIds])];
+        populateInvoiceFromDraftAppend(existingDraft, incomingIds);
       }
 
       const conflicts = entries.filter(e =>
@@ -2137,26 +2119,33 @@
         }
       }
 
+      const mergedItems = collectInvoiceItems();
+      const clientName = document.getElementById('clientName').value.trim() || existingDraft?.clientName || '';
+      const clientPhone = document.getElementById('clientPhone').value.trim() || existingDraft?.clientPhone || '';
+      const clientEmail = document.getElementById('clientEmail').value.trim() || existingDraft?.clientEmail || '';
+      const clientAddress = document.getElementById('clientAddress').value.trim() || existingDraft?.clientAddress || '';
+      const laborDescription = document.getElementById('laborDescription').value.trim() || existingDraft?.laborDescription || '';
+
       rememberCurrentClient(true);
-      rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(String(e.id)))));
-      setInvoiceSelectionOverride(selectedIds);
+      rememberCurrentLocationProfile(true, getSingleFilteredAddress(selectedEntries) || clientAddress);
 
       invoices[invoiceId] = {
+        ...(existingDraft || {}),
         id: invoiceId,
-        clientName: document.getElementById('clientName').value.trim(),
-        clientPhone: document.getElementById('clientPhone').value.trim(),
-        clientEmail: document.getElementById('clientEmail').value.trim(),
-        clientAddress: document.getElementById('clientAddress').value.trim(),
-        hourlyRate: +document.getElementById('hourlyRate').value || 0,
-        overtimeRate: +document.getElementById('overtimeRate').value || 0,
-        hstRate: +document.getElementById('hstRate').value || 0.13,
-        laborDescription: document.getElementById('laborDescription').value.trim(),
+        clientName,
+        clientPhone,
+        clientEmail,
+        clientAddress,
+        hourlyRate: +document.getElementById('hourlyRate').value || existingDraft?.hourlyRate || 0,
+        overtimeRate: +document.getElementById('overtimeRate').value || existingDraft?.overtimeRate || 0,
+        hstRate: +document.getElementById('hstRate').value || existingDraft?.hstRate || 0.13,
+        laborDescription,
         linkedEntryIds: selectedIds,
-        items: collectInvoiceItems(),
+        items: mergedItems,
         serviceDate,
         serviceDateLabel,
         status: 'draft',
-        createdAt: invoices[invoiceId]?.createdAt || new Date().toISOString(),
+        createdAt: existingDraft?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
@@ -2165,10 +2154,20 @@
       renderTable();
       refreshInvoiceDraftList(invoiceId);
       loadInvoiceDraftById(invoiceId);
-      alert(existingDraft ? `Invoice draft "${invoiceId}" updated${appendMode ? ' with the newly selected work' : ' and appended'}.` : `Invoice draft "${invoiceId}" saved.`);
+
+      if (appendMode) {
+        alert(`Invoice draft "${invoiceId}" updated with ${addedIds.length} new entr${addedIds.length === 1 ? 'y' : 'ies'}.`);
+      } else if (existingDraft) {
+        alert(`Invoice draft "${invoiceId}" updated.`);
+      } else {
+        alert(`Invoice draft "${invoiceId}" saved.`);
+      }
     }
 
     function appendWorkToLoadedDraft() {
+
+
+
       const invoiceId = document.getElementById('invoiceId').value.trim();
       if (!invoiceId || !invoices[invoiceId]) {
         alert('Load the draft you want to continue first.');
@@ -2200,12 +2199,11 @@
       document.getElementById('clientEmail').value = inv.clientEmail || '';
       document.getElementById('clientAddress').value = inv.clientAddress || '';
       rememberCurrentClient(true);
-      rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(entries.filter(e => (inv.linkedEntryIds || []).map(String).includes(String(e.id)))));
+      rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(entries.filter(e => (inv.linkedEntryIds || []).includes(e.id))));
       document.getElementById('hourlyRate').value = inv.hourlyRate ?? 100;
       document.getElementById('overtimeRate').value = inv.overtimeRate ?? 150;
       document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
       document.getElementById('laborDescription').value = inv.laborDescription || '';
-      setInvoiceSelectionOverride(inv.linkedEntryIds || []);
 
       renderInvoiceEntrySelector(inv.linkedEntryIds || []);
 
@@ -2220,8 +2218,6 @@
         }
       });
 
-      populateInvoiceFromEntries();
-      renderInvoiceEntrySelector(inv.linkedEntryIds || []);
       updateInvoiceSummary();
     }
 
@@ -2428,10 +2424,8 @@
         });
       });
 
-      const preservedInvoiceSelection = getSelectedInvoiceEntryIds();
-      if (preservedInvoiceSelection.length) setInvoiceSelectionOverride(preservedInvoiceSelection);
       saveData();
-      renderInvoiceEntrySelector(preservedInvoiceSelection);
+      renderInvoiceEntrySelector();
       populateInvoiceFromEntries();
       updateInvoiceSummary();
     }
