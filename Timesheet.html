@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1630,6 +1629,28 @@
       return uniqueAddrs.length === 1 ? uniqueAddrs[0] : '';
     }
 
+    function normalizeDraftAddress(address) {
+      return String(address || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
+    }
+
+    function getEntryAddress(entry) {
+      return String(
+        entry?.address ||
+        entry?.jobAddress ||
+        entry?.clientAddress ||
+        entry?.location ||
+        ''
+      ).trim();
+    }
+
+    function getLockedDraftAddress(invoiceId) {
+      const draftAddress = invoices[invoiceId]?.clientAddress || '';
+      return draftAddress.trim();
+    }
+
     function setClientAddressFromFiltered(filtered) {
       const addrField = document.getElementById('clientAddress');
       const singleAddress = getSingleFilteredAddress(filtered);
@@ -1786,6 +1807,8 @@
 
       const currentInvoiceId = document.getElementById('invoiceId').value.trim();
       const currentIds = selectedIds ?? getSelectedInvoiceEntryIds();
+      const lockedDraftAddress = getLockedDraftAddress(currentInvoiceId);
+      const normalizedLockedDraftAddress = normalizeDraftAddress(lockedDraftAddress);
       box.innerHTML = '';
 
       if (!entries.length) {
@@ -1808,15 +1831,23 @@
           const isSameInvoice = !!(currentInvoiceId && e.invoiceId && e.invoiceId === currentInvoiceId);
           const linkedToOtherDraft = e.billingStatus === 'draft-linked' && e.invoiceId && e.invoiceId !== currentInvoiceId;
           const invoicedToOtherInvoice = isInvoiced && !isSameInvoice;
-          const isLocked = invoicedToOtherInvoice || linkedToOtherDraft;
-          const isChecked = currentIds.includes(e.id) || isSameInvoice;
+          const entryAddress = getEntryAddress(e);
+          const addressMismatch = !!(
+            normalizedLockedDraftAddress &&
+            entryAddress &&
+            normalizeDraftAddress(entryAddress) !== normalizedLockedDraftAddress
+          );
+          const isLocked = invoicedToOtherInvoice || linkedToOtherDraft || addressMismatch;
+          const isChecked = (currentIds.includes(e.id) || isSameInvoice) && !addressMismatch;
 
           const statusNote =
-            e.billingStatus === 'invoiced'
-              ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
-              : e.billingStatus === 'draft-linked'
-                ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
-                : `Unbilled`;
+            addressMismatch
+              ? `Address mismatch with loaded draft`
+              : e.billingStatus === 'invoiced'
+                ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
+                : e.billingStatus === 'draft-linked'
+                  ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
+                  : `Unbilled`;
 
           row.innerHTML = `
             <input
@@ -1973,6 +2004,30 @@
           conflicts.map(e => `${formatDate(e.dateStr)} - ${e.jobName} (${e.invoiceId})`).join('\n')
         );
         return;
+      }
+
+      const selectedEntries = entries.filter(e => selectedIds.includes(e.id));
+      const currentFormAddress = document.getElementById('clientAddress').value.trim();
+      const lockedDraftAddress = (existingDraft?.clientAddress || currentFormAddress).trim();
+      const normalizedLockedDraftAddress = normalizeDraftAddress(lockedDraftAddress);
+
+      if (normalizedLockedDraftAddress) {
+        const mismatchedEntries = selectedEntries.filter(e => {
+          const entryAddress = getEntryAddress(e);
+          return entryAddress && normalizeDraftAddress(entryAddress) !== normalizedLockedDraftAddress;
+        });
+
+        if (mismatchedEntries.length) {
+          alert(
+            'You cannot add work from a different address to this draft.\n\n' +
+            'Draft address:\n' + lockedDraftAddress +
+            '\n\nMismatched entries:\n' +
+            mismatchedEntries.map(e => `${formatDate(e.dateStr)} - ${e.jobName}${getEntryAddress(e) ? ` (${getEntryAddress(e)})` : ''}`).join('\n')
+          );
+          renderInvoiceEntrySelector(selectedIds);
+          updateInvoiceSummary();
+          return;
+        }
       }
 
       rememberCurrentClient(true);
