@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1677,6 +1678,17 @@
       return `${formatDate(dates[0])} to ${formatDate(dates[dates.length - 1])}`;
     }
 
+    function getServiceDateForEntries(filtered) {
+      if (!filtered.length) return '';
+      const dates = filtered.map(e => e.dateStr).filter(Boolean).sort();
+      return dates[0] || '';
+    }
+
+    function getServiceDateLabelForEntries(filtered) {
+      const serviceDate = getServiceDateForEntries(filtered);
+      return serviceDate ? formatDate(serviceDate) : getSelectedDateRange(filtered);
+    }
+
 
     function mergeLaborDescriptions(existingText, appendedText) {
       const existingLines = String(existingText || '').split('\n').map(s => s.trim()).filter(Boolean);
@@ -2007,6 +2019,8 @@
       }
 
       const selectedEntries = entries.filter(e => selectedIds.includes(e.id));
+      const serviceDate = getServiceDateForEntries(selectedEntries);
+      const serviceDateLabel = getServiceDateLabelForEntries(selectedEntries);
       const currentFormAddress = document.getElementById('clientAddress').value.trim();
       const lockedDraftAddress = (existingDraft?.clientAddress || currentFormAddress).trim();
       const normalizedLockedDraftAddress = normalizeDraftAddress(lockedDraftAddress);
@@ -2045,6 +2059,8 @@
         laborDescription: document.getElementById('laborDescription').value.trim(),
         linkedEntryIds: selectedIds,
         items: collectInvoiceItems(),
+        serviceDate,
+        serviceDateLabel,
         status: 'draft',
         createdAt: invoices[invoiceId]?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -2778,10 +2794,9 @@
         doc.setFontSize(8);
         doc.text(copyType === 'boss' ? 'Internal copy for costing review' : 'e-transfer accepted at Jason@archerser.ca', 105, 280, { align: 'center' });
 
-        const d = new Date();
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const serviceDateForFile = getServiceDateForEntries(selectedEntries) || new Date().toISOString().split('T')[0];
         const safeClientName = (clientName || 'Client').replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-        doc.save(`${safeClientName || 'Client'}_${dateStr}_${copyType === 'boss' ? 'Boss_Copy' : 'Invoice'}.pdf`);
+        doc.save(`${safeClientName || 'Client'}_${serviceDateForFile}_${copyType === 'boss' ? 'Boss_Copy' : 'Invoice'}.pdf`);
 
         localStorage.setItem('lastClient', JSON.stringify({
           name: clientName,
