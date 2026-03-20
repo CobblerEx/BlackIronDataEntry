@@ -2053,31 +2053,40 @@
         return;
       }
 
-      const existingDraft = invoices[invoiceId];
       let selectedIds = getSelectedInvoiceEntryIds().map(String);
-      let addedIds = [];
+      const existingDraft = invoices[invoiceId];
 
-      if (appendMode) {
-        if (!existingDraft) {
-          alert('Load an existing draft first, then append the new work to it.');
-          return;
-        }
+      if (appendMode && !existingDraft) {
+        alert('Load an existing draft first, then append the new work to it.');
+        return;
+      }
 
+      if (appendMode && existingDraft) {
         const existingIds = (existingDraft.linkedEntryIds || []).map(String);
-        const incomingIds = selectedIds.filter(id => !existingIds.includes(id));
+        const mergedIds = [...new Set([...existingIds, ...selectedIds])];
+        const addedIds = mergedIds.filter(id => !existingIds.includes(id));
 
-        if (!incomingIds.length) {
+        if (!addedIds.length) {
           alert('Select the new timesheet entries you want to add to this draft first.');
           return;
         }
 
-        addedIds = incomingIds;
-        selectedIds = [...new Set([...existingIds, ...incomingIds])];
-        populateInvoiceFromDraftAppend(existingDraft, incomingIds);
+        selectedIds = populateInvoiceFromDraftAppend(existingDraft, mergedIds).map(String);
+      } else if (existingDraft) {
+        const existingIds = (existingDraft.linkedEntryIds || []).map(String);
+        const incomingIds = selectedIds.map(String);
+        const mergedIds = [...new Set([...existingIds, ...incomingIds])];
+        const isAppendingToExistingDraft = mergedIds.some(id => !existingIds.includes(id));
+
+        if (isAppendingToExistingDraft) {
+          selectedIds = populateInvoiceFromDraftAppend(existingDraft, mergedIds).map(String);
+        } else {
+          selectedIds = mergedIds;
+        }
       }
 
       const conflicts = entries.filter(e =>
-        selectedIds.includes(String(e.id)) &&
+        selectedIds.includes(e.id) &&
         e.billingStatus === 'draft-linked' &&
         e.invoiceId &&
         e.invoiceId !== invoiceId
@@ -2091,7 +2100,7 @@
         return;
       }
 
-      const selectedEntries = entries.filter(e => selectedIds.includes(String(e.id)));
+      const selectedEntries = entries.filter(e => selectedIds.includes(e.id));
       const existingServiceDate = existingDraft?.serviceDate || '';
       const existingServiceDateLabel = existingDraft?.serviceDateLabel || '';
       const serviceDate = getServiceDateForEntries(selectedEntries) || existingServiceDate;
@@ -2119,33 +2128,25 @@
         }
       }
 
-      const mergedItems = collectInvoiceItems();
-      const clientName = document.getElementById('clientName').value.trim() || existingDraft?.clientName || '';
-      const clientPhone = document.getElementById('clientPhone').value.trim() || existingDraft?.clientPhone || '';
-      const clientEmail = document.getElementById('clientEmail').value.trim() || existingDraft?.clientEmail || '';
-      const clientAddress = document.getElementById('clientAddress').value.trim() || existingDraft?.clientAddress || '';
-      const laborDescription = document.getElementById('laborDescription').value.trim() || existingDraft?.laborDescription || '';
-
       rememberCurrentClient(true);
-      rememberCurrentLocationProfile(true, getSingleFilteredAddress(selectedEntries) || clientAddress);
+      rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(e.id))));
 
       invoices[invoiceId] = {
-        ...(existingDraft || {}),
         id: invoiceId,
-        clientName,
-        clientPhone,
-        clientEmail,
-        clientAddress,
-        hourlyRate: +document.getElementById('hourlyRate').value || existingDraft?.hourlyRate || 0,
-        overtimeRate: +document.getElementById('overtimeRate').value || existingDraft?.overtimeRate || 0,
-        hstRate: +document.getElementById('hstRate').value || existingDraft?.hstRate || 0.13,
-        laborDescription,
+        clientName: document.getElementById('clientName').value.trim(),
+        clientPhone: document.getElementById('clientPhone').value.trim(),
+        clientEmail: document.getElementById('clientEmail').value.trim(),
+        clientAddress: document.getElementById('clientAddress').value.trim(),
+        hourlyRate: +document.getElementById('hourlyRate').value || 0,
+        overtimeRate: +document.getElementById('overtimeRate').value || 0,
+        hstRate: +document.getElementById('hstRate').value || 0.13,
+        laborDescription: document.getElementById('laborDescription').value.trim(),
         linkedEntryIds: selectedIds,
-        items: mergedItems,
+        items: collectInvoiceItems(),
         serviceDate,
         serviceDateLabel,
         status: 'draft',
-        createdAt: existingDraft?.createdAt || new Date().toISOString(),
+        createdAt: invoices[invoiceId]?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
@@ -2154,20 +2155,10 @@
       renderTable();
       refreshInvoiceDraftList(invoiceId);
       loadInvoiceDraftById(invoiceId);
-
-      if (appendMode) {
-        alert(`Invoice draft "${invoiceId}" updated with ${addedIds.length} new entr${addedIds.length === 1 ? 'y' : 'ies'}.`);
-      } else if (existingDraft) {
-        alert(`Invoice draft "${invoiceId}" updated.`);
-      } else {
-        alert(`Invoice draft "${invoiceId}" saved.`);
-      }
+      alert(existingDraft ? `Invoice draft "${invoiceId}" updated${appendMode ? ' with the newly selected work' : ' and appended'}.` : `Invoice draft "${invoiceId}" saved.`);
     }
 
     function appendWorkToLoadedDraft() {
-
-
-
       const invoiceId = document.getElementById('invoiceId').value.trim();
       if (!invoiceId || !invoices[invoiceId]) {
         alert('Load the draft you want to continue first.');
