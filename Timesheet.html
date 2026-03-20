@@ -820,6 +820,11 @@
     let entries = [];
     let addressHistory = JSON.parse(localStorage.getItem('addressHistory') || '[]');
     let invoices = JSON.parse(localStorage.getItem('savedInvoices') || '{}');
+    let invoiceSelectionOverride = null;
+
+    function setInvoiceSelectionOverride(ids = null) {
+      invoiceSelectionOverride = Array.isArray(ids) ? ids.map(String) : null;
+    }
 
     function hydrateInvoiceServiceDates() {
       let changed = false;
@@ -1687,12 +1692,14 @@
     }
 
     function getSelectedInvoiceEntryIds() {
-      return [...document.querySelectorAll('.invoice-entry-check:checked')].map(cb => cb.value);
+      const checkedIds = [...document.querySelectorAll('.invoice-entry-check:checked')].map(cb => String(cb.value));
+      if (checkedIds.length) return checkedIds;
+      return Array.isArray(invoiceSelectionOverride) ? invoiceSelectionOverride.map(String) : [];
     }
 
     function getSelectedInvoiceEntries() {
       const ids = getSelectedInvoiceEntryIds();
-      return entries.filter(e => ids.includes(e.id));
+      return entries.filter(e => ids.includes(String(e.id)));
     }
 
     function getFilteredEntries() {
@@ -1825,7 +1832,7 @@
       const selectedIds = getSelectedInvoiceEntryIds();
 
       entries = entries.map(entry => {
-        if (selectedIds.includes(entry.id)) {
+        if (selectedIds.includes(String(entry.id))) {
           return {
             ...entry,
             billingStatus: 'invoiced',
@@ -1849,7 +1856,7 @@
       if (!box) return;
 
       const currentInvoiceId = document.getElementById('invoiceId').value.trim();
-      const currentIds = (selectedIds ?? getSelectedInvoiceEntryIds()).map(String);
+      const currentIds = (selectedIds ?? invoiceSelectionOverride ?? getSelectedInvoiceEntryIds()).map(String);
       const lockedDraftAddress = getLockedDraftAddress(currentInvoiceId);
       const normalizedLockedDraftAddress = normalizeDraftAddress(lockedDraftAddress);
       box.innerHTML = '';
@@ -1932,6 +1939,7 @@
 
         cb.addEventListener('change', () => {
           syncRowState();
+          setInvoiceSelectionOverride([...document.querySelectorAll('.invoice-entry-check:checked')].map(input => String(input.value)));
           populateInvoiceFromEntries();
           updateInvoiceSummary();
         });
@@ -2028,6 +2036,7 @@
       tbody.innerHTML = '';
 
       ensureServiceChargeRow();
+      setInvoiceSelectionOverride([]);
       renderInvoiceEntrySelector([]);
       updateInvoiceSummary();
     }
@@ -2086,7 +2095,7 @@
       }
 
       const conflicts = entries.filter(e =>
-        selectedIds.includes(e.id) &&
+        selectedIds.includes(String(e.id)) &&
         e.billingStatus === 'draft-linked' &&
         e.invoiceId &&
         e.invoiceId !== invoiceId
@@ -2100,7 +2109,7 @@
         return;
       }
 
-      const selectedEntries = entries.filter(e => selectedIds.includes(e.id));
+      const selectedEntries = entries.filter(e => selectedIds.includes(String(e.id)));
       const existingServiceDate = existingDraft?.serviceDate || '';
       const existingServiceDateLabel = existingDraft?.serviceDateLabel || '';
       const serviceDate = getServiceDateForEntries(selectedEntries) || existingServiceDate;
@@ -2129,7 +2138,8 @@
       }
 
       rememberCurrentClient(true);
-      rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(e.id))));
+      rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(String(e.id)))));
+      setInvoiceSelectionOverride(selectedIds);
 
       invoices[invoiceId] = {
         id: invoiceId,
@@ -2190,11 +2200,12 @@
       document.getElementById('clientEmail').value = inv.clientEmail || '';
       document.getElementById('clientAddress').value = inv.clientAddress || '';
       rememberCurrentClient(true);
-      rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(entries.filter(e => (inv.linkedEntryIds || []).includes(e.id))));
+      rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(entries.filter(e => (inv.linkedEntryIds || []).map(String).includes(String(e.id)))));
       document.getElementById('hourlyRate').value = inv.hourlyRate ?? 100;
       document.getElementById('overtimeRate').value = inv.overtimeRate ?? 150;
       document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
       document.getElementById('laborDescription').value = inv.laborDescription || '';
+      setInvoiceSelectionOverride(inv.linkedEntryIds || []);
 
       renderInvoiceEntrySelector(inv.linkedEntryIds || []);
 
@@ -2209,6 +2220,8 @@
         }
       });
 
+      populateInvoiceFromEntries();
+      renderInvoiceEntrySelector(inv.linkedEntryIds || []);
       updateInvoiceSummary();
     }
 
@@ -2415,8 +2428,10 @@
         });
       });
 
+      const preservedInvoiceSelection = getSelectedInvoiceEntryIds();
+      if (preservedInvoiceSelection.length) setInvoiceSelectionOverride(preservedInvoiceSelection);
       saveData();
-      renderInvoiceEntrySelector();
+      renderInvoiceEntrySelector(preservedInvoiceSelection);
       populateInvoiceFromEntries();
       updateInvoiceSummary();
     }
