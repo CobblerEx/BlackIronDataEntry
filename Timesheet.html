@@ -1,8 +1,11 @@
-<html lang="en"><head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Timesheet Creator</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <style>
     * {
@@ -352,7 +355,7 @@
       <input type="file" id="restoreDataInput" accept="application/json,.json" style="display:none;">
     </div>
 
-    <div id="backupWarning" style="display: block; background: rgb(139, 30, 30); color: rgb(255, 255, 255); padding: 0.8rem 1rem; border-radius: 8px; margin: 0px auto 1rem; max-width: 900px; text-align: center;">
+    <div id="backupWarning" style="display:none;background:#8b1e1e;color:#fff;padding:.8rem 1rem;border-radius:8px;margin:0 auto 1rem;max-width:900px;text-align:center;">
       You have not backed up your data in the last 7 days.
       <button type="button" id="backupNowButton" style="margin-left:.75rem;background:#fff;color:#8b1e1e;padding:.45rem .8rem;border:none;border-radius:6px;cursor:pointer;font-weight:700;">Backup Now</button>
     </div>
@@ -534,7 +537,7 @@
           <input type="number" id="biCalcShutoffPosition" step="0.01" min="0" placeholder="Optional" class="select-on-focus">
         </label>
         <label style="display:flex;align-items:center;gap:.6rem;margin-top:1.6rem;">
-          <input type="checkbox" id="biCalcAutoTransfer" checked="" style="width:auto;">
+          <input type="checkbox" id="biCalcAutoTransfer" checked style="width:auto;">
           Auto-add fittings to parts list
         </label>
       </div>
@@ -592,30 +595,15 @@
       <div class="bi-wrap" style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,.03);">
         <label>Quick Add:
           <div class="bi-inline" style="width:100%;">
-            <input type="text" id="biQuickAdd" placeholder="Examples: 3/4 tee | 1 x 3/4 reducer | 3/4 x 6 nipple | qty 2 1/2 90 elbow" style="flex:1;">
-            <button type="button" id="biQuickAddBtn" class="mini-btn">Parse &amp; Add</button>
+            <input type="text" id="biQuickAdd" placeholder='Examples: 3/4 tee | 1 x 3/4 reducer | 3/4 x 6 nipple | qty 2 1/2 90 elbow' style="flex:1;">
+            <button type="button" id="biQuickAddBtn" class="mini-btn">Parse & Add</button>
           </div>
         </label>
         <small class="bi-muted">Fast field entry also works with voice. Duplicates are grouped automatically when sent to the invoice.</small>
       </div>
 
       <label style="margin-top:1rem;">Fitting Type:</label>
-      <div id="biFitGrid" class="bi-fit-grid"><button type="button" class="bi-fit-btn " data-fit="Nipple">Nipple</button>
-<button type="button" class="bi-fit-btn " data-fit="90 degree elbow">90 degree elbow</button>
-<button type="button" class="bi-fit-btn " data-fit="45 degree elbow">45 degree elbow</button>
-<button type="button" class="bi-fit-btn " data-fit="Tee">Tee</button>
-<button type="button" class="bi-fit-btn " data-fit="Union">Union</button>
-<button type="button" class="bi-fit-btn " data-fit="Shut-off">Shut-off</button>
-<button type="button" class="bi-fit-btn " data-fit="Reducer">Reducer</button>
-<button type="button" class="bi-fit-btn " data-fit="Cap">Cap</button>
-<button type="button" class="bi-fit-btn " data-fit="Plug">Plug</button>
-<button type="button" class="bi-fit-btn " data-fit="Coupling">Coupling</button>
-<button type="button" class="bi-fit-btn " data-fit="Bushing">Bushing</button>
-<button type="button" class="bi-fit-btn " data-fit="Flexconnector">Flexconnector</button>
-<button type="button" class="bi-fit-btn " data-fit="Gastiite">Gastiite</button>
-<button type="button" class="bi-fit-btn " data-fit="Stand Off (Long)">Stand Off (Long)</button>
-<button type="button" class="bi-fit-btn " data-fit="Stand Off (Short)">Stand Off (Short)</button>
-<button type="button" class="bi-fit-btn " data-fit="Paint">Paint</button></div>
+      <div id="biFitGrid" class="bi-fit-grid"></div>
 
       <div class="bi-grid">
         <label id="biReducerWrap" class="bi-hidden">Reducer To:
@@ -699,19 +687,19 @@
       <div class="bi-chip-row">
         <span class="bi-chip">Items: <b id="biItemCount">0</b></span>
         <span class="bi-chip">Total Qty: <b id="biTotalQty">0</b></span>
-        <span class="bi-chip">Last Size Saved: <b id="biLastSize">1/2</b></span>
+        <span class="bi-chip">Last Size Saved: <b id="biLastSize">—</b></span>
       </div>
       <small class="bi-muted">Quality-of-life upgrades added here: saved parts list, job-name memory, duplicate/edit/delete, last pipe size memory, and direct transfer into the invoice materials table.</small>
     </div>
 
     <div class="bi-wrap">
       <h2>Grouped Summary</h2>
-      <div id="biGroupedList" class="bi-list"><div class="bi-card"><div class="bi-card-main">No grouped items yet.</div></div></div>
+      <div id="biGroupedList" class="bi-list"></div>
     </div>
 
     <div class="bi-wrap">
       <h2>Parts List</h2>
-      <div id="biList" class="bi-list"><div class="bi-card"><div class="bi-card-main">No parts added yet.</div></div></div>
+      <div id="biList" class="bi-list"></div>
     </div>
   </div>
 
@@ -2067,8 +2055,6 @@
 
       let selectedIds = getSelectedInvoiceEntryIds().map(String);
       const existingDraft = invoices[invoiceId];
-      let mergedDescriptionForSave = document.getElementById('laborDescription').value.trim();
-      let itemsForSave = collectInvoiceItems();
 
       if (appendMode && !existingDraft) {
         alert('Load an existing draft first, then append the new work to it.');
@@ -2085,52 +2071,7 @@
           return;
         }
 
-        const existingEntries = entries.filter(e => existingIds.includes(String(e.id)));
-        const addedEntries = entries.filter(e => addedIds.includes(String(e.id)));
-        const mergedEntries = entries.filter(e => mergedIds.includes(String(e.id)));
-
-        selectedIds = mergedIds;
-        mergedDescriptionForSave = mergeLaborDescriptions(
-          existingDraft.laborDescription || getLaborDescriptionFromTimesheet(existingEntries),
-          getLaborDescriptionFromTimesheet(addedEntries)
-        ) || getLaborDescriptionFromTimesheet(mergedEntries);
-
-        const preservedNonLaborItems = (existingDraft.items || []).filter(item => !String(item.type || '').startsWith('labor-'));
-        const currentNonLaborItems = collectInvoiceItems().filter(item => !String(item.type || '').startsWith('labor-'));
-        const chosenNonLaborItems = currentNonLaborItems.length ? currentNonLaborItems : preservedNonLaborItems;
-
-        const mergedLaborItems = [];
-        mergedEntries.forEach(entry => {
-          const split = getHoursBreakdown(entry);
-          const baseDesc = `${((entry.jobName || '').trim() && (entry.description || '').trim()) ? `${entry.jobName.trim()}: ${entry.description.trim()}` : ((entry.description || '').trim() || (entry.jobName || '').trim() || 'Labor')}`;
-          if (split.regular > 0) {
-            mergedLaborItems.push({
-              desc: `${baseDesc} (Reg)`,
-              qty: +split.regular.toFixed(2),
-              unit: 'hr',
-              distributorCost: 0,
-              markup: 0,
-              customerPrice: +document.getElementById('hourlyRate').value || existingDraft.hourlyRate || 0,
-              price: +document.getElementById('hourlyRate').value || existingDraft.hourlyRate || 0,
-              type: `labor-regular-${entry.id}`
-            });
-          }
-          if (split.overtime > 0) {
-            mergedLaborItems.push({
-              desc: `${baseDesc} (Overtime)`,
-              qty: +split.overtime.toFixed(2),
-              unit: 'hr',
-              distributorCost: 0,
-              markup: 0,
-              customerPrice: +document.getElementById('overtimeRate').value || existingDraft.overtimeRate || 0,
-              price: +document.getElementById('overtimeRate').value || existingDraft.overtimeRate || 0,
-              type: `labor-overtime-${entry.id}`
-            });
-          }
-        });
-
-        itemsForSave = [...chosenNonLaborItems, ...mergedLaborItems];
-        document.getElementById('laborDescription').value = mergedDescriptionForSave;
+        selectedIds = populateInvoiceFromDraftAppend(existingDraft, mergedIds).map(String);
       } else if (existingDraft) {
         const existingIds = (existingDraft.linkedEntryIds || []).map(String);
         const incomingIds = selectedIds.map(String);
@@ -2138,16 +2079,14 @@
         const isAppendingToExistingDraft = mergedIds.some(id => !existingIds.includes(id));
 
         if (isAppendingToExistingDraft) {
-          selectedIds = populateInvoiceFromDraftAppend(existingDraft, incomingIds).map(String);
-          mergedDescriptionForSave = document.getElementById('laborDescription').value.trim();
-          itemsForSave = collectInvoiceItems();
+          selectedIds = populateInvoiceFromDraftAppend(existingDraft, mergedIds).map(String);
         } else {
           selectedIds = mergedIds;
         }
       }
 
       const conflicts = entries.filter(e =>
-        selectedIds.includes(String(e.id)) &&
+        selectedIds.includes(e.id) &&
         e.billingStatus === 'draft-linked' &&
         e.invoiceId &&
         e.invoiceId !== invoiceId
@@ -2155,16 +2094,13 @@
 
       if (conflicts.length) {
         alert(
-          'Some selected entries are already linked to another draft:
-
-' +
-          conflicts.map(e => `${formatDate(e.dateStr)} - ${e.jobName} (${e.invoiceId})`).join('
-')
+          'Some selected entries are already linked to another draft:\n\n' +
+          conflicts.map(e => `${formatDate(e.dateStr)} - ${e.jobName} (${e.invoiceId})`).join('\n')
         );
         return;
       }
 
-      const selectedEntries = entries.filter(e => selectedIds.includes(String(e.id)));
+      const selectedEntries = entries.filter(e => selectedIds.includes(e.id));
       const existingServiceDate = existingDraft?.serviceDate || '';
       const existingServiceDateLabel = existingDraft?.serviceDateLabel || '';
       const serviceDate = getServiceDateForEntries(selectedEntries) || existingServiceDate;
@@ -2181,17 +2117,10 @@
 
         if (mismatchedEntries.length) {
           alert(
-            'You cannot add work from a different address to this draft.
-
-' +
-            'Draft address:
-' + lockedDraftAddress +
-            '
-
-Mismatched entries:
-' +
-            mismatchedEntries.map(e => `${formatDate(e.dateStr)} - ${e.jobName}${getEntryAddress(e) ? ` (${getEntryAddress(e)})` : ''}`).join('
-')
+            'You cannot add work from a different address to this draft.\n\n' +
+            'Draft address:\n' + lockedDraftAddress +
+            '\n\nMismatched entries:\n' +
+            mismatchedEntries.map(e => `${formatDate(e.dateStr)} - ${e.jobName}${getEntryAddress(e) ? ` (${getEntryAddress(e)})` : ''}`).join('\n')
           );
           renderInvoiceEntrySelector(selectedIds);
           updateInvoiceSummary();
@@ -2200,7 +2129,7 @@ Mismatched entries:
       }
 
       rememberCurrentClient(true);
-      rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(String(e.id)))));
+      rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(e.id))));
 
       invoices[invoiceId] = {
         id: invoiceId,
@@ -2211,9 +2140,9 @@ Mismatched entries:
         hourlyRate: +document.getElementById('hourlyRate').value || 0,
         overtimeRate: +document.getElementById('overtimeRate').value || 0,
         hstRate: +document.getElementById('hstRate').value || 0.13,
-        laborDescription: mergedDescriptionForSave,
+        laborDescription: document.getElementById('laborDescription').value.trim(),
         linkedEntryIds: selectedIds,
-        items: itemsForSave,
+        items: collectInvoiceItems(),
         serviceDate,
         serviceDateLabel,
         status: 'draft',
@@ -4243,7 +4172,5 @@ document.addEventListener("DOMContentLoaded",function(){
 
 </script>
 
-
-
 </body>
-</html> 
+</html>
