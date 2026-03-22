@@ -1787,12 +1787,8 @@
         document.getElementById('clientAddress').value = matchedClientFromAddress;
       }
 
-      existingEntries.forEach(entry => {
-        const split = getHoursBreakdown(entry);
-        if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
-        if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
-      });
-      addedEntries.forEach(entry => {
+      // Recreate labor rows for all entries in the merged list
+      mergedEntries.forEach(entry => {
         const split = getHoursBreakdown(entry);
         if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
         if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
@@ -1891,24 +1887,18 @@
           const linkedToOtherDraft = e.billingStatus === 'draft-linked' && e.invoiceId && e.invoiceId !== currentInvoiceId;
           const invoicedToOtherInvoice = isInvoiced && !isSameInvoice;
           const entryAddress = getEntryAddress(e);
-          const addressMismatch = !!(
-            normalizedLockedDraftAddress &&
-            entryAddress &&
-            normalizeDraftAddress(entryAddress) !== normalizedLockedDraftAddress
-          );
-          const isLocked = invoicedToOtherInvoice || linkedToOtherDraft || addressMismatch;
-          const isChecked = (currentIds.includes(String(e.id)) || isSameInvoice) && !addressMismatch;
+          // Note: Address mismatch check removed to allow combining work from different locations on different days
+          const isLocked = invoicedToOtherInvoice || linkedToOtherDraft;
+          const isChecked = (currentIds.includes(String(e.id)) || isSameInvoice);
 
           row.setAttribute('tabindex', isLocked ? '-1' : '0');
 
           const statusNote =
-            addressMismatch
-              ? `Address mismatch with loaded draft`
-              : e.billingStatus === 'invoiced'
-                ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
-                : e.billingStatus === 'draft-linked'
-                  ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
-                  : `Unbilled`;
+            e.billingStatus === 'invoiced'
+              ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
+              : e.billingStatus === 'draft-linked'
+                ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
+                : `Unbilled`;
 
           if (isLocked) row.classList.add('row-disabled');
           if (isChecked) row.classList.add('row-selected');
@@ -2193,7 +2183,8 @@
       }
 
       setLoadedDraftBaseIds(baseIds);
-      const finalIds = populateInvoiceFromDraftAppend(existingDraft, mergedIds).map(String);
+      // Pass only the new IDs to be added, not the merged list
+      const finalIds = populateInvoiceFromDraftAppend(existingDraft, newIds).map(String);
       invoices[invoiceId].linkedEntryIds = finalIds;
       invoices[invoiceId].updatedAt = new Date().toISOString();
       saveInvoicesToStorage();
