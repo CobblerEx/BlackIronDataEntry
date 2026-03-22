@@ -1,0 +1,3511 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Timesheet Creator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    body {font-family:'Roboto',sans-serif;background:linear-gradient(135deg,#1a1a1a 0%,#2c3e50 100%);color:#e0e0e0;padding:1.5rem;margin:0;}
+    .nav-buttons {display:flex;justify-content:center;gap:1rem;margin:1rem 0;flex-wrap:wrap;}
+    .nav-button {width:40px;height:40px;background:#2a2a2a;border:2px solid #ff4500;border-radius:50%;color:#ff4500;display:flex;align-items:center;justify-content:center;text-decoration:none;position:relative;}
+    .nav-button:hover {transform:scale(1.1);box-shadow:0 0 15px rgba(255,69,0,.8);}
+    .nav-button::after {content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:5px 10px;border-radius:4px;font-size:.8rem;opacity:0;white-space:nowrap;transition:opacity .2s;pointer-events:none;z-index:10;}
+    .nav-button:hover::after {opacity:1;}
+    h1,h2 {color:#ff4500;text-align:center;text-shadow:0 0 10px rgba(255,69,0,.5);}
+    #form,#totalTime {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin-bottom:1.5rem;}
+    label {display:block;margin-bottom:.8rem;position:relative;}
+    input,select,textarea {width:100%;padding:.7rem;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;font-size:1rem;box-sizing:border-box;}
+    input:focus,select:focus,textarea:focus {outline:none;box-shadow:0 0 10px rgba(255,69,0,.7);}
+    textarea {height:80px;resize:vertical;}
+    button {background:#ff4500;color:white;border:none;padding:.8rem 1.5rem;border-radius:6px;cursor:pointer;font-size:1rem;margin:0 .5rem .5rem 0;transition:all .2s;}
+    button:hover {transform:scale(1.05);box-shadow:0 0 15px rgba(255,69,0,.8);}
+    #cancelButton,#clearAllButton {background:#dc3545;}
+    #newDayButton {background:#17a2b8;}
+    #copyLast {background:#28a745;}
+    #address {padding-right:50px !important;}
+    .history-btn {position:absolute;right:8px;top:38px;background:#ff4500;color:white;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;}
+    #addressHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
+    .history-item {padding:12px 16px;cursor:pointer;border-bottom:1px solid #444;}
+    .history-item:hover {background:#ff4500;color:white;padding-left:24px;}
+    table {width:100%;border-collapse:collapse;background:rgba(30,30,30,.95);border-radius:10px;overflow:hidden;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1rem 0;}
+    th,td {border:1px solid #ff4500;padding:.6rem;text-align:left;}
+    th {background:#ff4500;color:white;position:sticky;top:0;}
+    tbody tr:hover {background:#333;transform:translateY(-2px);}
+    .drag-handle {cursor:move;color:#ff4500;margin-right:8px;}
+    .action-select {padding:6px;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:4px;}
+    #totalTime {font-size:1.4rem;font-weight:bold;text-align:center;padding:1rem;}
+    #loading {display:none;text-align:center;padding:1.5rem;background:rgba(0,0,0,.8);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:10px;z-index:1000;}
+    .spinner {border:5px solid #333;border-top:5px solid #ff4500;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;display:inline-block;}
+    #invoiceBuilder {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1.5rem 0;}
+    .invoice-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;}
+    .inline-group {display:flex;gap:.5rem;align-items:end;flex-wrap:wrap;}
+    .mini-btn {padding:.5rem .8rem;font-size:.9rem;}
+    .items-table td,.items-table th {vertical-align:middle;}
+    .items-table input {min-width:90px;}
+    .text-right {text-align:right;}
+    .selector-row {display:block;padding:.7rem .8rem;border-bottom:1px solid #444;cursor:pointer;}
+    .selector-row:hover {background:#333;}
+    .selector-row input[type="checkbox"] {width:auto;margin-right:.55rem;vertical-align:middle;}
+
+    .status-pill {
+      display:inline-block;
+      padding:.2rem .55rem;
+      border-radius:999px;
+      font-size:.82rem;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .status-unbilled {
+      background:rgba(40,167,69,.16);
+      color:#7CFF9B;
+      border:1px solid rgba(40,167,69,.4);
+    }
+    .status-draft {
+      background:rgba(255,193,7,.14);
+      color:#ffd86a;
+      border:1px solid rgba(255,193,7,.4);
+    }
+    .status-invoiced {
+      background:rgba(13,110,253,.14);
+      color:#87b7ff;
+      border:1px solid rgba(13,110,253,.4);
+    }
+
+    .entry-row {
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .entry-row.longpressing {
+      background:#4a2a1a !important;
+      box-shadow: inset 0 0 0 2px rgba(255,69,0,.5);
+    }
+
+    .table-help {
+      text-align:center;
+      margin-top:.5rem;
+      opacity:.8;
+      font-size:.9rem;
+    }
+
+    @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    @media (max-width:600px) {table{display:block;overflow-x:auto;white-space:nowrap;}}
+
+    .tabs {display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;margin:1rem 0 1.25rem 0;}
+    .tab-btn {background:#2a2a2a;border:1px solid #ff4500;color:#ff4500;padding:.6rem 1rem;border-radius:999px;cursor:pointer;font-size:1rem;}
+    .tab-btn.active {background:#ff4500;color:#fff;box-shadow:0 0 15px rgba(255,69,0,.6);}
+    .tab-panel {display:none;}
+    .tab-panel.active {display:block;}
+
+    #invoiceSummary {
+      background:rgba(30,30,30,.95);
+      border:1px solid #ff4500;
+      border-radius:10px;
+      box-shadow:0 0 20px rgba(255,69,0,.2);
+      padding:1rem 1.2rem;
+      margin: 0 0 1rem 0;
+    }
+    #invoiceSummary .summary-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap:.5rem 1rem;
+      align-items:center;
+    }
+    #invoiceSummary .summary-item {font-size:1rem;}
+    #invoiceSummary .summary-item b {color:#ff4500;}
+
+    #importSection{
+      background:rgba(30,30,30,.95);
+      padding:1.5rem;
+      border-radius:10px;
+      box-shadow:0 0 20px rgba(255,69,0,.3);
+      margin:2rem 0;
+    }
+
+    #invoiceEntrySelector{
+      background:#2a2a2a;
+      border:1px solid #ff4500;
+      border-radius:8px;
+      padding:.3rem 0;
+      max-height:280px;
+      overflow-y:auto;
+      margin-top:.35rem;
+    }
+
+    .muted-note {
+      display:block;
+      opacity:.82;
+      margin-top:.25rem;
+      font-size:.88rem;
+    }
+
+    .desc-cell {position:relative;}
+    .material-autocomplete {position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1f1f1f;border:1px solid #ff4500;border-radius:6px;box-shadow:0 8px 18px rgba(0,0,0,.35);max-height:220px;overflow-y:auto;z-index:50;display:none;}
+    .material-autocomplete.show {display:block;}
+    .material-option {padding:.6rem .7rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.18);}
+    .material-option:last-child {border-bottom:none;}
+    .material-option:hover,.material-option.active {background:rgba(255,69,0,.16);}
+
+  
+
+
+    /* Black Iron calculator */
+    .bi-calc-toolbar {display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.75rem;align-items:end;}
+    .bi-calc-list {list-style:none;padding:0;margin:1rem 0 0 0;display:grid;gap:.65rem;}
+    .bi-calc-list li {background:#242424;border:1px solid rgba(255,69,0,.28);border-radius:10px;padding:.85rem;}
+    .bi-calc-sub {margin-left:1rem;margin-top:.45rem;}
+    .bi-calc-results {margin-top:1rem;padding:1rem;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,69,0,.25);}
+    .bi-calc-results h3 {margin:.1rem 0 .6rem 0;color:#ffb184;}
+    .bi-calc-results p {margin:.35rem 0;}
+    .bi-calc-error {color:#ff9f9f;}
+    #biCanvasContainer {width:100%;overflow:hidden;position:relative;margin-top:1rem;}
+    #biPipeCanvas {width:100%;max-width:100%;border:1px solid rgba(255,69,0,.35);border-radius:10px;background:#fff;cursor:grab;}
+    #biPipeCanvas.dragging {cursor:grabbing;}
+
+    /* Black Iron tab */
+    #blackIronTab .bi-wrap {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin:0 0 1.5rem 0;}
+    .bi-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;}
+    .bi-fit-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin:.75rem 0 1rem 0;}
+    .bi-fit-btn {background:#2a2a2a;border:1px solid #ff4500;color:#e0e0e0;padding:.8rem;border-radius:8px;cursor:pointer;font-size:.95rem;}
+    .bi-fit-btn.active {background:#ff4500;color:#fff;box-shadow:0 0 14px rgba(255,69,0,.5);}
+    .bi-inline {display:flex;gap:.6rem;flex-wrap:wrap;align-items:end;}
+    .bi-inline > * {flex:1 1 180px;}
+    .bi-actions {display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem;}
+    .bi-muted {opacity:.82;font-size:.9rem;margin-top:.35rem;display:block;}
+    .bi-list {display:grid;gap:.75rem;margin-top:1rem;}
+    .bi-card {background:#242424;border:1px solid rgba(255,69,0,.35);border-radius:10px;padding:1rem;display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;}
+    .bi-card-main {min-width:0;}
+    .bi-title {font-weight:700;color:#ffb184;display:block;margin-bottom:.25rem;}
+    .bi-meta {opacity:.9;word-break:break-word;}
+    .bi-card-actions {display:flex;gap:.4rem;flex-wrap:wrap;}
+    .bi-chip-row {display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem;}
+    .bi-chip {display:inline-block;padding:.35rem .7rem;border-radius:999px;background:rgba(255,69,0,.12);border:1px solid rgba(255,69,0,.35);}
+    .bi-hidden {display:none !important;}
+    .bi-voice-box {margin-top:.75rem;padding:.75rem;border-radius:8px;background:#222;border:1px solid rgba(255,69,0,.25);display:none;}
+
+  </style>
+</head>
+<body>
+  <div class="nav-buttons">
+    <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit.html" class="nav-button" data-tooltip="Black Iron Edit"><i class="fas fa-edit"></i></a>
+    <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit3.html" class="nav-button" data-tooltip="Black Iron v1"><i class="fas fa-file-alt"></i></a>
+    <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironcal2.html" class="nav-button" data-tooltip="Calculator"><i class="fas fa-calculator"></i></a>
+    <a href="https://cobblerex.github.io/BlackIronDataEntry/Uploadcsv.html" class="nav-button" data-tooltip="Upload CSV"><i class="fas fa-upload"></i></a>
+    <a href="https://cobblerex.github.io/BlackIronDataEntry/Timesheet.html" class="nav-button" data-tooltip="Timesheet"><i class="fas fa-clock"></i></a>
+  </div>
+
+  <h1>Timesheet Creator</h1>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" data-tab="timesheetTab"><i class="fas fa-clock"></i> Timesheet</button>
+    <button type="button" class="tab-btn" data-tab="invoiceTab"><i class="fas fa-file-invoice-dollar"></i> Invoice</button>
+    <button type="button" class="tab-btn" data-tab="blackIronCalcTab"><i class="fas fa-calculator"></i> Pipe Calculator</button>
+    <button type="button" class="tab-btn" data-tab="blackIronTab"><i class="fas fa-wrench"></i> Black Iron</button>
+  </div>
+
+  <div id="timesheetTab" class="tab-panel active">
+    <div id="form">
+      <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
+      <label>Date: <input type="date" id="sessionDate"></label>
+      <h2>Add / Edit Job Entry</h2>
+
+      <label>Job Name: <input type="text" id="jobName" placeholder="e.g. Furnace Tune-Up"></label>
+
+      <label>Job Type (optional auto-description):
+        <select id="jobType">
+          <option value="">-- Select to auto-fill description --</option>
+          <option value="Furnace Tune-Up">Furnace Tune-Up</option>
+          <option value="AC Maintenance">Air Conditioner Maintenance</option>
+          <option value="Gas Line Install">Gas Line Installation</option>
+          <option value="Water Heater Service">Water Heater Service</option>
+          <option value="Duct Cleaning">Duct Cleaning</option>
+          <option value="Compressor Replacement">Compressor Replacement</option>
+          <option value="Pool Heater Install">Pool Heater Gas Line / Install</option>
+          <option value="Underground Gas Line">Underground Gas Line</option>
+          <option value="General Service Call">General Service Call</option>
+        </select>
+      </label>
+
+      <label style="position:relative;">
+        Address:
+        <input type="text" id="address" placeholder="Type to search history..." autocomplete="off">
+        <button type="button" class="history-btn" id="historyBtn"><i class="fas fa-history"></i></button>
+        <div id="addressHistory"></div>
+      </label>
+
+      <label>Time In: <select id="timeIn"></select></label>
+      <label>Time Out: <select id="timeOut"></select></label>
+
+      <label>Description: <textarea id="description" placeholder="Auto-filled if Job Type selected. You can edit."></textarea></label>
+
+      <input type="hidden" id="editIndex" value="-1">
+      <div style="margin-top:1rem;">
+        <button id="actionButton">Add Entry</button>
+        <button id="copyLast">Copy Last Job</button>
+        <button id="cancelButton" style="display:none;">Cancel Edit</button>
+      </div>
+    </div>
+
+    <div id="totalTime">Total Time: 0 hrs 0 min</div>
+
+    <table id="entriesTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Job / Address</th>
+          <th>Time In</th>
+          <th>Time Out</th>
+          <th>Hours</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="table-help">
+      Tip: press and hold a row to edit on mobile, or double-click a row on desktop.
+    </div>
+
+    <div style="text-align:center;margin:2rem 0;">
+      <button id="generateExcel">Generate Excel</button>
+      <button id="goToInvoice" type="button">Go To Invoice</button>
+      <button id="newDayButton" type="button">New Day</button>
+      <button id="toggleArchiveButton" type="button">Archive ▼</button>
+      <button id="clearAllButton">Clear All</button>
+    </div>
+
+    <div id="importSection">
+      <h2>Import Timesheet (.xlsx)</h2>
+      <label>
+        Upload Excel Timesheet:
+        <input type="file" id="importExcelInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      </label>
+      <small style="display:block;opacity:.85;margin-top:.4rem;">
+        Imports a file exported from this app (Job Name, Address, Time In/Out, Description). This will replace your current entries.
+      </small>
+    </div>
+  </div>
+
+    <div id="archivePanel" style="max-height:0;overflow:hidden;opacity:0;transform:translateY(-6px);transition:max-height .35s ease, opacity .25s ease, transform .25s ease;margin:0 auto 1.5rem;max-width:100%;">
+      <div id="invoiceBuilder" style="margin-top:1rem;">
+        <h2 style="margin-top:0;">Archived Timesheets</h2>
+        <div class="inline-group" style="margin-bottom:1rem;align-items:flex-end;gap:.5rem;flex-wrap:wrap;">
+          <label style="flex:1;min-width:260px;">
+            Archived Days:
+            <select id="archiveDates">
+              <option value="">Select an archived day...</option>
+            </select>
+          </label>
+          <button type="button" id="loadArchiveButton" class="mini-btn">Load</button>
+          <button type="button" id="deleteArchiveButton" class="mini-btn" style="background:#dc3545;">Delete</button>
+          <button type="button" id="restoreArchiveButton" class="mini-btn" style="background:#17a2b8;">Restore to Timesheet</button>
+        </div>
+        <div id="archiveMeta" class="muted-note" style="margin-bottom:1rem;">No archived day selected.</div>
+        <table id="archiveTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Job / Address</th>
+              <th>Time In</th>
+              <th>Time Out</th>
+              <th>Hours</th>
+              <th>Description</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="7" style="text-align:center;opacity:.8;">No archived timesheet loaded.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  <div id="invoiceTab" class="tab-panel">
+    <div id="invoiceSummary">
+      <div class="summary-grid">
+        <div class="summary-item"><b>Date Range:</b> <span id="sumDate">—</span></div>
+        <div class="summary-item"><b>Employee:</b> <span id="sumEmployee">—</span></div>
+        <div class="summary-item"><b>Invoice:</b> <span id="sumSelected">Draft</span></div>
+        <div class="summary-item"><b>Total Hours:</b> <span id="sumTotalHours">0 hrs 0 min</span></div>
+        <div class="summary-item"><b>Regular:</b> <span id="sumRegularHours">0.00</span> hr</div>
+        <div class="summary-item"><b>Overtime:</b> <span id="sumOvertimeHours">0.00</span> hr</div>
+      </div>
+    </div>
+
+    <div id="invoiceBuilder">
+      <h2>Quick Invoice Builder</h2>
+
+      <div class="inline-group" style="margin-bottom:1rem;">
+        <label style="flex:1;min-width:240px;">
+          Invoice / Work Order:
+          <input type="text" id="invoiceId" placeholder="e.g. INV-1001 or Smith-Furnace">
+        </label>
+        <button type="button" id="newInvoiceDraft" class="mini-btn">New Draft</button>
+        <button type="button" id="saveInvoiceDraft" class="mini-btn">Save Draft</button>
+      </div>
+
+      <div class="inline-group" style="margin-bottom:1rem;align-items:flex-end;gap:0.5rem;flex-wrap:wrap;">
+        <label style="flex:1;min-width:260px;">
+          Saved Drafts:
+          <select id="invoiceDraftList">
+            <option value="">Select a saved draft...</option>
+          </select>
+        </label>
+        <button type="button" id="loadInvoiceDraft" class="mini-btn">Load Draft</button>
+        <button type="button" id="deleteInvoiceDraft" class="mini-btn" style="background:#dc3545;">Delete Draft</button>
+      </div>
+
+      <label>Include Entries In This Invoice:</label>
+      <div id="invoiceEntrySelector"></div>
+      <small class="muted-note">
+        Invoiced entries are locked unless they belong to the invoice ID you currently have open. Draft-linked entries stay selectable for their current draft.
+      </small>
+
+      <div class="invoice-grid" style="margin-top:1rem;">
+        <label>Client Name: <input type="text" id="clientName" list="clientNameList" placeholder="Customer name" autocomplete="off"><datalist id="clientNameList"></datalist></label>
+        <label>Client Phone: <input type="text" id="clientPhone" placeholder="Phone number"></label>
+        <label>Client Email: <input type="email" id="clientEmail" placeholder="Email"></label>
+        <label>Client Address: <input type="text" id="clientAddress" placeholder="Address"></label>
+        <label>Regular Rate ($): <input type="number" id="hourlyRate" min="0" step="0.01" value="100"></label>
+        <label>Overtime Rate ($): <input type="number" id="overtimeRate" min="0" step="0.01" value="150"></label>
+        <label>HST Rate: <input type="number" id="hstRate" min="0" step="0.01" value="0.13"></label>
+      </div>
+
+      <div class="inline-group" style="margin-top:1rem;">
+        <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Selected Entries</button>
+        <button type="button" id="addItem" class="mini-btn">Add Item</button>
+        <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
+        <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
+      </div>
+
+      <label style="margin-top:1rem;">Labor Description:
+        <textarea id="laborDescription" placeholder="Service summary auto-filled from your selected timesheet entries."></textarea>
+      </label>
+
+      <table class="items-table" id="itemsTable">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th style="width:90px;">Qty</th>
+            <th style="width:90px;">Unit</th>
+            <th style="width:140px;">Distributor Cost</th>
+            <th style="width:110px;">Markup %</th>
+            <th style="width:140px;">Customer Price</th>
+            <th style="width:140px;">Amount</th>
+            <th style="width:90px;">Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <datalist id="materialSuggestions"></datalist>
+      <small class="muted-note">
+        Material descriptions and their last saved costs are remembered on this device. Markup auto-calculates from distributor cost, and customer price can also be typed in directly.
+      </small>
+    </div>
+  </div>
+
+  
+
+  <div id="blackIronCalcTab" class="tab-panel">
+<div class="bi-wrap">
+      <h2>Black Iron Length Calculator</h2>
+      <div class="bi-calc-toolbar">
+        <label>Pipe Size:
+          <select id="biCalcPipeSize">
+            <option value="0.5">1/2"</option>
+            <option value="0.75">3/4"</option>
+            <option value="1">1"</option>
+            <option value="1.25">1-1/4"</option>
+          </select>
+        </label>
+        <label>Assembled Length (in):
+          <input type="number" id="biCalcMeasurement" step="0.01" min="0" class="select-on-focus">
+        </label>
+        <label>Starting Fitting:
+          <select id="biCalcStartFitting">
+            <option value="none">None</option>
+            <option value="elbow">90° Elbow</option>
+            <option value="tee">Tee</option>
+            <option value="coupling">Coupling</option>
+            <option value="shutoff">Shut-Off Valve</option>
+          </select>
+        </label>
+        <label>Ending Fitting:
+          <select id="biCalcEndFitting">
+            <option value="none">None</option>
+            <option value="elbow">90° Elbow</option>
+            <option value="tee">Tee</option>
+            <option value="coupling">Coupling</option>
+            <option value="shutoff">Shut-Off Valve</option>
+          </select>
+        </label>
+        <label>Mid-Segment Shut-Off (in):
+          <input type="number" id="biCalcShutoffPosition" step="0.01" min="0" placeholder="Optional" class="select-on-focus">
+        </label>
+        <label style="display:flex;align-items:center;gap:.6rem;margin-top:1.6rem;">
+          <input type="checkbox" id="biCalcAutoTransfer" checked style="width:auto;">
+          Auto-add fittings to parts list
+        </label>
+      </div>
+      <div class="bi-actions">
+        <button type="button" id="biCalcAddLength">Add Length</button>
+        <button type="button" id="biCalcTotal">Calculate Total</button>
+        <button type="button" id="biSendToParts" style="background:#28a745;">Send to Black Iron</button>
+        <button type="button" id="biCalcReset" style="background:#6c757d;">Reset</button>
+      </div>
+      <small class="bi-muted">Uses fitting takeout/engagement to suggest the closest nipple sizes, and can push those fittings straight into your Black Iron parts list.</small>
+
+      <ul id="biCalcLengthList" class="bi-calc-list"></ul>
+
+      <div id="biCanvasContainer">
+        <canvas id="biPipeCanvas" width="900" height="320"></canvas>
+        <div class="bi-actions" style="margin-top:.75rem;">
+          <button type="button" id="biCanvasZoomIn">Zoom In</button>
+          <button type="button" id="biCanvasZoomOut">Zoom Out</button>
+          <button type="button" id="biCanvasResetView" style="background:#6c757d;">Reset View</button>
+        </div>
+      </div>
+
+      <div id="biCalcResults" class="bi-calc-results"></div>
+    </div>
+  </div>
+
+<div id="blackIronTab" class="tab-panel">
+    
+    
+
+<div class="bi-wrap">
+      <h2>Black Iron Parts Builder</h2>
+      <div class="bi-grid">
+        <label>Job / Parts List Name:
+          <input type="text" id="biJobName" list="biJobHistory" placeholder="e.g. Smith Pool Heater Gas Line">
+          <datalist id="biJobHistory"></datalist>
+        </label>
+        <label>Pipe Size:
+          <select id="biOdSize">
+            <option value="3/8">3/8</option>
+            <option value="1/2">1/2</option>
+            <option value="3/4">3/4</option>
+            <option value="1">1</option>
+            <option value="1 1/4">1 1/4</option>
+            <option value="1 1/2">1 1/2</option>
+            <option value="2">2</option>
+            <option value="2 1/2">2 1/2</option>
+          </select>
+        </label>
+        <label>Quantity:
+          <input type="number" id="biQty" min="1" value="1" class="select-on-focus">
+        </label>
+      </div>
+
+      <div class="bi-wrap" style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,.03);">
+        <label>Quick Add:
+          <div class="bi-inline" style="width:100%;">
+            <input type="text" id="biQuickAdd" placeholder='Examples: 3/4 tee | 1 x 3/4 reducer | 3/4 x 6 nipple | qty 2 1/2 90 elbow' style="flex:1;">
+            <button type="button" id="biQuickAddBtn" class="mini-btn">Parse & Add</button>
+          </div>
+        </label>
+        <small class="bi-muted">Fast field entry also works with voice. Duplicates are grouped automatically when sent to the invoice.</small>
+      </div>
+
+      <label style="margin-top:1rem;">Fitting Type:</label>
+      <div id="biFitGrid" class="bi-fit-grid"></div>
+
+      <div class="bi-grid">
+        <label id="biReducerWrap" class="bi-hidden">Reducer To:
+          <select id="biReducerSize">
+            <option value="">Select size</option>
+            <option value="3/8">3/8</option>
+            <option value="1/2">1/2</option>
+            <option value="3/4">3/4</option>
+            <option value="1">1</option>
+            <option value="1 1/4">1 1/4</option>
+            <option value="1 1/2">1 1/2</option>
+            <option value="2">2</option>
+            <option value="2 1/2">2 1/2</option>
+          </select>
+        </label>
+        <label id="biNippleWrap" class="bi-hidden">Nipple Length:
+          <select id="biNippleSize">
+            <option value="">Select length</option>
+            <option value="1 1/2">1 1/2"</option>
+            <option value="2">2"</option>
+            <option value="2 1/2">2 1/2"</option>
+            <option value="3">3"</option>
+            <option value="3 1/2">3 1/2"</option>
+            <option value="4">4"</option>
+            <option value="4 1/2">4 1/2"</option>
+            <option value="5">5"</option>
+            <option value="5 1/2">5 1/2"</option>
+            <option value="6">6"</option>
+            <option value="7">7"</option>
+            <option value="8">8"</option>
+            <option value="9">9"</option>
+            <option value="10">10"</option>
+            <option value="12">12"</option>
+            <option value="18">18"</option>
+            <option value="24">24"</option>
+          </select>
+        </label>
+        <label id="biTeeWrap" class="bi-hidden">Custom Tee Sizes:
+          <div class="bi-inline">
+            <select id="biTee1"><option value="">Branch 1</option><option value="3/8">3/8</option><option value="1/2">1/2</option><option value="3/4">3/4</option><option value="1">1</option><option value="1 1/4">1 1/4</option><option value="1 1/2">1 1/2</option><option value="2">2</option><option value="2 1/2">2 1/2</option></select>
+            <select id="biTee2"><option value="">Branch 2</option><option value="3/8">3/8</option><option value="1/2">1/2</option><option value="3/4">3/4</option><option value="1">1</option><option value="1 1/4">1 1/4</option><option value="1 1/2">1 1/2</option><option value="2">2</option><option value="2 1/2">2 1/2</option></select>
+            <select id="biTee3"><option value="">Branch 3</option><option value="3/8">3/8</option><option value="1/2">1/2</option><option value="3/4">3/4</option><option value="1">1</option><option value="1 1/4">1 1/4</option><option value="1 1/2">1 1/2</option><option value="2">2</option><option value="2 1/2">2 1/2</option></select>
+          </div>
+          <small class="bi-muted">Leave blank to use a straight tee matching the main pipe size.</small>
+        </label>
+      </div>
+
+      <div class="bi-actions">
+        <button type="button" id="biAddItem">Add Item</button>
+        <button type="button" id="biVoiceBtn">Voice Add</button>
+        <button type="button" id="biSendInvoice">Send All To Invoice</button>
+        <button type="button" id="biExportCsv">Export CSV</button>
+        <button type="button" id="biClearList" style="background:#dc3545;">Clear List</button>
+      </div>
+      <div id="biVoiceBox" class="bi-voice-box"></div>
+
+      <div class="bi-wrap" style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,.03);">
+        <h3 style="margin-top:0;">Pipe Cut Length Helper</h3>
+        <div class="bi-grid">
+          <label>Pipe Size:
+            <select id="biCutPipeSize">
+              <option value="3/8">3/8</option><option value="1/2">1/2</option><option value="3/4">3/4</option><option value="1">1</option><option value="1 1/4">1 1/4</option><option value="1 1/2">1 1/2</option><option value="2">2</option><option value="2 1/2">2 1/2</option>
+            </select>
+          </label>
+          <label>Face-to-Face Length (in):
+            <input type="number" id="biFaceLength" min="0" step="0.125" value="12" class="select-on-focus">
+          </label>
+          <label>Takeout Each End (in):
+            <input type="number" id="biTakeoutEachEnd" min="0" step="0.125" value="0.75" class="select-on-focus">
+          </label>
+          <label>Qty:
+            <input type="number" id="biCutQty" min="1" value="1" class="select-on-focus">
+          </label>
+        </div>
+        <div class="bi-actions" style="margin-top:.75rem;">
+          <button type="button" id="biCalcCut">Add Cut Pipe</button>
+        </div>
+        <small class="bi-muted">Cut length = face-to-face length minus both fitting takeouts. Adjust the takeout value to match the fittings you are using.</small>
+      </div>
+
+      <div class="bi-chip-row">
+        <span class="bi-chip">Items: <b id="biItemCount">0</b></span>
+        <span class="bi-chip">Total Qty: <b id="biTotalQty">0</b></span>
+        <span class="bi-chip">Last Size Saved: <b id="biLastSize">—</b></span>
+      </div>
+      <small class="bi-muted">Quality-of-life upgrades added here: saved parts list, job-name memory, duplicate/edit/delete, last pipe size memory, and direct transfer into the invoice materials table.</small>
+    </div>
+
+    <div class="bi-wrap">
+      <h2>Grouped Summary</h2>
+      <div id="biGroupedList" class="bi-list"></div>
+    </div>
+
+    <div class="bi-wrap">
+      <h2>Parts List</h2>
+      <div id="biList" class="bi-list"></div>
+    </div>
+  </div>
+
+
+  <div id="loading"><div class="spinner"></div><br>Generating...</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    const LOGO_URL = "https://cobblerex.github.io/BlackIronDataEntry/archers_logo.jpg";
+
+    function detectFmt(url) {
+      const u = String(url || "").toLowerCase();
+      if (u.endsWith(".jpg") || u.endsWith(".jpeg")) return "JPEG";
+      return "PNG";
+    }
+
+    async function loadImageAsDataURL(url) {
+      const res = await fetch(url, { mode: "cors", cache: "no-cache" });
+      if (!res.ok) throw new Error(`Logo fetch failed: ${res.status} ${res.statusText}`);
+      const blob = await res.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ dataUrl: reader.result, fmt: detectFmt(url) });
+        reader.onerror = () => reject(new Error("Failed reading logo blob"));
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    const jobTemplates = {
+      "Furnace Tune-Up": "Inspected and cleaned furnace components including burner, heat exchanger, and blower. Checked thermostat operation, gas pressure, ignition system, and safety controls. Replaced air filter. Tested system for proper operation and carbon monoxide levels.",
+      "AC Maintenance": "Performed seasonal maintenance on air conditioning system: cleaned condenser coils, checked refrigerant levels, inspected electrical components, lubricated moving parts, cleared drain line, and tested system performance.",
+      "Gas Line Install": "Installed new black iron gas piping from meter to appliance location. Pressure tested line to 15 PSI for 15 minutes with no drop. Installed drip leg, shut-off valve, and sediment trap per code requirements.",
+      "Water Heater Service": "Flushed water heater tank, inspected anode rod, tested temperature & pressure relief valve, checked burner assembly (gas) or heating elements (electric), and verified proper venting.",
+      "Duct Cleaning": "Performed complete duct cleaning using rotary brush and HEPA vacuum system. Removed and cleaned all supply and return vents. Sanitized ductwork and applied microbial treatment where required.",
+      "Compressor Replacement": "Recovered refrigerant, removed failed compressor, installed new compressor with compatible oil charge. Replaced filter drier, brazed connections, evacuated system to 500 microns, and recharged to manufacturer specifications.",
+      "Pool Heater Install": "Installed new natural gas pool heater including gas line extension, electrical connection, bonding, and venting. Performed startup and verified proper operation.",
+      "Underground Gas Line": "Installed underground polyethylene gas line from meter to building entrance. Trenched, bedded with sand, installed tracer wire, riser, and transition fitting. Pressure tested per local code.",
+      "General Service Call": "Responded to customer service call. Diagnosed issue, performed necessary repairs/adjustments, and verified proper operation of equipment."
+    };
+
+    const timeOptions = [];
+    for (let h = 0; h < 24; h++) {
+      for (let m of [0, 30]) {
+        const mil = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+        const hr12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+        const period = h < 12 ? 'AM' : 'PM';
+        const display = `${hr12}:${m.toString().padStart(2,'0')} ${period}`;
+        timeOptions.push({mil, display});
+      }
+    }
+
+    const timeIn = document.getElementById('timeIn');
+    const timeOut = document.getElementById('timeOut');
+    timeOptions.forEach(o => {
+      const opt1 = new Option(o.display, o.mil);
+      const opt2 = opt1.cloneNode(true);
+      timeIn.add(opt1);
+      timeOut.add(opt2);
+    });
+    timeIn.value = '08:00';
+    timeOut.value = '08:30';
+    document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
+
+    document.getElementById('jobType').addEventListener('change', function() {
+      const selected = this.value;
+      const descField = document.getElementById('description');
+      if (selected && jobTemplates[selected]) {
+        descField.value = jobTemplates[selected];
+        if (!document.getElementById('jobName').value.trim()) {
+          document.getElementById('jobName').value = selected;
+        }
+      }
+    });
+
+    function generateEntryId() {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return 'entry-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    }
+
+    function to12hr(time24) {
+      const opt = timeOptions.find(o => o.mil === time24);
+      return opt ? opt.display : time24;
+    }
+
+    function timeToDecimal(t) {
+      const [h, m] = t.split(':').map(Number);
+      return h + m / 60;
+    }
+
+    function decimalToHM(dec) {
+      const totalMins = Math.round(dec * 60);
+      return { h: Math.floor(totalMins / 60), m: totalMins % 60 };
+    }
+
+    function formatHours(dec) {
+      const { h, m } = decimalToHM(dec);
+      return `${h}:${m.toString().padStart(2,'0')}`;
+    }
+
+    function getNextTime(current24) {
+      const idx = timeOptions.findIndex(o => o.mil === current24);
+      return timeOptions[(idx + 1) % timeOptions.length].mil;
+    }
+
+    function formatDate(d) {
+      if (!d) return '';
+      const [y, m, day] = d.split('-');
+      return `${m}/${day}/${y}`;
+    }
+
+    function formatMoney(value) {
+      return Number(value || 0).toFixed(2);
+    }
+
+    let entries = [];
+    let addressHistory = JSON.parse(localStorage.getItem('addressHistory') || '[]');
+    let invoices = JSON.parse(localStorage.getItem('savedInvoices') || '{}');
+    let materialCatalog = JSON.parse(localStorage.getItem('materialCatalog') || '{}');
+
+    function saveMaterialCatalog() {
+      localStorage.setItem('materialCatalog', JSON.stringify(materialCatalog));
+      renderMaterialSuggestions();
+    }
+
+    function normalizeMaterialKey(desc) {
+      return String(desc || '').trim().toLowerCase();
+    }
+
+    function saveMaterialFromValues(values = {}) {
+      const desc = String(values.desc || '').trim();
+      if (!desc) return;
+      const key = normalizeMaterialKey(desc);
+      materialCatalog[key] = {
+        desc,
+        unit: String(values.unit || 'ea').trim() || 'ea',
+        distributorCost: +values.distributorCost || 0,
+        markup: +values.markup || 0,
+        customerPrice: +values.customerPrice || 0
+      };
+      saveMaterialCatalog();
+    }
+
+    function getSavedMaterial(desc) {
+      const key = normalizeMaterialKey(desc);
+      return key ? materialCatalog[key] || null : null;
+    }
+
+    function findBestMaterialMatch(desc) {
+      const key = normalizeMaterialKey(desc);
+      if (!key) return null;
+      if (materialCatalog[key]) return materialCatalog[key];
+
+      const values = Object.values(materialCatalog);
+      const startsWithMatches = values.filter(item => normalizeMaterialKey(item.desc).startsWith(key));
+      if (startsWithMatches.length === 1) return startsWithMatches[0];
+
+      const includesMatches = values.filter(item => normalizeMaterialKey(item.desc).includes(key));
+      if (includesMatches.length === 1) return includesMatches[0];
+
+      return null;
+    }
+
+    function renderMaterialSuggestions() {
+      const list = document.getElementById('materialSuggestions');
+      if (!list) return;
+      list.innerHTML = '';
+      Object.values(materialCatalog)
+        .sort((a, b) => a.desc.localeCompare(b.desc))
+        .forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.desc;
+          list.appendChild(option);
+        });
+    }
+
+    function getDefaultMarkupPercent() {
+      return 25;
+    }
+
+    function customerPriceFromCost(cost, markupPercent) {
+      return (+cost || 0) * (1 + ((+markupPercent || 0) / 100));
+    }
+
+    function markupFromCostAndPrice(cost, price) {
+      const c = +cost || 0;
+      const p = +price || 0;
+      if (!c) return 0;
+      return ((p - c) / c) * 100;
+    }
+
+    function saveInvoicesToStorage() {
+      localStorage.setItem('savedInvoices', JSON.stringify(invoices));
+    }
+    function getSortedInvoiceDraftIds() {
+      return Object.values(invoices)
+        .sort((a, b) => {
+          const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          return bTime - aTime || String(a.id || '').localeCompare(String(b.id || ''));
+        })
+        .map(inv => inv.id)
+        .filter(Boolean);
+    }
+
+    function refreshInvoiceDraftList(selectedId = '') {
+      const select = document.getElementById('invoiceDraftList');
+      if (!select) return;
+
+      const previous = selectedId || select.value || document.getElementById('invoiceId')?.value?.trim() || '';
+      select.innerHTML = '<option value="">Select a saved draft...</option>';
+
+      getSortedInvoiceDraftIds().forEach(id => {
+        const inv = invoices[id] || {};
+        const option = document.createElement('option');
+        option.value = id;
+        const client = inv.clientName ? ' — ' + inv.clientName : '';
+        option.textContent = `${id}${client}`;
+        select.appendChild(option);
+      });
+
+      if (previous && invoices[previous]) {
+        select.value = previous;
+      }
+    }
+
+    function deleteInvoiceDraftById(invoiceId) {
+      const inv = invoices[invoiceId];
+      if (!inv) {
+        alert('Invoice draft not found.');
+        return;
+      }
+
+      if (!confirm(`Delete invoice draft "${invoiceId}"?`)) return;
+
+      delete invoices[invoiceId];
+      saveInvoicesToStorage();
+      syncEntryStatusesFromInvoices();
+      renderTable();
+      renderInvoiceEntrySelector([]);
+      updateInvoiceSummary();
+      refreshInvoiceDraftList();
+
+      if (document.getElementById('invoiceId').value.trim() === invoiceId) {
+        clearInvoice();
+      }
+
+      alert(`Invoice draft "${invoiceId}" deleted.`);
+    }
+
+    function saveData() {
+      const data = {
+        employee: document.getElementById('employee').value,
+        date: document.getElementById('sessionDate').value,
+        entries
+      };
+      localStorage.setItem('timesheetData', JSON.stringify(data));
+      localStorage.setItem('addressHistory', JSON.stringify(addressHistory));
+    }
+
+    function loadData() {
+      const saved = localStorage.getItem('timesheetData');
+      if (saved) {
+        const d = JSON.parse(saved);
+        document.getElementById('employee').value = d.employee || 'Lucas';
+        document.getElementById('sessionDate').value = d.date || new Date().toISOString().split('T')[0];
+        entries = (d.entries || []).map(e => ({
+          id: e.id || generateEntryId(),
+          billingStatus: e.billingStatus || 'unbilled',
+          invoiceId: e.invoiceId || '',
+          ...e
+        }));
+      }
+      renderTable();
+      refreshArchiveList();
+    }
+
+    function getTodayDateString() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function getNextDateString(dateStr) {
+      const base = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+      if (Number.isNaN(base.getTime())) return getTodayDateString();
+      base.setDate(base.getDate() + 1);
+      return base.toISOString().split('T')[0];
+    }
+
+    function getArchivedDays() {
+      return JSON.parse(localStorage.getItem('timesheetArchive') || '[]');
+    }
+
+    function saveArchivedDays(days) {
+      localStorage.setItem('timesheetArchive', JSON.stringify(days));
+    }
+
+    function getArchiveLabel(day) {
+      if (!day) return '';
+      const employee = day.employee ? ` — ${day.employee}` : '';
+      const count = Array.isArray(day.entries) ? day.entries.length : 0;
+      const jobLabel = count === 1 ? 'entry' : 'entries';
+      return `${day.date || 'Unknown Date'}${employee} (${count} ${jobLabel})`;
+    }
+
+    function refreshArchiveList(selectedKey = '') {
+      const select = document.getElementById('archiveDates');
+      if (!select) return;
+
+      const archive = getArchivedDays();
+      const previous = selectedKey || select.value || '';
+      select.innerHTML = '<option value="">Select an archived day...</option>';
+
+      archive.forEach((day, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = getArchiveLabel(day);
+        select.appendChild(option);
+      });
+
+      if (previous !== '' && archive[+previous]) {
+        select.value = String(previous);
+      }
+    }
+
+    function renderArchiveTable(day) {
+      const tbody = document.querySelector('#archiveTable tbody');
+      const meta = document.getElementById('archiveMeta');
+      if (!tbody || !meta) return;
+
+      if (!day) {
+        meta.textContent = 'No archived day selected.';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;opacity:.8;">No archived timesheet loaded.</td></tr>';
+        return;
+      }
+
+      const count = Array.isArray(day.entries) ? day.entries.length : 0;
+      const archivedAt = day.archivedAt ? new Date(day.archivedAt).toLocaleString() : 'Unknown';
+      meta.textContent = `${day.date || 'Unknown Date'} — ${day.employee || 'Unknown Employee'} — ${count} ${count === 1 ? 'entry' : 'entries'} — archived ${archivedAt}`;
+
+      if (!count) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;opacity:.8;">This archived day has no entries.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      day.entries.forEach(entry => {
+        const inDec = timeToDecimal(entry.timeIn);
+        const outDec = timeToDecimal(entry.timeOut);
+        const duration = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${formatDate(entry.dateStr || day.date || '')}</td>
+          <td><strong>${entry.jobName || ''}</strong><br><small>${entry.address || ''}</small></td>
+          <td>${entry.timeIn ? to12hr(entry.timeIn) : ''}</td>
+          <td>${entry.timeOut ? to12hr(entry.timeOut) : ''}</td>
+          <td>${Number.isFinite(duration) ? formatHours(duration) : ''}</td>
+          <td>${entry.description || ''}</td>
+          <td>${getStatusMarkup(entry)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getSelectedArchiveDay() {
+      const select = document.getElementById('archiveDates');
+      const archive = getArchivedDays();
+      const index = select ? Number(select.value) : -1;
+      if (!Number.isInteger(index) || index < 0 || index >= archive.length) return null;
+      return { day: archive[index], index, archive };
+    }
+
+    function loadArchiveDay() {
+      const selected = getSelectedArchiveDay();
+      renderArchiveTable(selected ? selected.day : null);
+      const panel = document.getElementById('archivePanel');
+      if (panel && panel.dataset.open === 'true') {
+        requestAnimationFrame(() => {
+          panel.style.maxHeight = panel.scrollHeight + 40 + 'px';
+        });
+      }
+    }
+
+    function deleteArchiveDay() {
+      const selected = getSelectedArchiveDay();
+      if (!selected) {
+        alert('Select an archived day to delete.');
+        return;
+      }
+
+      const label = getArchiveLabel(selected.day);
+      if (!confirm(`Delete archived timesheet "${label}"?`)) return;
+
+      selected.archive.splice(selected.index, 1);
+      saveArchivedDays(selected.archive);
+      refreshArchiveList('');
+      renderArchiveTable(null);
+      alert('Archived timesheet deleted.');
+    }
+
+    function restoreArchiveDay() {
+      const selected = getSelectedArchiveDay();
+      if (!selected) {
+        alert('Select an archived day to restore.');
+        return;
+      }
+
+      entries = JSON.parse(JSON.stringify(selected.day.entries || []));
+      document.getElementById('employee').value = selected.day.employee || document.getElementById('employee').value || 'Lucas';
+      document.getElementById('sessionDate').value = selected.day.date || getTodayDateString();
+      saveData();
+      renderTable();
+      clearForm();
+      setActiveTab('timesheetTab');
+      toggleArchiveDrawer(true);
+      alert(`Restored ${selected.day.date || 'archived timesheet'} to the Timesheet tab.`);
+    }
+
+    function archiveCurrentTimesheetDay() {
+      const employee = document.getElementById('employee').value || 'Lucas';
+      const sessionDate = document.getElementById('sessionDate').value || getTodayDateString();
+      if (!entries.length) return false;
+
+      const archive = getArchivedDays();
+      archive.unshift({
+        archivedAt: new Date().toISOString(),
+        employee,
+        date: sessionDate,
+        entries: JSON.parse(JSON.stringify(entries))
+      });
+      saveArchivedDays(archive.slice(0, 60));
+      refreshArchiveList();
+      return true;
+    }
+
+    function startNewDay() {
+      const currentDate = document.getElementById('sessionDate').value || getTodayDateString();
+      const nextDate = getNextDateString(currentDate);
+      const archived = archiveCurrentTimesheetDay();
+
+      entries = [];
+      document.getElementById('sessionDate').value = nextDate;
+      saveData();
+      renderTable();
+      clearForm();
+
+      alert(archived
+        ? `Archived ${currentDate} and started a new day on ${nextDate}.`
+        : `Started a new day on ${nextDate}.`);
+    }
+
+
+    const addrInput = document.getElementById('address');
+    const dropdown = document.getElementById('addressHistory');
+
+    function showHistory(filter = '') {
+      dropdown.innerHTML = '';
+      const list = filter
+        ? addressHistory.filter(a => a.toLowerCase().includes(filter.toLowerCase()))
+        : addressHistory;
+
+      if (list.length === 0) {
+        dropdown.innerHTML = '<div class="history-item">No addresses found</div>';
+      } else {
+        list.forEach(a => {
+          const div = document.createElement('div');
+          div.className = 'history-item';
+          div.textContent = a;
+          div.onclick = () => { addrInput.value = a; dropdown.style.display = 'none'; };
+          dropdown.appendChild(div);
+        });
+      }
+      dropdown.style.display = 'block';
+    }
+
+    addrInput.addEventListener('input', () => showHistory(addrInput.value));
+    addrInput.addEventListener('focus', () => showHistory());
+    document.getElementById('historyBtn').onclick = () => showHistory();
+    document.addEventListener('click', e => {
+      if (!addrInput.contains(e.target) && !document.getElementById('historyBtn').contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    function parseDateFromMdy(mdy) {
+      const m = String(mdy || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!m) return '';
+      const mm = m[1].padStart(2,'0');
+      const dd = m[2].padStart(2,'0');
+      const yyyy = m[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function parseDateFromDateLabel(label) {
+      const s = String(label || '');
+      const m = s.match(/Date:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+      return m ? parseDateFromMdy(m[1]) : '';
+    }
+
+    function parseDateFromFilename(name) {
+      const m = String(name || '').match(/(\d{4}-\d{2}-\d{2})/);
+      return m ? m[1] : '';
+    }
+
+    function parseEmployeeFromTitleCell(a1) {
+      const s = String(a1 || '');
+      const m = s.match(/Timesheet\s*-\s*(.+)$/i);
+      return m ? m[1].trim() : '';
+    }
+
+    function to24hMil(timeStr) {
+      const s = String(timeStr || '').trim();
+      if (!s) return '';
+      const m24 = s.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+      if (m24) return `${m24[1].padStart(2,'0')}:${m24[2]}`;
+      const m12 = s.match(/^(\d{1,2}):([0-5]\d)\s*([AaPp][Mm])$/);
+      if (!m12) return '';
+      let h = parseInt(m12[1], 10);
+      const min = m12[2];
+      const ap = m12[3].toUpperCase();
+      if (h === 12) h = 0;
+      if (ap === 'PM') h += 12;
+      return `${String(h).padStart(2,'0')}:${min}`;
+    }
+
+    function findHeaderRowIndex(grid) {
+      for (let r = 0; r < grid.length; r++) {
+        const row = (grid[r] || []).map(v => String(v || '').trim().toLowerCase());
+        if (row.includes('job name') && row.includes('time in') && row.includes('time out')) return r;
+      }
+      return -1;
+    }
+
+    async function handleExcelImport(file) {
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, { type: 'array' });
+      const firstSheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[firstSheetName];
+      const grid = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false });
+
+      const a1 = grid?.[0]?.[0];
+      const b1 = grid?.[0]?.[1];
+
+      let date = parseDateFromDateLabel(b1) || parseDateFromFilename(file.name);
+      if (!date) {
+        date = prompt('Could not detect date. Enter YYYY-MM-DD to import into:', document.getElementById('sessionDate').value);
+        if (!date) return;
+      }
+
+      const emp = parseEmployeeFromTitleCell(a1);
+      if (emp) document.getElementById('employee').value = emp;
+
+      const headerRow = findHeaderRowIndex(grid);
+      if (headerRow === -1) {
+        alert('Could not find header row. Make sure this file was exported from this app.');
+        return;
+      }
+
+      const headers = (grid[headerRow] || []).map(v => String(v || '').trim().toLowerCase());
+      const col = (name) => headers.indexOf(name);
+
+      const cJob = col('job name');
+      const cAddr = col('address');
+      const cIn = col('time in');
+      const cOut = col('time out');
+      const cDesc = col('description');
+
+      if (cJob === -1 || cIn === -1 || cOut === -1) {
+        alert('Missing required columns (Job Name / Time In / Time Out).');
+        return;
+      }
+
+      const imported = [];
+      for (let r = headerRow + 1; r < grid.length; r++) {
+        const row = grid[r] || [];
+        const firstCell = String(row[cJob] || '').trim();
+        if (!firstCell) continue;
+        if (firstCell.toUpperCase() === 'TOTAL') break;
+
+        const jobName = String(row[cJob] || '').trim();
+        const address = String((cAddr >= 0 ? row[cAddr] : '') || '').trim();
+        const timeInVal = to24hMil(row[cIn]);
+        const timeOutVal = to24hMil(row[cOut]);
+        const description = String((cDesc >= 0 ? row[cDesc] : '') || '').trim();
+
+        if (!jobName || !timeInVal || !timeOutVal) continue;
+
+        imported.push({
+          id: generateEntryId(),
+          dateStr: date,
+          jobName,
+          address,
+          timeIn: timeInVal,
+          timeOut: timeOutVal,
+          description,
+          billingStatus: 'unbilled',
+          invoiceId: ''
+        });
+      }
+
+      if (!imported.length) {
+        alert('Imported file but found no job rows.');
+        return;
+      }
+
+      document.getElementById('sessionDate').value = date;
+      entries = imported;
+      renderTable();
+      clearForm();
+      alert(`Imported ${imported.length} entries for ${date}.`);
+    }
+
+    document.getElementById('importExcelInput').addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        await handleExcelImport(file);
+      } catch (err) {
+        console.error(err);
+        alert('Import failed: ' + (err?.message || 'Unknown error'));
+      } finally {
+        e.target.value = '';
+      }
+    });
+
+    function createItemRow(item = {}) {
+      const savedMaterial = getSavedMaterial(item.desc);
+      const defaultMarkup = item.markup ?? savedMaterial?.markup ?? getDefaultMarkupPercent();
+      const defaultDistributorCost = item.distributorCost ?? savedMaterial?.distributorCost ?? 0;
+      const fallbackCustomerPrice = item.customerPrice ?? item.price ?? savedMaterial?.customerPrice ?? customerPriceFromCost(defaultDistributorCost, defaultMarkup);
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="desc-cell">
+          <input type="text" class="item-desc" list="materialSuggestions" autocomplete="off" value="${(item.desc || '').replace(/"/g, '&quot;')}" placeholder="Material / extra service">
+          <div class="material-autocomplete"></div>
+        </td>
+        <td><input type="number" class="item-qty" min="0" step="0.01" value="${item.qty ?? 1}"></td>
+        <td><input type="text" class="item-unit" value="${(item.unit || savedMaterial?.unit || 'ea').replace(/"/g, '&quot;')}"></td>
+        <td><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></td>
+        <td><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></td>
+        <td><input type="number" class="item-customer-price select-on-focus" min="0" step="0.01" value="${formatMoney(fallbackCustomerPrice)}"></td>
+        <td class="item-amount text-right">$0.00</td>
+        <td><button type="button" class="mini-btn remove-item">Remove</button></td>
+      `;
+
+      const desc = tr.querySelector('.item-desc');
+      const qty = tr.querySelector('.item-qty');
+      const unit = tr.querySelector('.item-unit');
+      const distributorCost = tr.querySelector('.item-distributor-cost');
+      const markup = tr.querySelector('.item-markup');
+      const customerPrice = tr.querySelector('.item-customer-price');
+      const amountCell = tr.querySelector('.item-amount');
+      const autocompleteBox = tr.querySelector('.material-autocomplete');
+
+      function getMaterialMatches(term) {
+        const key = normalizeMaterialKey(term);
+        if (!key) return [];
+        return Object.values(materialCatalog)
+          .filter(item => normalizeMaterialKey(item.desc).includes(key))
+          .sort((a, b) => {
+            const aKey = normalizeMaterialKey(a.desc);
+            const bKey = normalizeMaterialKey(b.desc);
+            const aStarts = aKey.startsWith(key) ? 0 : 1;
+            const bStarts = bKey.startsWith(key) ? 0 : 1;
+            if (aStarts !== bStarts) return aStarts - bStarts;
+            return a.desc.localeCompare(b.desc);
+          })
+          .slice(0, 8);
+      }
+
+      function hideMaterialDropdown() {
+        autocompleteBox.classList.remove('show');
+        autocompleteBox.innerHTML = '';
+      }
+
+      function applySelectedMaterial(saved) {
+        if (!saved) return;
+        desc.value = saved.desc;
+        unit.value = saved.unit || 'ea';
+        distributorCost.value = formatMoney(saved.distributorCost ?? 0);
+        markup.value = formatMoney(saved.markup ?? getDefaultMarkupPercent());
+        customerPrice.value = formatMoney(saved.customerPrice ?? customerPriceFromCost(saved.distributorCost, saved.markup));
+        recalc();
+        saveCurrentMaterial();
+      }
+
+      function showMaterialDropdown() {
+        const matches = getMaterialMatches(desc.value);
+        if (!matches.length) {
+          hideMaterialDropdown();
+          return;
+        }
+        autocompleteBox.innerHTML = '';
+        matches.forEach((saved, index) => {
+          const option = document.createElement('div');
+          option.className = 'material-option' + (index === 0 ? ' active' : '');
+          option.textContent = saved.desc;
+          option.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            applySelectedMaterial(saved);
+            hideMaterialDropdown();
+          });
+          autocompleteBox.appendChild(option);
+        });
+        autocompleteBox.classList.add('show');
+      }
+
+      function syncFromSaved(useBestMatch = false) {
+        const saved = useBestMatch ? findBestMaterialMatch(desc.value) : getSavedMaterial(desc.value);
+        if (!saved) return;
+        if (!unit.value.trim() || unit.value === 'ea') unit.value = saved.unit || 'ea';
+        distributorCost.value = formatMoney(saved.distributorCost ?? 0);
+        markup.value = formatMoney(saved.markup ?? getDefaultMarkupPercent());
+        customerPrice.value = formatMoney(saved.customerPrice ?? customerPriceFromCost(saved.distributorCost, saved.markup));
+        recalc();
+      }
+
+      function saveCurrentMaterial() {
+        if ((tr.dataset.type || '').startsWith('labor-')) return;
+        saveMaterialFromValues({
+          desc: desc.value,
+          unit: unit.value,
+          distributorCost: distributorCost.value,
+          markup: markup.value,
+          customerPrice: customerPrice.value
+        });
+      }
+
+      function recalc() {
+        amountCell.textContent = `$${formatMoney((+qty.value || 0) * (+customerPrice.value || 0))}`;
+      }
+
+      desc.addEventListener('input', () => {
+        syncFromSaved(true);
+        showMaterialDropdown();
+      });
+      desc.addEventListener('focus', showMaterialDropdown);
+      desc.addEventListener('keydown', (e) => {
+        const options = [...autocompleteBox.querySelectorAll('.material-option')];
+        if (!autocompleteBox.classList.contains('show') || !options.length) return;
+        let activeIndex = options.findIndex(opt => opt.classList.contains('active'));
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          activeIndex = Math.min(activeIndex + 1, options.length - 1);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          activeIndex = Math.max(activeIndex - 1, 0);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const active = options[activeIndex] || options[0];
+          if (active) active.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+          return;
+        } else if (e.key === 'Escape') {
+          hideMaterialDropdown();
+          return;
+        } else {
+          return;
+        }
+        options.forEach((opt, idx) => opt.classList.toggle('active', idx === activeIndex));
+        options[activeIndex]?.scrollIntoView({ block: 'nearest' });
+      });
+      desc.addEventListener('change', () => {
+        syncFromSaved();
+        hideMaterialDropdown();
+        saveCurrentMaterial();
+      });
+      desc.addEventListener('blur', () => {
+        setTimeout(hideMaterialDropdown, 120);
+        saveCurrentMaterial();
+      });
+      unit.addEventListener('blur', saveCurrentMaterial);
+      qty.addEventListener('input', recalc);
+      distributorCost.addEventListener('input', () => {
+        customerPrice.value = formatMoney(customerPriceFromCost(distributorCost.value, markup.value));
+        recalc();
+      });
+      markup.addEventListener('input', () => {
+        customerPrice.value = formatMoney(customerPriceFromCost(distributorCost.value, markup.value));
+        recalc();
+      });
+      customerPrice.addEventListener('input', () => {
+        markup.value = formatMoney(markupFromCostAndPrice(distributorCost.value, customerPrice.value));
+        recalc();
+      });
+      distributorCost.addEventListener('blur', saveCurrentMaterial);
+      markup.addEventListener('blur', saveCurrentMaterial);
+      customerPrice.addEventListener('blur', saveCurrentMaterial);
+      [distributorCost, markup, customerPrice].forEach(input => {
+        input.addEventListener('focus', () => setTimeout(() => input.select(), 0));
+        input.addEventListener('mouseup', (e) => e.preventDefault());
+      });
+      tr.querySelector('.remove-item').onclick = () => tr.remove();
+      recalc();
+
+      document.querySelector('#itemsTable tbody').appendChild(tr);
+      return tr;
+    }
+
+    function ensureServiceChargeRow() {
+      let row = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
+      if (!row) {
+        createItemRow({ desc: 'Service Charge', qty: 1, unit: 'ea', distributorCost: 0, markup: 0, customerPrice: 100 });
+        row = document.querySelector('#itemsTable tbody tr:last-child');
+        row.dataset.type = 'service-charge';
+      }
+      return row;
+    }
+
+    function ensureRegularLaborRow() {
+      let regularRow = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
+      if (!regularRow) {
+        createItemRow({
+          desc: 'Labor (Regular Hours)',
+          qty: 0,
+          unit: 'hr',
+          distributorCost: 0,
+          markup: 0,
+          customerPrice: document.getElementById('hourlyRate').value || 100
+        });
+        regularRow = document.querySelector('#itemsTable tbody tr:last-child');
+        regularRow.dataset.type = 'regular-labor';
+        regularRow.querySelector('.remove-item').style.display = 'none';
+      }
+      return regularRow;
+    }
+
+    function ensureOvertimeLaborRow() {
+      let overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+      if (!overtimeRow) {
+        createItemRow({
+          desc: 'Labor (Overtime Hours)',
+          qty: 0,
+          unit: 'hr',
+          distributorCost: 0,
+          markup: 0,
+          customerPrice: document.getElementById('overtimeRate').value || 150
+        });
+        overtimeRow = document.querySelector('#itemsTable tbody tr:last-child');
+        overtimeRow.dataset.type = 'overtime-labor';
+        overtimeRow.querySelector('.remove-item').style.display = 'none';
+      }
+      return overtimeRow;
+    }
+
+    function removeOvertimeLaborRowIfExists() {
+      const overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+      if (overtimeRow) overtimeRow.remove();
+    }
+
+    function isRegularBusinessTime(dt) {
+      const day = dt.getDay();
+      const hour = dt.getHours() + dt.getMinutes() / 60;
+      const weekday = day >= 1 && day <= 5;
+      return weekday && hour >= 8 && hour < 16;
+    }
+
+    function getHoursBreakdown(entry) {
+      if (entry && Number(entry.overtimeHours) > 0) {
+        const overtime = Number(entry.overtimeHours) || 0;
+        const total = Number(entry.totalHours) || 0;
+        return { regular: Math.max(0, total - overtime), overtime };
+      }
+
+      const inDec = timeToDecimal(entry.timeIn);
+      const outDec = timeToDecimal(entry.timeOut);
+      const total = outDec >= inDec ? (outDec - inDec) : (outDec - inDec + 24);
+      return { regular: total, overtime: 0 };
+    }
+
+    function getLaborRows() {
+      return [...document.querySelectorAll('#itemsTable tbody tr')].filter(row => (row.dataset.type || '').startsWith('labor-'));
+    }
+
+    function clearLaborRows() {
+      getLaborRows().forEach(row => row.remove());
+    }
+
+    function createLaborEntryRow(entry, kind, qty) {
+      createItemRow({
+        desc: `${((entry.jobName || '').trim() && (entry.description || '').trim()) ? `${entry.jobName.trim()}: ${entry.description.trim()}` : ((entry.description || '').trim() || (entry.jobName || '').trim() || 'Labor')} (${kind === 'regular' ? 'Reg' : 'Overtime'})`,
+        qty: qty,
+        unit: 'hr',
+        distributorCost: 0,
+        markup: 0,
+        customerPrice: kind === 'regular' ? (document.getElementById('hourlyRate').value || 100) : (document.getElementById('overtimeRate').value || 150)
+      });
+      const row = document.querySelector('#itemsTable tbody tr:last-child');
+      row.dataset.type = `labor-${kind}-${entry.id}`;
+      row.dataset.laborKind = kind;
+      row.dataset.entryId = String(entry.id);
+      row.querySelector('.remove-item').style.display = 'none';
+      row.querySelector('.item-distributor-cost').value = formatMoney(0);
+      row.querySelector('.item-markup').value = formatMoney(0);
+      row.querySelector('.item-customer-price').value = formatMoney(kind === 'regular' ? document.getElementById('hourlyRate').value : document.getElementById('overtimeRate').value);
+      row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      return row;
+    }
+
+    function getLaborSummaryFrom(filtered) {
+      if (!filtered.length) return 'Service call completed as requested. Diagnostics, adjustments, and system performance verification performed.';
+      const uniqueJobs = [...new Set(filtered.map(e => e.jobName).filter(Boolean))];
+      const uniqueAddrs = [...new Set(filtered.map(e => (e.address || '').trim()).filter(Boolean))];
+      const jobList = uniqueJobs.join(', ');
+      const addrNote = uniqueAddrs.length === 1 ? ` at ${uniqueAddrs[0]}` : '';
+      return `Performed ${jobList}${addrNote}. Completed diagnostics, adjustments, cleanup, and final system operation checks.`;
+    }
+
+    function getLaborDescriptionFromTimesheet(filtered) {
+      const lines = filtered
+        .map(e => {
+          const desc = (e.description || '').trim();
+          const job = (e.jobName || '').trim();
+          if (!desc && !job) return null;
+          if (!desc) return job;
+          return job ? `${job}: ${desc}` : desc;
+        })
+        .filter(Boolean);
+
+      if (!lines.length) return getLaborSummaryFrom(filtered);
+      return lines.join('\n');
+    }
+
+    function getUniqueFilteredAddresses(filtered) {
+      return [...new Set(filtered.map(e => (e.address || '').trim()).filter(Boolean))];
+    }
+
+    function getSingleFilteredAddress(filtered) {
+      const uniqueAddrs = getUniqueFilteredAddresses(filtered);
+      return uniqueAddrs.length === 1 ? uniqueAddrs[0] : '';
+    }
+
+    function setClientAddressFromFiltered(filtered) {
+      const addrField = document.getElementById('clientAddress');
+      const singleAddress = getSingleFilteredAddress(filtered);
+      if (singleAddress) addrField.value = singleAddress;
+    }
+
+    function getSelectedInvoiceEntryIds() {
+      return [...document.querySelectorAll('.invoice-entry-check:checked')].map(cb => cb.value);
+    }
+
+    function getSelectedInvoiceEntries() {
+      const ids = getSelectedInvoiceEntryIds();
+      return entries.filter(e => ids.includes(e.id));
+    }
+
+    function getFilteredEntries() {
+      return getSelectedInvoiceEntries();
+    }
+
+    function getSelectedDateRange(filtered) {
+      if (!filtered.length) return '—';
+      const dates = [...new Set(filtered.map(e => e.dateStr))].sort();
+      if (dates.length === 1) return formatDate(dates[0]);
+      return `${formatDate(dates[0])} to ${formatDate(dates[dates.length - 1])}`;
+    }
+
+
+    function mergeLaborDescriptions(existingText, appendedText) {
+      const existingLines = String(existingText || '').split('\n').map(s => s.trim()).filter(Boolean);
+      const appendedLines = String(appendedText || '').split('\n').map(s => s.trim()).filter(Boolean);
+      const merged = [...existingLines];
+      appendedLines.forEach(line => {
+        if (!merged.includes(line)) merged.push(line);
+      });
+      return merged.join('\n');
+    }
+
+    function populateInvoiceFromDraftAppend(existingDraft, newSelectedIds) {
+      const existingIds = (existingDraft?.linkedEntryIds || []).map(String);
+      const incomingIds = (newSelectedIds || []).map(String);
+      const mergedIds = [...new Set([...existingIds, ...incomingIds])];
+      const addedIds = mergedIds.filter(id => !existingIds.includes(id));
+
+      const existingEntries = entries.filter(e => existingIds.includes(String(e.id)));
+      const addedEntries = entries.filter(e => addedIds.includes(String(e.id)));
+      const mergedEntries = entries.filter(e => mergedIds.includes(String(e.id)));
+
+      document.getElementById('invoiceId').value = existingDraft.id || document.getElementById('invoiceId').value || '';
+      document.getElementById('clientName').value = document.getElementById('clientName').value.trim() || existingDraft.clientName || '';
+      document.getElementById('clientPhone').value = document.getElementById('clientPhone').value.trim() || existingDraft.clientPhone || '';
+      document.getElementById('clientEmail').value = document.getElementById('clientEmail').value.trim() || existingDraft.clientEmail || '';
+      document.getElementById('clientAddress').value = document.getElementById('clientAddress').value.trim() || existingDraft.clientAddress || '';
+      document.getElementById('hourlyRate').value = document.getElementById('hourlyRate').value || (existingDraft.hourlyRate ?? 100);
+      document.getElementById('overtimeRate').value = document.getElementById('overtimeRate').value || (existingDraft.overtimeRate ?? 150);
+      document.getElementById('hstRate').value = document.getElementById('hstRate').value || (existingDraft.hstRate ?? 0.13);
+
+      renderInvoiceEntrySelector(mergedIds);
+
+      const tbody = document.querySelector('#itemsTable tbody');
+      tbody.innerHTML = '';
+      (existingDraft.items || []).forEach(item => {
+        if (!(item.type || '').startsWith('labor-')) {
+          createItemRow(item);
+          const row = tbody.lastElementChild;
+          if (item.type) row.dataset.type = item.type;
+        }
+      });
+
+      const mergedDescription = mergeLaborDescriptions(
+        existingDraft.laborDescription || getLaborDescriptionFromTimesheet(existingEntries),
+        getLaborDescriptionFromTimesheet(addedEntries)
+      ) || getLaborDescriptionFromTimesheet(mergedEntries);
+      document.getElementById('laborDescription').value = mergedDescription;
+
+      const matchedClientFromAddress = fillClientProfileFromFilteredEntries(mergedEntries, false);
+      if (!document.getElementById('clientAddress').value.trim() && matchedClientFromAddress) {
+        document.getElementById('clientAddress').value = matchedClientFromAddress;
+      }
+
+      existingEntries.forEach(entry => {
+        const split = getHoursBreakdown(entry);
+        if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
+        if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
+      });
+      addedEntries.forEach(entry => {
+        const split = getHoursBreakdown(entry);
+        if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
+        if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
+      });
+
+      updateInvoiceSummary();
+      refreshInvoiceDraftList(existingDraft.id || '');
+      return mergedIds;
+    }
+
+    function syncEntryStatusesFromInvoices() {
+      const linkedMap = {};
+
+      Object.values(invoices).forEach(inv => {
+        const entryIds = inv.linkedEntryIds || [];
+        entryIds.forEach(id => {
+          linkedMap[id] = {
+            invoiceId: inv.id || '',
+            status: inv.status === 'invoiced' ? 'invoiced' : 'draft-linked'
+          };
+        });
+      });
+
+      entries = entries.map(entry => {
+        const linked = linkedMap[entry.id];
+        if (linked) {
+          return {
+            ...entry,
+            billingStatus: linked.status,
+            invoiceId: linked.invoiceId
+          };
+        }
+        return {
+          ...entry,
+          billingStatus: 'unbilled',
+          invoiceId: ''
+        };
+      });
+
+      saveData();
+    }
+
+    function markSelectedEntriesAsInvoiced(invoiceId) {
+      const selectedIds = getSelectedInvoiceEntryIds();
+
+      entries = entries.map(entry => {
+        if (selectedIds.includes(entry.id)) {
+          return {
+            ...entry,
+            billingStatus: 'invoiced',
+            invoiceId: invoiceId || entry.invoiceId || ''
+          };
+        }
+        return entry;
+      });
+
+      if (invoiceId && invoices[invoiceId]) {
+        invoices[invoiceId].status = 'invoiced';
+        invoices[invoiceId].updatedAt = new Date().toISOString();
+        saveInvoicesToStorage();
+      }
+
+      saveData();
+    }
+
+    function renderInvoiceEntrySelector(selectedIds = null) {
+      const box = document.getElementById('invoiceEntrySelector');
+      if (!box) return;
+
+      const currentInvoiceId = document.getElementById('invoiceId').value.trim();
+      const currentIds = selectedIds ?? getSelectedInvoiceEntryIds();
+      box.innerHTML = '';
+
+      if (!entries.length) {
+        box.innerHTML = '<div style="padding:.9rem;">No timesheet entries available.</div>';
+        return;
+      }
+
+      entries
+        .slice()
+        .sort((a, b) => {
+          const da = `${a.dateStr} ${a.timeIn}`;
+          const db = `${b.dateStr} ${b.timeIn}`;
+          return da.localeCompare(db);
+        })
+        .forEach(e => {
+          const row = document.createElement('label');
+          row.className = 'selector-row';
+
+          const isInvoiced = e.billingStatus === 'invoiced';
+          const isSameInvoice = !!(currentInvoiceId && e.invoiceId && e.invoiceId === currentInvoiceId);
+          const linkedToOtherDraft = e.billingStatus === 'draft-linked' && e.invoiceId && e.invoiceId !== currentInvoiceId;
+          const invoicedToOtherInvoice = isInvoiced && !isSameInvoice;
+          const isLocked = invoicedToOtherInvoice || linkedToOtherDraft;
+          const isChecked = currentIds.includes(e.id) || isSameInvoice;
+
+          const statusNote =
+            e.billingStatus === 'invoiced'
+              ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
+              : e.billingStatus === 'draft-linked'
+                ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
+                : `Unbilled`;
+
+          row.innerHTML = `
+            <input
+              type="checkbox"
+              class="invoice-entry-check"
+              value="${e.id}"
+              ${isChecked ? 'checked' : ''}
+              ${isLocked ? 'disabled' : ''}
+            >
+            <strong>${formatDate(e.dateStr)}</strong> — ${e.jobName}${e.address ? ` <span style="opacity:.8;">(${e.address})</span>` : ''}
+            <br>
+            <small>${to12hr(e.timeIn)} - ${to12hr(e.timeOut)} | ${statusNote}</small>
+          `;
+          box.appendChild(row);
+        });
+
+      box.querySelectorAll('.invoice-entry-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          populateInvoiceFromEntries();
+          updateInvoiceSummary();
+        });
+      });
+    }
+
+    function updateInvoiceSummary() {
+      const filtered = getFilteredEntries();
+
+      let totalDec = 0;
+      filtered.forEach(e => {
+        const inDec = timeToDecimal(e.timeIn);
+        const outDec = timeToDecimal(e.timeOut);
+        const dur = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+        totalDec += dur;
+      });
+
+      const { h, m } = decimalToHM(totalDec);
+
+      const totals = filtered.reduce((acc, e) => {
+        const split = getHoursBreakdown(e);
+        acc.regular += split.regular;
+        acc.overtime += split.overtime;
+        return acc;
+      }, { regular: 0, overtime: 0 });
+
+      const invoiceId = document.getElementById('invoiceId').value.trim();
+
+      document.getElementById('sumDate').textContent = getSelectedDateRange(filtered);
+      document.getElementById('sumEmployee').textContent = document.getElementById('employee').value || '—';
+      document.getElementById('sumSelected').textContent = invoiceId || `${filtered.length} selected entr${filtered.length === 1 ? 'y' : 'ies'}`;
+      document.getElementById('sumTotalHours').textContent = `${h} hrs ${m} min`;
+      document.getElementById('sumRegularHours').textContent = totals.regular.toFixed(2);
+      document.getElementById('sumOvertimeHours').textContent = totals.overtime.toFixed(2);
+    }
+
+    function populateInvoiceFromEntries() {
+      const filtered = getFilteredEntries();
+
+      clearLaborRows();
+
+      const laborDescriptionField = document.getElementById('laborDescription');
+      laborDescriptionField.value = getLaborDescriptionFromTimesheet(filtered);
+
+      const matchedClientFromAddress = fillClientProfileFromFilteredEntries(filtered, false);
+
+      const lastClient = JSON.parse(localStorage.getItem('lastClient') || '{}');
+      const clientNameInput = document.getElementById('clientName');
+      if (!clientNameInput.value.trim()) clientNameInput.value = lastClient.name || '';
+      const clientPhoneInput = document.getElementById('clientPhone');
+      if (!clientPhoneInput.value.trim()) clientPhoneInput.value = lastClient.phone || '';
+      const clientEmailInput = document.getElementById('clientEmail');
+      if (!clientEmailInput.value.trim()) clientEmailInput.value = lastClient.email || '';
+      const clientAddressInput = document.getElementById('clientAddress');
+      if (!clientAddressInput.value.trim()) clientAddressInput.value = matchedClientFromAddress || lastClient.address || '';
+
+      filtered.forEach(entry => {
+        const split = getHoursBreakdown(entry);
+        if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
+        if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
+      });
+
+      updateInvoiceSummary();
+      const currentInvoiceId = document.getElementById('invoiceId').value.trim();
+      refreshInvoiceDraftList(currentInvoiceId);
+    }
+
+    function clearInvoice() {
+      document.getElementById('invoiceId').value = '';
+      document.getElementById('clientName').value = '';
+      document.getElementById('clientPhone').value = '';
+      document.getElementById('clientEmail').value = '';
+      document.getElementById('clientAddress').value = '';
+      document.getElementById('laborDescription').value = '';
+
+      const tbody = document.querySelector('#itemsTable tbody');
+      tbody.innerHTML = '';
+
+      ensureServiceChargeRow();
+      renderInvoiceEntrySelector([]);
+      updateInvoiceSummary();
+    }
+
+    function collectInvoiceItems() {
+      return [...document.querySelectorAll('#itemsTable tbody tr')].map(row => ({
+        desc: row.querySelector('.item-desc').value.trim(),
+        qty: +row.querySelector('.item-qty').value || 0,
+        unit: row.querySelector('.item-unit').value.trim() || 'ea',
+        distributorCost: +row.querySelector('.item-distributor-cost').value || 0,
+        markup: +row.querySelector('.item-markup').value || 0,
+        customerPrice: +row.querySelector('.item-customer-price').value || 0,
+        price: +row.querySelector('.item-customer-price').value || 0,
+        type: row.dataset.type || ''
+      }));
+    }
+
+    function saveCurrentInvoiceDraft() {
+      const invoiceId = document.getElementById('invoiceId').value.trim();
+      if (!invoiceId) {
+        alert('Enter an Invoice / Work Order ID first.');
+        return;
+      }
+
+      let selectedIds = getSelectedInvoiceEntryIds();
+      const existingDraft = invoices[invoiceId];
+
+      if (existingDraft) {
+        const existingIds = (existingDraft.linkedEntryIds || []).map(String);
+        const incomingIds = selectedIds.map(String);
+        const mergedIds = [...new Set([...existingIds, ...incomingIds])];
+        const isAppendingToExistingDraft = mergedIds.some(id => !existingIds.includes(id));
+
+        if (isAppendingToExistingDraft) {
+          selectedIds = populateInvoiceFromDraftAppend(existingDraft, selectedIds);
+        } else {
+          selectedIds = mergedIds;
+        }
+      }
+
+      const conflicts = entries.filter(e =>
+        selectedIds.includes(e.id) &&
+        e.billingStatus === 'draft-linked' &&
+        e.invoiceId &&
+        e.invoiceId !== invoiceId
+      );
+
+      if (conflicts.length) {
+        alert(
+          'Some selected entries are already linked to another draft:\n\n' +
+          conflicts.map(e => `${formatDate(e.dateStr)} - ${e.jobName} (${e.invoiceId})`).join('\n')
+        );
+        return;
+      }
+
+      rememberCurrentClient(true);
+      rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(e.id))));
+
+      invoices[invoiceId] = {
+        id: invoiceId,
+        clientName: document.getElementById('clientName').value.trim(),
+        clientPhone: document.getElementById('clientPhone').value.trim(),
+        clientEmail: document.getElementById('clientEmail').value.trim(),
+        clientAddress: document.getElementById('clientAddress').value.trim(),
+        hourlyRate: +document.getElementById('hourlyRate').value || 0,
+        overtimeRate: +document.getElementById('overtimeRate').value || 0,
+        hstRate: +document.getElementById('hstRate').value || 0.13,
+        laborDescription: document.getElementById('laborDescription').value.trim(),
+        linkedEntryIds: selectedIds,
+        items: collectInvoiceItems(),
+        status: 'draft',
+        createdAt: invoices[invoiceId]?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      saveInvoicesToStorage();
+      syncEntryStatusesFromInvoices();
+      renderTable();
+      updateInvoiceSummary();
+      refreshInvoiceDraftList(invoiceId);
+      alert(existingDraft ? `Invoice draft "${invoiceId}" updated and appended.` : `Invoice draft "${invoiceId}" saved.`);
+    }
+
+    function loadInvoiceDraftById(invoiceId) {
+      const inv = invoices[invoiceId];
+      if (!inv) {
+        alert('Invoice draft not found.');
+        return;
+      }
+
+      document.getElementById('invoiceId').value = inv.id || '';
+      document.getElementById('clientName').value = inv.clientName || '';
+      document.getElementById('clientPhone').value = inv.clientPhone || '';
+      document.getElementById('clientEmail').value = inv.clientEmail || '';
+      document.getElementById('clientAddress').value = inv.clientAddress || '';
+      rememberCurrentClient(true);
+      rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(entries.filter(e => (inv.linkedEntryIds || []).includes(e.id))));
+      document.getElementById('hourlyRate').value = inv.hourlyRate ?? 100;
+      document.getElementById('overtimeRate').value = inv.overtimeRate ?? 150;
+      document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
+      document.getElementById('laborDescription').value = inv.laborDescription || '';
+
+      renderInvoiceEntrySelector(inv.linkedEntryIds || []);
+
+      const tbody = document.querySelector('#itemsTable tbody');
+      tbody.innerHTML = '';
+      (inv.items || []).forEach(item => {
+        createItemRow(item);
+        const row = tbody.lastElementChild;
+        if (item.type) row.dataset.type = item.type;
+        if ((item.type || '').startsWith('labor-')) {
+          row.querySelector('.remove-item').style.display = 'none';
+        }
+      });
+
+      updateInvoiceSummary();
+    }
+
+    function getStatusMarkup(entry) {
+      if (entry.billingStatus === 'invoiced') {
+        return `<span class="status-pill status-invoiced">Invoiced${entry.invoiceId ? ` (${entry.invoiceId})` : ''}</span>`;
+      }
+      if (entry.billingStatus === 'draft-linked') {
+        return `<span class="status-pill status-draft">Draft Linked${entry.invoiceId ? ` (${entry.invoiceId})` : ''}</span>`;
+      }
+      return `<span class="status-pill status-unbilled">Unbilled</span>`;
+    }
+
+    function toggleArchiveDrawer(forceOpen = null) {
+      const panel = document.getElementById('archivePanel');
+      const button = document.getElementById('toggleArchiveButton');
+      if (!panel || !button) return;
+
+      const isOpen = panel.dataset.open === 'true';
+      const shouldOpen = forceOpen === null ? !isOpen : !!forceOpen;
+
+      if (shouldOpen) {
+        refreshArchiveList();
+        loadArchiveDay();
+        panel.dataset.open = 'true';
+        panel.style.maxHeight = panel.scrollHeight + 40 + 'px';
+        panel.style.opacity = '1';
+        panel.style.transform = 'translateY(0)';
+        button.textContent = 'Archive ▲';
+      } else {
+        panel.dataset.open = 'false';
+        panel.style.maxHeight = '0';
+        panel.style.opacity = '0';
+        panel.style.transform = 'translateY(-6px)';
+        button.textContent = 'Archive ▼';
+      }
+    }
+
+    function setActiveTab(tabId) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+      const panel = document.getElementById(tabId);
+      const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+      if (panel) panel.classList.add('active');
+      if (btn) btn.classList.add('active');
+
+      if (tabId === 'invoiceTab') {
+        renderInvoiceEntrySelector();
+        populateInvoiceFromEntries();
+        updateInvoiceSummary();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+    });
+
+    document.getElementById('goToInvoice').addEventListener('click', () => setActiveTab('invoiceTab'));
+    document.getElementById('toggleArchiveButton').addEventListener('click', () => toggleArchiveDrawer());
+    document.getElementById('archiveDates').addEventListener('change', () => {
+      loadArchiveDay();
+      const panel = document.getElementById('archivePanel');
+      if (panel && panel.dataset.open === 'true') {
+        panel.style.maxHeight = panel.scrollHeight + 40 + 'px';
+      }
+    });
+    document.getElementById('loadArchiveButton').addEventListener('click', loadArchiveDay);
+    document.getElementById('deleteArchiveButton').addEventListener('click', deleteArchiveDay);
+    document.getElementById('restoreArchiveButton').addEventListener('click', restoreArchiveDay);
+
+    function editEntry(i) {
+      const e = entries[i];
+      document.getElementById('jobName').value = e.jobName;
+      document.getElementById('address').value = e.address || '';
+      document.getElementById('timeIn').value = e.timeIn;
+      document.getElementById('timeOut').value = e.timeOut;
+      document.getElementById('description').value = e.description || '';
+      document.getElementById('jobType').value = '';
+      document.getElementById('editIndex').value = i;
+      document.getElementById('actionButton').textContent = 'Update Entry';
+      document.getElementById('cancelButton').style.display = 'inline-block';
+      document.getElementById('form').scrollIntoView({ behavior:'smooth' });
+    }
+
+    function renderTable() {
+      const tbody = document.querySelector('#entriesTable tbody');
+      tbody.innerHTML = '';
+      let totalDec = 0;
+
+      entries.forEach((e, i) => {
+        const inDec = timeToDecimal(e.timeIn);
+        const outDec = timeToDecimal(e.timeOut);
+        const duration = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+        totalDec += duration;
+
+        const tr = document.createElement('tr');
+        tr.draggable = true;
+        tr.dataset.index = i;
+        tr.classList.add('entry-row');
+
+        tr.innerHTML = `
+          <td>${formatDate(e.dateStr)}</td>
+          <td><strong>${e.jobName}</strong><br><small>${e.address || ''}</small></td>
+          <td>${to12hr(e.timeIn)}</td>
+          <td>${to12hr(e.timeOut)}</td>
+          <td>${formatHours(duration)}</td>
+          <td>${e.description || ''}</td>
+          <td>${getStatusMarkup(e)}</td>
+          <td>
+            <i class="fas fa-grip-lines drag-handle"></i>
+            <select class="action-select">
+              <option value="" disabled selected>Actions</option>
+              <option value="up">Up</option>
+              <option value="down">Down</option>
+              <option value="mark-unbilled">Mark Unbilled</option>
+              <option value="delete">Delete</option>
+            </select>
+          </td>`;
+        tbody.appendChild(tr);
+
+        let pressTimer = null;
+        let longPressTriggered = false;
+        let startX = 0;
+        let startY = 0;
+
+        const startPress = (clientX, clientY) => {
+          longPressTriggered = false;
+          startX = clientX;
+          startY = clientY;
+          tr.classList.add('longpressing');
+
+          pressTimer = setTimeout(() => {
+            longPressTriggered = true;
+            tr.classList.remove('longpressing');
+            editEntry(i);
+          }, 600);
+        };
+
+        const cancelPress = () => {
+          tr.classList.remove('longpressing');
+          if (pressTimer) {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+          }
+        };
+
+        tr.addEventListener('mousedown', (ev) => {
+          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
+          startPress(ev.clientX, ev.clientY);
+        });
+
+        tr.addEventListener('mouseup', cancelPress);
+        tr.addEventListener('mouseleave', cancelPress);
+
+        tr.addEventListener('touchstart', (ev) => {
+          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
+          const t = ev.touches[0];
+          startPress(t.clientX, t.clientY);
+        }, { passive: true });
+
+        tr.addEventListener('touchmove', (ev) => {
+          if (!pressTimer) return;
+          const t = ev.touches[0];
+          const dx = Math.abs(t.clientX - startX);
+          const dy = Math.abs(t.clientY - startY);
+          if (dx > 10 || dy > 10) cancelPress();
+        }, { passive: true });
+
+        tr.addEventListener('touchend', cancelPress);
+        tr.addEventListener('touchcancel', cancelPress);
+
+        tr.addEventListener('dblclick', (ev) => {
+          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
+          editEntry(i);
+        });
+
+        tr.addEventListener('dragstart', e => {
+          tr.classList.add('dragging');
+          e.dataTransfer.setData('text', tr.dataset.index);
+        });
+        tr.addEventListener('dragover', e => e.preventDefault());
+        tr.addEventListener('drop', e => {
+          e.preventDefault();
+          const from = +e.dataTransfer.getData('text');
+          const to = +tr.dataset.index;
+          if (from !== to) {
+            const [item] = entries.splice(from, 1);
+            entries.splice(to, 0, item);
+            renderTable();
+          }
+        });
+        tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
+      });
+
+      const { h, m } = decimalToHM(totalDec);
+      document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
+
+      document.querySelectorAll('.action-select').forEach((select, idx) => {
+        select.addEventListener('change', function() {
+          handleAction(idx, this.value);
+          this.value = '';
+        });
+      });
+
+      saveData();
+      renderInvoiceEntrySelector();
+      populateInvoiceFromEntries();
+      updateInvoiceSummary();
+    }
+
+    function handleAction(i, act) {
+      if (act === 'edit') {
+        editEntry(i);
+      }
+      else if (act === 'up' && i > 0) {
+        [entries[i - 1], entries[i]] = [entries[i], entries[i - 1]];
+        renderTable();
+      }
+      else if (act === 'down' && i < entries.length - 1) {
+        [entries[i], entries[i + 1]] = [entries[i + 1], entries[i]];
+        renderTable();
+      }
+      else if (act === 'mark-unbilled') {
+        entries[i].billingStatus = 'unbilled';
+        entries[i].invoiceId = '';
+
+        const currentInvoiceId = document.getElementById('invoiceId').value.trim();
+        if (currentInvoiceId && invoices[currentInvoiceId]) {
+          invoices[currentInvoiceId].linkedEntryIds = (invoices[currentInvoiceId].linkedEntryIds || []).filter(id => id !== entries[i].id);
+          invoices[currentInvoiceId].updatedAt = new Date().toISOString();
+          saveInvoicesToStorage();
+        }
+
+        saveData();
+        renderTable();
+      }
+      else if (act === 'delete' && confirm('Delete this entry?')) {
+        const entryId = entries[i].id;
+
+        Object.values(invoices).forEach(inv => {
+          inv.linkedEntryIds = (inv.linkedEntryIds || []).filter(id => id !== entryId);
+          inv.updatedAt = new Date().toISOString();
+        });
+        saveInvoicesToStorage();
+
+        entries.splice(i, 1);
+        renderTable();
+      }
+    }
+
+    document.getElementById('actionButton').onclick = () => {
+      const idx = +document.getElementById('editIndex').value;
+      const date = document.getElementById('sessionDate').value;
+      const job = document.getElementById('jobName').value.trim();
+      const addr = document.getElementById('address').value.trim();
+      const tIn = document.getElementById('timeIn').value;
+      const tOut = document.getElementById('timeOut').value;
+      const desc = document.getElementById('description').value.trim();
+
+      if (!date) return alert('Select a date');
+      if (!job) return alert('Enter job name');
+      if (timeToDecimal(tOut) === timeToDecimal(tIn)) return alert('Time In and Time Out cannot be the same');
+
+      const existing = idx === -1 ? null : entries[idx];
+
+      const entry = {
+        id: idx === -1 ? generateEntryId() : (entries[idx].id || generateEntryId()),
+        dateStr: date,
+        jobName: job,
+        address: addr,
+        timeIn: tIn,
+        timeOut: tOut,
+        description: desc,
+        billingStatus: existing?.billingStatus || 'unbilled',
+        invoiceId: existing?.invoiceId || ''
+      };
+
+      if (idx === -1) entries.push(entry);
+      else entries[idx] = entry;
+
+      if (addr && !addressHistory.includes(addr)) {
+        addressHistory.unshift(addr);
+        if (addressHistory.length > 50) addressHistory.pop();
+      }
+
+      renderTable();
+      clearForm();
+    };
+
+    function clearForm() {
+      document.getElementById('jobName').value = '';
+      document.getElementById('jobType').value = '';
+      document.getElementById('address').value = '';
+      document.getElementById('description').value = '';
+      document.getElementById('editIndex').value = -1;
+      document.getElementById('actionButton').textContent = 'Add Entry';
+      document.getElementById('cancelButton').style.display = 'none';
+      if (entries.length) {
+        const last = entries[entries.length - 1];
+        document.getElementById('timeIn').value = last.timeOut;
+        document.getElementById('timeOut').value = getNextTime(last.timeOut);
+      }
+      document.getElementById('jobName').focus();
+    }
+
+    document.getElementById('cancelButton').onclick = clearForm;
+
+    document.getElementById('copyLast').onclick = () => {
+      if (!entries.length) return alert('No previous job');
+      const l = entries[entries.length - 1];
+      document.getElementById('jobName').value = l.jobName;
+      document.getElementById('address').value = l.address || '';
+      document.getElementById('description').value = l.description || '';
+      document.getElementById('timeIn').value = l.timeOut;
+      document.getElementById('timeOut').value = getNextTime(l.timeOut);
+      document.getElementById('jobType').value = '';
+    };
+
+    document.getElementById('clearAllButton').onclick = () => {
+      if (confirm('Clear ALL entries?')) {
+        entries = [];
+        document.getElementById('sessionDate').value = getTodayDateString();
+        saveData();
+        renderTable();
+        clearForm();
+      }
+    };
+
+    document.getElementById('newDayButton').onclick = () => {
+      if (!entries.length) {
+        startNewDay();
+        return;
+      }
+
+      if (confirm('Archive the current day, clear the timesheet, and move to the next date?')) {
+        startNewDay();
+      }
+    };
+
+    document.getElementById('addItem').onclick = () => createItemRow({ markup: getDefaultMarkupPercent() });
+    document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
+    document.getElementById('clearInvoice').onclick = () => clearInvoice();
+    document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
+
+    document.getElementById('loadInvoiceDraft').onclick = () => {
+      const chosen = document.getElementById('invoiceDraftList').value.trim();
+      if (!chosen) {
+        alert('Select a saved draft first.');
+        return;
+      }
+      loadInvoiceDraftById(chosen);
+    };
+
+    document.getElementById('deleteInvoiceDraft').onclick = () => {
+      const chosen = document.getElementById('invoiceDraftList').value.trim();
+      if (!chosen) {
+        alert('Select a saved draft first.');
+        return;
+      }
+      deleteInvoiceDraftById(chosen);
+    };
+
+    document.getElementById('newInvoiceDraft').onclick = () => {
+      document.getElementById('invoiceId').value = '';
+      document.getElementById('clientName').value = '';
+      document.getElementById('clientPhone').value = '';
+      document.getElementById('clientEmail').value = '';
+      document.getElementById('clientAddress').value = '';
+      document.getElementById('laborDescription').value = '';
+      document.querySelector('#itemsTable tbody').innerHTML = '';
+      ensureServiceChargeRow();
+      ensureRegularLaborRow();
+      renderInvoiceEntrySelector([]);
+      updateInvoiceSummary();
+    };
+
+    document.getElementById('invoiceId').addEventListener('input', () => {
+      renderInvoiceEntrySelector();
+      updateInvoiceSummary();
+    });
+
+    document.getElementById('hourlyRate').addEventListener('input', () => {
+      const r = ensureRegularLaborRow();
+      r.querySelector('.item-customer-price').value = formatMoney(document.getElementById('hourlyRate').value || 0);
+      r.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
+      populateInvoiceFromEntries();
+    });
+
+    document.getElementById('overtimeRate').addEventListener('input', () => {
+      const otRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+      if (otRow) {
+        otRow.querySelector('.item-customer-price').value = formatMoney(document.getElementById('overtimeRate').value || 0);
+        otRow.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
+      }
+      populateInvoiceFromEntries();
+    });
+
+    document.getElementById('generateExcel').onclick = () => {
+      document.getElementById('loading').style.display = 'block';
+      setTimeout(() => {
+        try {
+          const wb = XLSX.utils.book_new();
+          const data = [
+            [`Timesheet - ${document.getElementById('employee').value}`, `Date: ${formatDate(document.getElementById('sessionDate').value)}`],
+            [],
+            ['Job Name', 'Address', 'Time In', 'Time Out', 'Hours', 'Description', 'Status', 'Invoice ID']
+          ];
+
+          let totalDec = 0;
+          entries.forEach(e => {
+            const dur = timeToDecimal(e.timeOut) >= timeToDecimal(e.timeIn)
+              ? timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn)
+              : timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn) + 24;
+
+            totalDec += dur;
+
+            data.push([
+              e.jobName,
+              e.address || '',
+              to12hr(e.timeIn),
+              to12hr(e.timeOut),
+              formatHours(dur),
+              e.description || '',
+              e.billingStatus || 'unbilled',
+              e.invoiceId || ''
+            ]);
+          });
+
+          const { h, m } = decimalToHM(totalDec);
+          data.push([]);
+          data.push(['TOTAL', '', '', '', `${h}:${m.toString().padStart(2,'0')}`, '', '', '']);
+
+          const ws = XLSX.utils.aoa_to_sheet(data);
+          ws['!cols'] = [
+            {wch:20},{wch:30},{wch:14},{wch:14},{wch:10},{wch:40},{wch:14},{wch:18}
+          ];
+          XLSX.utils.book_append_sheet(wb, ws, 'Timesheet');
+          XLSX.writeFile(wb, `${document.getElementById('employee').value}_Timesheet_${document.getElementById('sessionDate').value}.xlsx`);
+        } catch(e) {
+          alert('Export failed');
+          console.error(e);
+        }
+        document.getElementById('loading').style.display = 'none';
+      }, 100);
+    };
+
+    document.getElementById('generateInvoice').onclick = async () => {
+      document.getElementById('loading').innerHTML = '<div class="spinner"></div><br>Generating Invoice...';
+      document.getElementById('loading').style.display = 'block';
+
+      try {
+        populateInvoiceFromEntries();
+        updateInvoiceSummary();
+
+        const hstRate = parseFloat(document.getElementById('hstRate').value || '0.13');
+        const invoiceId = document.getElementById('invoiceId').value.trim();
+        const clientName = document.getElementById('clientName').value.trim();
+        const clientPhone = document.getElementById('clientPhone').value.trim();
+        const clientEmail = document.getElementById('clientEmail').value.trim();
+        const clientAddress = document.getElementById('clientAddress').value.trim();
+        const selectedEntries = getFilteredEntries();
+
+        if (!selectedEntries.length) {
+          document.getElementById('loading').style.display = 'none';
+          return alert('Select at least one timesheet entry for this invoice.');
+        }
+
+        const lineRows = [...document.querySelectorAll('#itemsTable tbody tr')];
+        const lines = lineRows
+          .map(row => {
+            const quantity = +row.querySelector('.item-qty').value || 0;
+            const distributorCost = +row.querySelector('.item-distributor-cost').value || 0;
+            const markup = +row.querySelector('.item-markup').value || 0;
+            const customerPrice = +row.querySelector('.item-customer-price').value || 0;
+            const desc = row.querySelector('.item-desc').value.trim();
+            const unit = row.querySelector('.item-unit').value.trim() || 'ea';
+            return { quantity, desc, unit, distributorCost, markup, customerPrice, price: customerPrice, amount: quantity * customerPrice };
+          })
+          .filter(l => (l.desc && l.quantity) || l.amount);
+
+        if (!lines.length) {
+          document.getElementById('loading').style.display = 'none';
+          return alert('Add at least one invoice line item.');
+        }
+
+        const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
+        const hst = subtotal * hstRate;
+        const total = subtotal + hst;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        let logoDrawn = false;
+        let logoBox = { x: 10, y: 8, w: 0, h: 0 };
+
+        if (LOGO_URL && LOGO_URL.trim() !== "") {
+          try {
+            const { dataUrl, fmt } = await loadImageAsDataURL(LOGO_URL);
+            const logoW = 26;
+            const logoH = 20;
+            doc.addImage(dataUrl, fmt, logoBox.x, logoBox.y, logoW, logoH);
+            logoBox.w = logoW;
+            logoBox.h = logoH;
+            logoDrawn = true;
+          } catch (e) {
+            console.warn("Logo skipped:", e.message);
+          }
+        }
+
+        const titleX = logoDrawn ? logoBox.x + logoBox.w + 8 : 10;
+        const titleY = 20;
+
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
+        doc.text("ARCHER'S EQUIPMENT REPAIR", titleX, titleY);
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("Archer's Equipment Repair Ltd.", titleX, titleY + 7);
+
+        doc.setFontSize(10);
+        doc.text("TSSA #: 000394614", 145, 12);
+        doc.text("HST #: 900518869RT0001", 145, 17);
+        doc.text("Phone: 519-383-9654", 145, 22);
+
+        doc.setFontSize(20);
+        doc.setFont("helvetica", "bold");
+        doc.text("INVOICE", 170, 34);
+
+        doc.setDrawColor(180);
+        doc.line(10, 38, 200, 38);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(12);
+        doc.text("DATE RANGE: " + getSelectedDateRange(selectedEntries), 10, 48);
+        doc.text("INVOICE ID: " + (invoiceId || '-'), 10, 58);
+        doc.text("NAME: " + (clientName || '-'), 10, 68);
+        doc.text("PHONE: " + (clientPhone || '-'), 10, 78);
+        doc.text("EMAIL: " + (clientEmail || '-'), 10, 88);
+
+        const splitAddress = doc.splitTextToSize("ADDRESS: " + (clientAddress || '-'), 190);
+        doc.text(splitAddress, 10, 98);
+
+        const entryLines = selectedEntries
+          .slice()
+          .sort((a, b) => (`${a.dateStr} ${a.timeIn}`).localeCompare(`${b.dateStr} ${b.timeIn}`))
+          .map(e => `${formatDate(e.dateStr)} - ${e.jobName} (${to12hr(e.timeIn)} to ${to12hr(e.timeOut)})`);
+
+        const splitEntryLines = doc.splitTextToSize("VISITS: " + entryLines.join(" | "), 190);
+        const visitsY = 108 + ((splitAddress.length - 1) * 6);
+        doc.text(splitEntryLines, 10, visitsY);
+
+        if (typeof doc.autoTable !== "function") {
+          throw new Error("jsPDF AutoTable not available (CDN not loaded).");
+        }
+
+        const tableStartY = visitsY + ((splitEntryLines.length - 1) * 6) + 8;
+
+        doc.autoTable({
+          startY: tableStartY,
+          head: [['QUANTITY', 'DESCRIPTION', 'UNIT PRICE', 'UNIT', 'AMOUNT']],
+          body: lines.map(l => [
+            l.quantity.toFixed(2),
+            l.desc,
+            '$' + formatMoney(l.customerPrice ?? l.price),
+            l.unit,
+            '$' + formatMoney(l.amount)
+          ]),
+          theme: 'grid',
+          headStyles: { fillColor: [211, 211, 211], textColor: [0, 0, 0] },
+          styles: { cellPadding: 5, fontSize: 10, overflow: 'linebreak' },
+          columnStyles: { 1: { cellWidth: 80 } },
+        });
+
+        const finalY = doc.lastAutoTable.finalY + 10;
+
+        doc.setFont("helvetica", "bold");
+        doc.text("SUBTOTAL: $" + formatMoney(subtotal), 140, finalY);
+        doc.text("HST: $" + formatMoney(hst), 140, finalY + 8);
+        doc.text("TOTAL: $" + formatMoney(total), 140, finalY + 16);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.text("e-transfer accepted at Jason@archerser.ca", 105, 280, { align: 'center' });
+
+        const d = new Date();
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const safeClientName = (clientName || 'Client').replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        doc.save(`${safeClientName || 'Client'}_${dateStr}_Invoice.pdf`);
+
+        localStorage.setItem('lastClient', JSON.stringify({
+          name: clientName,
+          phone: clientPhone,
+          email: clientEmail,
+          address: clientAddress
+        }));
+        rememberCurrentClient(true);
+        rememberCurrentLocationProfile(true, getSingleFilteredAddress(selectedEntries));
+
+        if (invoiceId && invoices[invoiceId]) {
+          invoices[invoiceId].status = 'invoiced';
+          invoices[invoiceId].updatedAt = new Date().toISOString();
+          saveInvoicesToStorage();
+        }
+
+        markSelectedEntriesAsInvoiced(invoiceId);
+        renderTable();
+      } catch (err) {
+        alert('Invoice generation failed. Please refresh and try again.');
+        console.error(err);
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    };
+
+
+    function getClientProfiles() {
+      return JSON.parse(localStorage.getItem('clientProfiles') || '{}');
+    }
+
+    function saveClientProfiles(profiles) {
+      localStorage.setItem('clientProfiles', JSON.stringify(profiles));
+    }
+
+    function getLocationProfiles() {
+      return JSON.parse(localStorage.getItem('locationProfiles') || '{}');
+    }
+
+    function saveLocationProfiles(profiles) {
+      localStorage.setItem('locationProfiles', JSON.stringify(profiles));
+    }
+
+    function normalizeClientKey(name) {
+      return String(name || '').trim().toLowerCase();
+    }
+
+    function normalizeAddressKey(address) {
+      return String(address || '').trim().toLowerCase();
+    }
+
+    function renderClientNameSuggestions() {
+      const list = document.getElementById('clientNameList');
+      if (!list) return;
+      const profiles = getClientProfiles();
+      list.innerHTML = '';
+      Object.values(profiles)
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
+        .forEach(profile => {
+          if (!profile || !profile.name) return;
+          const option = document.createElement('option');
+          option.value = profile.name;
+          list.appendChild(option);
+        });
+    }
+
+    function getCurrentClientProfile() {
+      return {
+        name: document.getElementById('clientName').value.trim(),
+        phone: document.getElementById('clientPhone').value.trim(),
+        email: document.getElementById('clientEmail').value.trim(),
+        address: document.getElementById('clientAddress').value.trim()
+      };
+    }
+
+    function rememberCurrentClient(force = false) {
+      const profile = getCurrentClientProfile();
+      const key = normalizeClientKey(profile.name);
+      if (!key) return;
+      if (!force && !profile.phone && !profile.email && !profile.address) return;
+
+      const profiles = getClientProfiles();
+      const existing = profiles[key] || {};
+      profiles[key] = {
+        name: profile.name,
+        phone: profile.phone || existing.phone || '',
+        email: profile.email || existing.email || '',
+        address: profile.address || existing.address || ''
+      };
+      saveClientProfiles(profiles);
+      renderClientNameSuggestions();
+    }
+
+    function rememberCurrentLocationProfile(force = false, preferredAddress = '') {
+      const profile = getCurrentClientProfile();
+      const address = String(preferredAddress || profile.address || '').trim();
+      const key = normalizeAddressKey(address);
+      if (!key) return;
+      if (!force && !profile.name && !profile.phone && !profile.email) return;
+
+      const profiles = getLocationProfiles();
+      const existing = profiles[key] || {};
+      profiles[key] = {
+        address,
+        name: profile.name || existing.name || '',
+        phone: profile.phone || existing.phone || '',
+        email: profile.email || existing.email || '',
+        billingAddress: profile.address || existing.billingAddress || address
+      };
+      saveLocationProfiles(profiles);
+    }
+
+    function fillClientProfileByName(name) {
+      const key = normalizeClientKey(name);
+      if (!key) return false;
+      const profile = getClientProfiles()[key];
+      if (!profile) return false;
+      document.getElementById('clientName').value = profile.name || name;
+      document.getElementById('clientPhone').value = profile.phone || '';
+      document.getElementById('clientEmail').value = profile.email || '';
+      document.getElementById('clientAddress').value = profile.address || '';
+      return true;
+    }
+
+    function fillClientProfileByAddress(address, overwrite = false) {
+      const normalizedAddress = String(address || '').trim();
+      const key = normalizeAddressKey(normalizedAddress);
+      if (!key) return false;
+
+      const profile = getLocationProfiles()[key];
+      if (!profile) return false;
+
+      const clientName = document.getElementById('clientName');
+      const clientPhone = document.getElementById('clientPhone');
+      const clientEmail = document.getElementById('clientEmail');
+      const clientAddress = document.getElementById('clientAddress');
+
+      if (!clientName || !clientPhone || !clientEmail || !clientAddress) return false;
+
+      if (overwrite || !clientName.value.trim()) clientName.value = profile.name || '';
+      if (overwrite || !clientPhone.value.trim()) clientPhone.value = profile.phone || '';
+      if (overwrite || !clientEmail.value.trim()) clientEmail.value = profile.email || '';
+      if (overwrite || !clientAddress.value.trim()) clientAddress.value = profile.billingAddress || profile.address || normalizedAddress;
+      return true;
+    }
+
+    function fillClientProfileFromFilteredEntries(filtered, overwrite = false) {
+      const singleAddress = getSingleFilteredAddress(filtered);
+      if (!singleAddress) return '';
+      setClientAddressFromFiltered(filtered);
+      fillClientProfileByAddress(singleAddress, overwrite);
+      return singleAddress;
+    }
+
+    function setupClientAutoFill() {
+      const clientName = document.getElementById('clientName');
+      const clientPhone = document.getElementById('clientPhone');
+      const clientEmail = document.getElementById('clientEmail');
+      const clientAddress = document.getElementById('clientAddress');
+      if (!clientName || !clientPhone || !clientEmail || !clientAddress) return;
+
+      renderClientNameSuggestions();
+
+      clientName.addEventListener('change', () => {
+        if (!fillClientProfileByName(clientName.value)) rememberCurrentClient(true);
+        rememberCurrentLocationProfile(true);
+      });
+
+      clientName.addEventListener('blur', () => {
+        if (!fillClientProfileByName(clientName.value)) rememberCurrentClient(true);
+        rememberCurrentLocationProfile(true);
+      });
+
+      [clientPhone, clientEmail, clientAddress].forEach(el => {
+        el.addEventListener('change', () => {
+          if (el === clientAddress) fillClientProfileByAddress(clientAddress.value, false);
+          rememberCurrentClient(true);
+          rememberCurrentLocationProfile(true);
+        });
+        el.addEventListener('blur', () => {
+          if (el === clientAddress) fillClientProfileByAddress(clientAddress.value, false);
+          rememberCurrentClient(true);
+          rememberCurrentLocationProfile(true);
+        });
+      });
+    }
+
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        document.getElementById('actionButton').click();
+      }
+    });
+
+    renderMaterialSuggestions();
+    setupClientAutoFill();
+    loadData();
+    clearForm();
+    ensureServiceChargeRow();
+    ensureRegularLaborRow();
+    renderInvoiceEntrySelector([]);
+    populateInvoiceFromEntries();
+    updateInvoiceSummary();
+    refreshInvoiceDraftList();
+  </script>
+
+  <script>
+  (function(){
+    const FITTINGS = ['Nipple','90 degree elbow','45 degree elbow','Tee','Union','Shut-off','Reducer','Cap','Plug','Coupling','Bushing','Flexconnector','Gastiite','Stand Off (Long)','Stand Off (Short)','Paint'];
+    const STORAGE_KEY = 'blackIronMergedState';
+    const HISTORY_KEY = 'blackIronMergedJobHistory';
+    const els = {
+      tab: document.getElementById('blackIronTab'),
+      fitGrid: document.getElementById('biFitGrid'),
+      jobName: document.getElementById('biJobName'),
+      jobHistory: document.getElementById('biJobHistory'),
+      od: document.getElementById('biOdSize'),
+      qty: document.getElementById('biQty'),
+      quickAdd: document.getElementById('biQuickAdd'),
+      quickAddBtn: document.getElementById('biQuickAddBtn'),
+      reducerWrap: document.getElementById('biReducerWrap'),
+      reducer: document.getElementById('biReducerSize'),
+      nippleWrap: document.getElementById('biNippleWrap'),
+      nipple: document.getElementById('biNippleSize'),
+      teeWrap: document.getElementById('biTeeWrap'),
+      tee1: document.getElementById('biTee1'),
+      tee2: document.getElementById('biTee2'),
+      tee3: document.getElementById('biTee3'),
+      add: document.getElementById('biAddItem'),
+      voice: document.getElementById('biVoiceBtn'),
+      send: document.getElementById('biSendInvoice'),
+      export: document.getElementById('biExportCsv'),
+      clear: document.getElementById('biClearList'),
+      calcCut: document.getElementById('biCalcCut'),
+      cutPipeSize: document.getElementById('biCutPipeSize'),
+      faceLength: document.getElementById('biFaceLength'),
+      takeoutEachEnd: document.getElementById('biTakeoutEachEnd'),
+      cutQty: document.getElementById('biCutQty'),
+      list: document.getElementById('biList'),
+      groupedList: document.getElementById('biGroupedList'),
+      itemCount: document.getElementById('biItemCount'),
+      totalQty: document.getElementById('biTotalQty'),
+      lastSize: document.getElementById('biLastSize'),
+      voiceBox: document.getElementById('biVoiceBox'),
+      calcPipeSize: document.getElementById('biCalcPipeSize'),
+      calcMeasurement: document.getElementById('biCalcMeasurement'),
+      calcStartFitting: document.getElementById('biCalcStartFitting'),
+      calcEndFitting: document.getElementById('biCalcEndFitting'),
+      calcShutoffPosition: document.getElementById('biCalcShutoffPosition'),
+      calcAutoTransfer: document.getElementById('biCalcAutoTransfer'),
+      calcAdd: document.getElementById('biCalcAddLength'),
+      calcTotal: document.getElementById('biCalcTotal'),
+      calcReset: document.getElementById('biCalcReset'),
+      calcLengthList: document.getElementById('biCalcLengthList'),
+      calcResults: document.getElementById('biCalcResults'),
+      pipeCanvas: document.getElementById('biPipeCanvas'),
+      canvasZoomIn: document.getElementById('biCanvasZoomIn'),
+      canvasZoomOut: document.getElementById('biCanvasZoomOut'),
+      canvasResetView: document.getElementById('biCanvasResetView')
+    };
+
+    let state = { selectedFitting:'', items:[], lastOd:'1/2', jobName:'', calcEntries:[], calcPreviousFitting:null, calcZoom:1, calcOffsetX:0, calcOffsetY:0 };
+    let recognition = null;
+    const calcFittingData = {
+      0.5: { elbow: { engagement: 0.64, body: 1.2 }, tee: { engagement: 0.64, body: 1.25 }, coupling: { engagement: 0.64, body: 1.12 }, shutoff: { engagement: 0.64, body: 2.0 } },
+      0.75: { elbow: { engagement: 0.81, body: 1.4 }, tee: { engagement: 0.81, body: 2.0 }, coupling: { engagement: 0.67, body: 1.2 }, shutoff: { engagement: 0.81, body: 2.5 } },
+      1: { elbow: { engagement: 0.92, body: 1.6 }, tee: { engagement: 0.92, body: 2.2 }, coupling: { engagement: 0.78, body: 1.4 }, shutoff: { engagement: 0.92, body: 3.0 } },
+      1.25: { elbow: { engagement: 1.05, body: 1.8 }, tee: { engagement: 1.05, body: 2.4 }, coupling: { engagement: 0.89, body: 1.6 }, shutoff: { engagement: 1.05, body: 3.5 } }
+    };
+    const calcNippleSizes = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 10, 12, 18, 24, 36, 48];
+    let calcDragging = false;
+    let calcDragStartX = 0;
+    let calcDragStartY = 0;
+
+
+    function esc(s){ return String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+    function saveState(){
+      state.jobName = els.jobName.value.trim();
+      state.lastOd = els.od.value;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      els.lastSize.textContent = state.lastOd || '—';
+      if (els.cutPipeSize) els.cutPipeSize.value = els.od.value || state.lastOd || '1/2';
+      renderJobHistory();
+    }
+    function loadState(){
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        if (saved && typeof saved === 'object') state = Object.assign(state, saved);
+      } catch(e) {}
+      els.jobName.value = state.jobName || '';
+      els.od.value = state.lastOd || '1/2';
+      renderFitButtons();
+      updateConditionalFields();
+      renderList();
+      renderJobHistory();
+      els.lastSize.textContent = state.lastOd || '—';
+      if (els.calcPipeSize && !['0.5','0.75','1','1.25'].includes(els.calcPipeSize.value)) els.calcPipeSize.value = '0.5';
+      calcUpdateLengthList();
+      calcDrawLayout();
+    }
+    function getHistory(){
+      try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) { return []; }
+    }
+    function saveHistory(name){
+      name = String(name || '').trim();
+      if (!name) return;
+      const arr = getHistory().filter(v => v !== name);
+      arr.unshift(name);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 30)));
+      renderJobHistory();
+    }
+    function renderJobHistory(){
+      const list = els.jobHistory;
+      list.innerHTML = '';
+      getHistory().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        list.appendChild(opt);
+      });
+    }
+    function renderFitButtons(){
+      els.fitGrid.innerHTML = FITTINGS.map(name => `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}" data-fit="${esc(name)}">${esc(name)}</button>`).join('\n');
+    }
+    function updateConditionalFields(){
+      const f = state.selectedFitting;
+      els.reducerWrap.classList.toggle('bi-hidden', f !== 'Reducer');
+      els.nippleWrap.classList.toggle('bi-hidden', f !== 'Nipple');
+      els.teeWrap.classList.toggle('bi-hidden', f !== 'Tee');
+    }
+    function buildSizeDetail(){
+      if (state.selectedFitting === 'Nipple') {
+        if (!els.nipple.value) throw new Error('Select a nipple length.');
+        return `${els.nipple.value}"`;
+      }
+      if (state.selectedFitting === 'Reducer') {
+        if (!els.reducer.value) throw new Error('Select the reducer size.');
+        return `Reduced to ${els.reducer.value}"`;
+      }
+      if (state.selectedFitting === 'Tee') {
+        const vals = [els.tee1.value, els.tee2.value, els.tee3.value].filter(Boolean);
+        return vals.length === 3 ? `${vals[0]}" x ${vals[1]}" x ${vals[2]}"` : `${els.od.value}" x ${els.od.value}" x ${els.od.value}"`;
+      }
+      return '';
+    }
+    function formatInches(value){
+      const num = parseFloat(value);
+      if (!isFinite(num)) return String(value ?? '');
+      return Number.isInteger(num) ? String(num) : num.toFixed(3).replace(/0+$/,'').replace(/\.$/,'');
+    }
+    function buildDisplay(item){
+      if (item.fittingType === 'Pipe') return `${item.odSize}" Pipe, ${item.sizeDetail}, Qty: ${item.quantity}`;
+      let extra = item.sizeDetail ? `, ${item.sizeDetail}` : '';
+      if (item.fittingType === 'Tee' && item.sizeDetail.includes(' x ')) return `${item.fittingType}, ${item.sizeDetail}, Qty: ${item.quantity}`;
+      return `${item.fittingType}, ${item.odSize}"${extra}, Qty: ${item.quantity}`;
+    }
+    function buildInvoiceDescription(item){
+      if (item.fittingType === 'Pipe') return `${item.odSize}" Black Iron Gas Pipe - ${item.sizeDetail}`;
+      if (item.fittingType === 'Tee' && item.sizeDetail.includes(' x ')) return `${item.sizeDetail} Black Iron Tee - Supply & Install`;
+      if (item.fittingType === 'Reducer') return `${item.odSize}" Black Iron Reducing Fitting - ${item.sizeDetail}`;
+      if (item.fittingType === 'Nipple') return `${item.odSize}" Black Iron Pipe Nipple - ${item.sizeDetail}`;
+      if (item.sizeDetail) return `${item.odSize}" Black Iron ${item.fittingType} - ${item.sizeDetail}`;
+      return `${item.odSize}" Black Iron ${item.fittingType} - Supply & Install`;
+    }
+    function getGroupKey(item){
+      return JSON.stringify([item.fittingType, item.odSize, item.sizeDetail || '']);
+    }
+    function getGroupedItems(){
+      const map = new Map();
+      state.items.forEach(item => {
+        const key = getGroupKey(item);
+        if (!map.has(key)) map.set(key, { ...item, quantity: 0, sourceCount: 0 });
+        const grouped = map.get(key);
+        grouped.quantity += (+item.quantity || 0);
+        grouped.sourceCount += 1;
+      });
+      return [...map.values()];
+    }
+
+    function calcGcd(a,b){ while (b) [a,b] = [b, a % b]; return a; }
+    function calcToFraction(inches){
+      const value = Number(inches || 0);
+      const sixteenths = Math.round(value * 16);
+      const whole = Math.floor(sixteenths / 16);
+      let numerator = Math.abs(sixteenths % 16);
+      if (numerator === 0) return `${whole}`;
+      const divisor = calcGcd(numerator, 16);
+      return whole ? `${whole} ${numerator / divisor}/${16 / divisor}` : `${numerator / divisor}/${16 / divisor}`;
+    }
+    function calcToFeetAndFraction(inches){
+      const value = Number(inches || 0);
+      const feet = Math.floor(value / 12);
+      const remaining = value % 12;
+      return `${feet} ft ${calcToFraction(remaining)} in`;
+    }
+    function calcGetNippleOptions(cutLength, startingEngagement, endingEngagement, endingAdjustment){
+      const sorted = calcNippleSizes
+        .map(size => ({ size, diff: Math.abs(size - cutLength) }))
+        .sort((a,b) => a.diff - b.diff)
+        .slice(0, 3)
+        .map(item => item.size);
+      return sorted.map(nipple => ({
+        nipple,
+        assembled: nipple - startingEngagement - endingEngagement + endingAdjustment,
+        isClosest: nipple === sorted[0]
+      }));
+    }
+    function calcAddTransferItem(fittingType, odSize, sizeDetail, quantity){
+      addItem({ fittingType, odSize, sizeDetail, quantity });
+    }
+    function calcUpdateLengthList(){
+      if (!els.calcLengthList) return;
+      els.calcLengthList.innerHTML = '';
+      state.calcEntries.forEach((entry, index) => {
+        const sizeText = `${entry.pipeSize}"`;
+        if (entry.segments) {
+          const li = document.createElement('li');
+          li.innerHTML = `<b>Length ${index + 1}:</b> ${calcToFraction(entry.assembledLength)} in (${sizeText} pipe) with mid-segment shut-off`;
+          els.calcLengthList.appendChild(li);
+          entry.segments.forEach((seg, subIndex) => {
+            const sub = document.createElement('li');
+            sub.className = 'bi-calc-sub';
+            const startText = seg.startingFitting !== 'none' ? `from ${seg.startingFitting} (-${calcToFraction(seg.startingEngagement)} in)` : '';
+            const endText = seg.endingFittingType !== 'none' ? ` to ${seg.endingFittingType} (${seg.endingFittingAdjustment >= 0 ? '+' : ''}${calcToFraction(Math.abs(seg.endingFittingAdjustment))} in)` : '';
+            const nippleText = seg.nippleOptions.map(opt => opt.isClosest ? `<b>${opt.nipple} → ${calcToFraction(opt.assembled)}</b>` : `${opt.nipple} → ${calcToFraction(opt.assembled)}`).join(', ');
+            sub.innerHTML = `Segment ${subIndex + 1}: ${calcToFraction(seg.assembledLength)} in ${startText}${endText}<br>Cut Length: ${calcToFraction(seg.cutLength)} in<br>Nipple Options: ${nippleText}`;
+            els.calcLengthList.appendChild(sub);
+          });
+        } else {
+          const li = document.createElement('li');
+          const startText = entry.startingFitting !== 'none' ? `from ${entry.startingFitting} (-${calcToFraction(entry.startingEngagement)} in)` : '';
+          const endText = entry.endingFittingType !== 'none' ? ` to ${entry.endingFittingType} (${entry.endingFittingAdjustment >= 0 ? '+' : ''}${calcToFraction(Math.abs(entry.endingFittingAdjustment))} in)` : '';
+          const nippleText = entry.nippleOptions.map(opt => opt.isClosest ? `<b>${opt.nipple} → ${calcToFraction(opt.assembled)}</b>` : `${opt.nipple} → ${calcToFraction(opt.assembled)}`).join(', ');
+          li.innerHTML = `<b>Length ${index + 1}:</b> ${calcToFraction(entry.assembledLength)} in (${sizeText} pipe) ${startText}${endText}<br>Cut Length: ${calcToFraction(entry.cutLength)} in<br>Nipple Options: ${nippleText}`;
+          els.calcLengthList.appendChild(li);
+        }
+      });
+    }
+    function calcCalculateTotal(){
+      if (!state.calcEntries.length) {
+        els.calcResults.innerHTML = '<div class="bi-calc-error">No measurements added yet.</div>';
+        return;
+      }
+      let totalAssembledLength = 0, totalCutLength = 0, totalStartingEngagement = 0, totalEndingAdjustment = 0;
+      state.calcEntries.forEach(entry => {
+        if (entry.segments) {
+          entry.segments.forEach(seg => {
+            totalAssembledLength += seg.assembledLength;
+            totalCutLength += seg.cutLength;
+            totalStartingEngagement += seg.startingEngagement;
+            totalEndingAdjustment += seg.endingFittingAdjustment;
+          });
+        } else {
+          totalAssembledLength += entry.assembledLength;
+          totalCutLength += entry.cutLength;
+          totalStartingEngagement += entry.startingEngagement;
+          totalEndingAdjustment += entry.endingFittingAdjustment;
+        }
+      });
+      els.calcResults.innerHTML = `
+        <h3>Results</h3>
+        <p>Base Length Total: ${calcToFeetAndFraction(totalAssembledLength)}</p>
+        <p>Cut Length Total: ${calcToFeetAndFraction(totalCutLength)}</p>
+        <p>Total Starting Engagement: ${calcToFraction(totalStartingEngagement)} in</p>
+        <p>Total Ending Adjustment: ${calcToFraction(totalEndingAdjustment)} in</p>
+      `;
+    }
+    function calcTurnDirection(direction){
+      if (direction === 'right') return 'down';
+      if (direction === 'down') return 'left';
+      if (direction === 'left') return 'up';
+      return 'right';
+    }
+    function calcDrawLayout(){
+      const canvas = els.pipeCanvas;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!state.calcEntries.length) return;
+
+      let maxX = 0, maxY = 0, minY = 0;
+      let segments = [];
+      state.calcEntries.forEach(entry => { segments = segments.concat(entry.segments || [entry]); });
+
+      let x = 20, y = canvas.height / 2, direction = 'right';
+      segments.forEach(seg => {
+        const length = seg.assembledLength;
+        if (direction === 'right') maxX = Math.max(maxX, x + length);
+        if (direction === 'left') maxX = Math.max(maxX, x);
+        if (direction === 'down') maxY = Math.max(maxY, y + length);
+        if (direction === 'up') minY = Math.min(minY, y - length);
+        if (seg.endingFittingType === 'elbow') direction = calcTurnDirection(direction);
+      });
+
+      const spreadX = Math.max(maxX, 50);
+      const spreadY = Math.max(maxY - minY, 50);
+      const baseScale = Math.min((canvas.width - 40) / spreadX, (canvas.height - 40) / spreadY);
+
+      ctx.save();
+      ctx.translate(state.calcOffsetX || 0, state.calcOffsetY || 0);
+      ctx.scale(state.calcZoom || 1, state.calcZoom || 1);
+
+      x = 20;
+      y = canvas.height / (2 * (state.calcZoom || 1)) - (minY < 0 ? minY * baseScale : 0);
+      direction = 'right';
+
+      ctx.beginPath();
+      ctx.lineWidth = 2 / (state.calcZoom || 1);
+      ctx.font = `${10 / (state.calcZoom || 1)}px Arial`;
+      ctx.strokeStyle = '#c2410c';
+      ctx.fillStyle = '#111';
+
+      segments.forEach(seg => {
+        const len = seg.assembledLength * baseScale;
+        const startX = x, startY = y;
+        if (direction === 'right') x += len;
+        else if (direction === 'left') x -= len;
+        else if (direction === 'down') y += len;
+        else if (direction === 'up') y -= len;
+
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(x, y);
+
+        const midX = (startX + x) / 2;
+        const midY = (startY + y) / 2;
+        ctx.fillText(`${calcToFraction(seg.assembledLength)}"`, midX + 4 / (state.calcZoom || 1), midY - 6 / (state.calcZoom || 1));
+
+        if (seg.endingFittingType === 'elbow') {
+          direction = calcTurnDirection(direction);
+        }
+      });
+
+      ctx.stroke();
+      ctx.restore();
+    }
+    function calcResetView(){
+      state.calcZoom = 1;
+      state.calcOffsetX = 0;
+      state.calcOffsetY = 0;
+      saveState();
+      calcDrawLayout();
+    }
+    function calcZoom(factor){
+      state.calcZoom = Math.max(0.4, Math.min(3, (state.calcZoom || 1) * factor));
+      saveState();
+      calcDrawLayout();
+    }
+    function calcResetCalculator(){
+      state.calcEntries = [];
+      state.calcPreviousFitting = null;
+      els.calcMeasurement.value = '';
+      els.calcShutoffPosition.value = '';
+      els.calcStartFitting.value = 'none';
+      els.calcEndFitting.value = 'none';
+      els.calcResults.innerHTML = '';
+      calcResetView();
+      saveState();
+      calcUpdateLengthList();
+      calcDrawLayout();
+    }
+    function calcAddMeasurement(){
+      const pipeSize = parseFloat(els.calcPipeSize.value);
+      const assembledLength = parseFloat(els.calcMeasurement.value);
+      const startingFittingType = els.calcStartFitting.value;
+      const endingFittingType = els.calcEndFitting.value;
+      const shutoffPosition = parseFloat(els.calcShutoffPosition.value) || 0;
+      const autoTransfer = !!els.calcAutoTransfer.checked;
+      const odSizeMap = { 0.5: '1/2', 0.75: '3/4', 1: '1', 1.25: '1 1/4' };
+      const odSize = odSizeMap[pipeSize];
+      const fittingMap = { elbow: '90 degree elbow', tee: 'Tee', coupling: 'Coupling', shutoff: 'Shut-off' };
+
+      if (!(assembledLength > 0)) {
+        els.calcResults.innerHTML = '<div class="bi-calc-error">Please enter a valid positive length.</div>';
+        return;
+      }
+      if (shutoffPosition && (shutoffPosition <= 0 || shutoffPosition >= assembledLength)) {
+        els.calcResults.innerHTML = '<div class="bi-calc-error">Shut-off position must be between 0 and the assembled length.</div>';
+        return;
+      }
+
+      const startingEngagement = startingFittingType !== 'none'
+        ? calcFittingData[pipeSize][startingFittingType].engagement
+        : (state.calcEntries.length === 0 ? calcFittingData[pipeSize].elbow.engagement : state.calcPreviousFitting ? calcFittingData[pipeSize][state.calcPreviousFitting].engagement : 0);
+
+      let endingFittingAdjustment = endingFittingType !== 'none' ? calcFittingData[pipeSize][endingFittingType].body - calcFittingData[pipeSize][endingFittingType].engagement : 0;
+      let endingEngagement = endingFittingType !== 'none' ? calcFittingData[pipeSize][endingFittingType].engagement : 0;
+
+      if (shutoffPosition) {
+        const shutoffFitting = calcFittingData[pipeSize].shutoff;
+        const shutoffAdjustment = shutoffFitting.body - shutoffFitting.engagement;
+
+        const firstAssembled = shutoffPosition;
+        const firstBase = firstAssembled + startingEngagement - shutoffAdjustment;
+        const firstCut = firstBase + shutoffFitting.engagement;
+        const firstNippleOptions = calcGetNippleOptions(firstCut, startingEngagement, shutoffFitting.engagement, shutoffAdjustment);
+
+        const secondAssembled = assembledLength - shutoffPosition;
+        const secondBase = secondAssembled + shutoffFitting.engagement - endingFittingAdjustment;
+        const secondCut = secondBase + endingEngagement;
+        const secondNippleOptions = calcGetNippleOptions(secondCut, shutoffFitting.engagement, endingEngagement, endingFittingAdjustment);
+
+        state.calcEntries.push({
+          pipeSize, assembledLength,
+          segments: [
+            {
+              assembledLength: firstAssembled,
+              baseLength: firstBase,
+              cutLength: firstCut,
+              nippleOptions: firstNippleOptions,
+              startingFitting: startingFittingType !== 'none' ? startingFittingType : (state.calcEntries.length === 0 ? 'elbow' : state.calcPreviousFitting || 'none'),
+              endingFittingType: 'shutoff',
+              startingEngagement,
+              endingFittingAdjustment: shutoffAdjustment,
+              endingEngagement: shutoffFitting.engagement
+            },
+            {
+              assembledLength: secondAssembled,
+              baseLength: secondBase,
+              cutLength: secondCut,
+              nippleOptions: secondNippleOptions,
+              startingFitting: 'shutoff',
+              endingFittingType,
+              startingEngagement: shutoffFitting.engagement,
+              endingFittingAdjustment,
+              endingEngagement
+            }
+          ]
+        });
+
+        if (autoTransfer) {
+          if (state.calcEntries.length === 1 && startingFittingType !== 'none') calcAddTransferItem(fittingMap[startingFittingType], odSize, '', 1);
+          calcAddTransferItem('Shut-off', odSize, '', 1);
+          calcAddTransferItem('Nipple', odSize, `${firstNippleOptions[0].nipple}"`, 1);
+          calcAddTransferItem('Nipple', odSize, `${secondNippleOptions[0].nipple}"`, 1);
+          if (endingFittingType !== 'none') calcAddTransferItem(fittingMap[endingFittingType], odSize, '', 1);
+        }
+      } else {
+        const baseLength = assembledLength + startingEngagement - endingFittingAdjustment;
+        const cutLength = baseLength + endingEngagement;
+        const nippleOptions = calcGetNippleOptions(cutLength, startingEngagement, endingEngagement, endingFittingAdjustment);
+
+        state.calcEntries.push({
+          pipeSize, assembledLength, baseLength, cutLength, nippleOptions,
+          startingFitting: startingFittingType !== 'none' ? startingFittingType : (state.calcEntries.length === 0 ? 'elbow' : state.calcPreviousFitting || 'none'),
+          endingFittingType, startingEngagement, endingFittingAdjustment, endingEngagement
+        });
+
+        if (autoTransfer) {
+          if (state.calcEntries.length === 1 && startingFittingType !== 'none') calcAddTransferItem(fittingMap[startingFittingType], odSize, '', 1);
+          calcAddTransferItem('Nipple', odSize, `${nippleOptions[0].nipple}"`, 1);
+          if (endingFittingType !== 'none') calcAddTransferItem(fittingMap[endingFittingType], odSize, '', 1);
+        }
+      }
+
+      if (state.calcPreviousFitting) els.calcStartFitting.value = state.calcPreviousFitting;
+      state.calcPreviousFitting = endingFittingType !== 'none' ? endingFittingType : null;
+
+      saveState();
+      calcUpdateLengthList();
+      calcDrawLayout();
+      els.calcMeasurement.value = '';
+      els.calcShutoffPosition.value = '';
+      els.calcResults.innerHTML = '';
+    }
+    function initCalcCanvas(){
+      const canvas = els.pipeCanvas;
+      if (!canvas) return;
+      canvas.addEventListener('mousedown', e => {
+        calcDragging = true;
+        calcDragStartX = e.clientX - (state.calcOffsetX || 0);
+        calcDragStartY = e.clientY - (state.calcOffsetY || 0);
+        canvas.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', e => {
+        if (!calcDragging) return;
+        state.calcOffsetX = e.clientX - calcDragStartX;
+        state.calcOffsetY = e.clientY - calcDragStartY;
+        calcDrawLayout();
+      });
+      window.addEventListener('mouseup', () => {
+        if (!calcDragging) return;
+        calcDragging = false;
+        canvas.classList.remove('dragging');
+        saveState();
+      });
+      canvas.addEventListener('mouseleave', () => {
+        if (!calcDragging) return;
+        calcDragging = false;
+        canvas.classList.remove('dragging');
+        saveState();
+      });
+    }
+
+
+    function parseBlackIronCommand(raw){
+      let text = String(raw || '').toLowerCase().trim();
+      if (!text) throw new Error('Type a fitting command first.');
+      text = text.replace(/^add\s+/, '').replace(/×/g, ' x ').replace(/[“”]/g, '"');
+      [
+        ['three eighths','3/8'],['three eighth','3/8'],['one half','1/2'],['half','1/2'],
+        ['three quarters','3/4'],['three quarter','3/4'],['one and a quarter','1 1/4'],
+        ['one and a half','1 1/2'],['two and a half','2 1/2']
+      ].forEach(([a,b]) => text = text.replaceAll(a, b));
+      text = text.replace(/inches|inch/g,'').replace(/\s+/g,' ').trim();
+
+      let quantity = 1;
+      let m = text.match(/(?:qty|quantity)\s*(\d+)/);
+      if (m) quantity = parseInt(m[1], 10);
+      if (!m) {
+        m = text.match(/^(\d+)\s+(?=(?:3\/8|1\/2|3\/4|1|1 1\/4|1 1\/2|2|2 1\/2))/);
+        if (m) quantity = parseInt(m[1], 10);
+      }
+      if (!m) {
+        m = text.match(/x\s*(\d+)$/);
+        if (m) quantity = parseInt(m[1], 10);
+      }
+
+      const fittingDefs = [
+        ['90 degree elbow','90 degree elbow'],['90 elbow','90 degree elbow'],['elbow 90','90 degree elbow'],
+        ['45 degree elbow','45 degree elbow'],['45 elbow','45 degree elbow'],['tee','Tee'],['reducer','Reducer'],
+        ['reducing coupling','Reducer'],['nipple','Nipple'],['union','Union'],['shut off','Shut-off'],['shut-off','Shut-off'],
+        ['cap','Cap'],['plug','Plug'],['coupling','Coupling'],['bushing','Bushing'],['flex connector','Flexconnector'],
+        ['flexconnector','Flexconnector'],['gastiite','Gastiite'],['paint','Paint'],['stand off long','Stand Off (Long)'],
+        ['stand off short','Stand Off (Short)'],['pipe','Pipe']
+      ];
+      let fittingType = '';
+      for (const [needle, canonical] of fittingDefs) {
+        if (text.includes(needle)) { fittingType = canonical; break; }
+      }
+      if (!fittingType) throw new Error('Could not find the fitting type.');
+
+      const sizes = (text.match(/(?:2 1\/2|1 1\/2|1 1\/4|3\/4|1\/2|3\/8|\b2\b|\b1\b)/g) || []).map(s => s.trim());
+      let odSize = sizes[0] || els.od.value;
+      let sizeDetail = '';
+
+      if (fittingType === 'Reducer') {
+        if (sizes.length < 2) throw new Error('Reducer quick add needs two sizes, like 1 x 3/4 reducer.');
+        odSize = sizes[0];
+        sizeDetail = `Reduced to ${sizes[1]}"`;
+      } else if (fittingType === 'Nipple') {
+        const nm = text.match(/(?:x|by|length)\s*(1 1\/2|2 1\/2|3 1\/2|4 1\/2|5 1\/2|1 1\/4|2|3|4|5|6|7|8|9|10|12|18|24)\b/);
+        const fallbackMatches = text.match(/\b(1 1\/2|2 1\/2|3 1\/2|4 1\/2|5 1\/2|1 1\/4|2|3|4|5|6|7|8|9|10|12|18|24)\b/g) || [];
+        const length = nm ? nm[1] : fallbackMatches[1];
+        if (!length) throw new Error('Nipple quick add needs a length, like 3/4 x 6 nipple.');
+        sizeDetail = `${length}"`;
+      } else if (fittingType === 'Tee') {
+        if (sizes.length >= 3) sizeDetail = `${sizes[0]}" x ${sizes[1]}" x ${sizes[2]}"`;
+      } else if (fittingType === 'Pipe') {
+        const lm = text.match(/(?:x|length)\s*(\d+(?:\.\d+)?)\b/) || text.match(/\b(\d+(?:\.\d+)?)\s*(?:ft|foot|feet)\b/);
+        if (!lm) throw new Error('Pipe quick add needs a length, like 3/4 pipe x 8.');
+        sizeDetail = `Cut & Threaded (${formatInches(lm[1])} ft)`;
+      }
+
+      return { fittingType, odSize, sizeDetail, quantity };
+    }
+    function addCutPipe(){
+      const face = parseFloat(els.faceLength.value || '0');
+      const takeout = parseFloat(els.takeoutEachEnd.value || '0');
+      const quantity = Math.max(1, parseInt(els.cutQty.value || '1', 10));
+      if (!(face > 0)) return alert('Enter a face-to-face length.');
+      const cut = face - (takeout * 2);
+      if (!(cut > 0)) return alert('Cut length must be greater than zero.');
+      addItem({
+        fittingType: 'Pipe',
+        odSize: els.cutPipeSize.value,
+        sizeDetail: `Cut & Threaded (${formatInches(cut)}\" cut length from ${formatInches(face)}\" face-to-face)`,
+        quantity
+      });
+    }
+    function addItem(prefill){
+      try {
+        if (!state.selectedFitting && !prefill) throw new Error('Choose a fitting type first.');
+        const quantity = Math.max(1, parseInt((prefill && prefill.quantity) || els.qty.value || '1', 10));
+        const item = {
+          id: 'bi-' + Date.now() + '-' + Math.random().toString(36).slice(2,8),
+          fittingType: (prefill && prefill.fittingType) || state.selectedFitting,
+          odSize: (prefill && prefill.odSize) || els.od.value,
+          sizeDetail: (prefill && 'sizeDetail' in prefill) ? prefill.sizeDetail : buildSizeDetail(),
+          quantity
+        };
+        state.items.unshift(item);
+        saveHistory(els.jobName.value.trim());
+        saveState();
+        renderList();
+        els.qty.value = 1;
+      } catch(err) {
+        alert(err.message || 'Could not add item.');
+      }
+    }
+    function renderList(){
+      els.itemCount.textContent = state.items.length;
+      els.totalQty.textContent = state.items.reduce((n, item) => n + (+item.quantity || 0), 0);
+      const groupedItems = getGroupedItems();
+      if (!groupedItems.length) {
+        els.groupedList.innerHTML = '<div class="bi-card"><div class="bi-card-main">No grouped items yet.</div></div>';
+        els.list.innerHTML = '<div class="bi-card"><div class="bi-card-main">No parts added yet.</div></div>';
+        return;
+      }
+      els.groupedList.innerHTML = groupedItems.map(item => `
+        <div class="bi-card">
+          <div class="bi-card-main">
+            <span class="bi-title">${esc(buildDisplay(item))}</span>
+            <div class="bi-meta">Invoice text: ${esc(buildInvoiceDescription(item))}${item.sourceCount > 1 ? ` · grouped from ${item.sourceCount} entries` : ''}</div>
+          </div>
+        </div>
+      `).join('\n');
+      els.list.innerHTML = state.items.map((item, index) => `
+        <div class="bi-card" data-index="${index}">
+          <div class="bi-card-main">
+            <span class="bi-title">${esc(buildDisplay(item))}</span>
+            <div class="bi-meta">Invoice text: ${esc(buildInvoiceDescription(item))}</div>
+          </div>
+          <div class="bi-card-actions">
+            <button type="button" class="mini-btn bi-dup">Duplicate</button>
+            <button type="button" class="mini-btn bi-edit">Edit</button>
+            <button type="button" class="mini-btn bi-del" style="background:#dc3545;">Delete</button>
+          </div>
+        </div>
+      `).join('\n');
+    }
+    function editItem(index){
+      const item = state.items[index];
+      if (!item) return;
+      const qty = prompt('Quantity:', item.quantity);
+      if (qty === null) return;
+      const parsedQty = parseInt(qty, 10);
+      if (!parsedQty || parsedQty < 1) return alert('Enter a valid quantity.');
+      item.quantity = parsedQty;
+      const custom = prompt('Size detail / custom text:', item.sizeDetail || '');
+      if (custom === null) return;
+      item.sizeDetail = custom.trim();
+      saveState(); renderList();
+    }
+    function deleteItem(index){ state.items.splice(index,1); saveState(); renderList(); }
+    function duplicateItem(index){ const item = state.items[index]; if (!item) return; addItem(Object.assign({}, item, {id:undefined})); }
+    function clearList(){ if (!state.items.length) return; if (!confirm('Clear the whole Black Iron list?')) return; state.items=[]; saveState(); renderList(); }
+    function sendToInvoice(){
+      const groupedItems = getGroupedItems();
+      if (!groupedItems.length) return alert('No Black Iron items to send.');
+      const tbody = document.querySelector('#itemsTable tbody');
+      groupedItems.forEach(item => {
+        const row = createItemRow({ desc: buildInvoiceDescription(item), qty: item.quantity, unit: item.fittingType === 'Pipe' ? 'ft' : 'ea' });
+        tbody.appendChild(row);
+      });
+      if (!document.getElementById('invoiceId').value.trim() && els.jobName.value.trim()) {
+        document.getElementById('invoiceId').value = els.jobName.value.trim().replace(/\s+/g,'-');
+      }
+      if (!document.getElementById('clientName').value.trim() && els.jobName.value.trim()) {
+        document.getElementById('clientName').value = els.jobName.value.trim();
+      }
+      setActiveTab('invoiceTab');
+      updateInvoiceSummary();
+      alert('Grouped Black Iron items were added to the invoice materials table.');
+    }
+    function exportCsv(){
+      if (!state.items.length) return alert('No items to export.');
+      const rows = [['Fitting Type','OD Size','Size Details','Quantity']].concat(state.items.map(item => [item.fittingType, item.odSize, item.sizeDetail || '', item.quantity]));
+      const content = '﻿' + rows.map(r => r.map(v => {
+        const s = String(v ?? '');
+        return /[\",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+      }).join(',')).join('\n');
+      const blob = new Blob([content], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = `${(els.jobName.value.trim() || 'black_iron_parts').replace(/[^a-z0-9-_]+/gi,'_')}.csv`;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+    function selectFitting(name){ state.selectedFitting = name; renderFitButtons(); updateConditionalFields(); saveState(); }
+    function initVoice(){
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { els.voice.disabled = true; els.voice.title = 'Voice input is not supported in this browser'; return; }
+      recognition = new SR();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognition.onstart = () => { els.voiceBox.style.display='block'; els.voiceBox.textContent='Listening… Say something like: add 3/4 tee quantity 2'; };
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results).map(r => r[0].transcript).join(' ');
+        els.voiceBox.textContent = transcript;
+        if (event.results[0].isFinal) handleVoiceTranscript(transcript.toLowerCase());
+      };
+      recognition.onend = () => { setTimeout(() => { els.voiceBox.style.display='none'; }, 1200); };
+      recognition.onerror = (e) => { els.voiceBox.style.display='block'; els.voiceBox.textContent = 'Voice error: ' + e.error; };
+      els.voice.addEventListener('click', () => recognition.start());
+    }
+    function handleVoiceTranscript(text){
+      try {
+        const parsed = parseBlackIronCommand(text);
+        if (parsed.fittingType && parsed.fittingType !== 'Pipe') selectFitting(parsed.fittingType);
+        addItem(parsed);
+        els.voiceBox.textContent = 'Added: ' + buildDisplay(parsed);
+      } catch(err) {
+        els.voiceBox.textContent = 'Could not parse: ' + text;
+      }
+    }
+
+    els.fitGrid.addEventListener('click', e => {
+      const btn = e.target.closest('.bi-fit-btn');
+      if (btn) selectFitting(btn.dataset.fit);
+    });
+    els.add.addEventListener('click', () => addItem());
+    els.quickAddBtn.addEventListener('click', () => {
+      try {
+        const parsed = parseBlackIronCommand(els.quickAdd.value);
+        if (parsed.fittingType && parsed.fittingType !== 'Pipe') selectFitting(parsed.fittingType);
+        addItem(parsed);
+        els.quickAdd.value = '';
+      } catch(err) {
+        alert(err.message || 'Could not parse quick add entry.');
+      }
+    });
+    els.quickAdd.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        els.quickAddBtn.click();
+      }
+    });
+    els.send.addEventListener('click', sendToInvoice);
+    els.export.addEventListener('click', exportCsv);
+    els.clear.addEventListener('click', clearList);
+    els.calcCut.addEventListener('click', addCutPipe);
+    els.calcAdd.addEventListener('click', calcAddMeasurement);
+    els.calcTotal.addEventListener('click', calcCalculateTotal);
+    els.calcReset.addEventListener('click', calcResetCalculator);
+    els.canvasZoomIn.addEventListener('click', () => calcZoom(1.2));
+    els.canvasZoomOut.addEventListener('click', () => calcZoom(0.8));
+    els.canvasResetView.addEventListener('click', calcResetView);
+    els.calcMeasurement.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); calcAddMeasurement(); } });
+    els.calcShutoffPosition.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); calcAddMeasurement(); } });
+    els.jobName.addEventListener('change', () => { saveHistory(els.jobName.value); saveState(); });
+    els.jobName.addEventListener('input', saveState);
+    els.od.addEventListener('change', () => { els.cutPipeSize.value = els.od.value; saveState(); });
+    els.qty.addEventListener('focus', () => els.qty.select());
+    els.list.addEventListener('click', e => {
+      const card = e.target.closest('.bi-card');
+      if (!card) return;
+      const index = +card.dataset.index;
+      if (e.target.closest('.bi-del')) deleteItem(index);
+      else if (e.target.closest('.bi-edit')) editItem(index);
+      else if (e.target.closest('.bi-dup')) duplicateItem(index);
+    });
+    const originalSetActiveTab = window.setActiveTab;
+    window.setActiveTab = function(tabId){
+      originalSetActiveTab(tabId);
+      if (tabId === 'blackIronTab') {
+        calcDrawLayout();
+        if (!els.jobName.value.trim()) {
+          const inv = document.getElementById('invoiceId').value.trim();
+          const client = document.getElementById('clientName').value.trim();
+          els.jobName.value = inv || client || els.jobName.value;
+          saveState();
+        }
+      }
+    };
+    initCalcCanvas();
+    loadState();
+    initVoice();
+  })();
+  
+document.addEventListener("DOMContentLoaded",function(){
+  const sendBtn=document.getElementById("biSendToParts");
+  if(sendBtn){
+    sendBtn.addEventListener("click",function(){
+      const calcBtn=document.getElementById("biCalcTotal");
+      if(calcBtn){calcBtn.click();}
+      const tabBtn=[...document.querySelectorAll('.tab-btn')].find(b=>b.dataset.tab==="blackIronTab");
+      if(tabBtn){tabBtn.click();}
+      alert("Calculated items sent. Review them in the Black Iron tab.");
+    });
+  }
+});
+
+</script>
+
+</body>
+</html>
