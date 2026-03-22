@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,7 +22,7 @@
     .nav-button {width:48px;height:48px;background:#2a2a2a;border:2px solid #ff4500;border-radius:50%;color:#ff4500;display:flex;align-items:center;justify-content:center;text-decoration:none;position:relative;transition:all .2s;}
     .nav-button:active {transform:scale(0.95);box-shadow:0 0 15px rgba(255,69,0,.8);}
     .nav-button:hover {transform:scale(1.1);box-shadow:0 0 15px rgba(255,69,0,.8);}
-    .nav-button::after {content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:5px 10px;border-radius:4px;font-size:.8rem;opacity:0;white-space:nowrap;transition:opacity .2s;pointer-events:none;z-index:10;}
+    .nav-button::after {content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:5px 10px;border-radius:4px;font-size:.8rem;opacity:0;white-space:nowrap;transition:opacity .2s;pointer-events:auto;z-index:10;}
     .nav-button:hover::after {opacity:1;}
     h1,h2 {color:#ff4500;text-align:center;text-shadow:0 0 10px rgba(255,69,0,.5);}
     #form,#totalTime {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin-bottom:1.5rem;}
@@ -60,7 +61,7 @@
     .text-right {text-align:right;}
     .selector-row {display:flex;align-items:flex-start;gap:.65rem;padding:.7rem .8rem;border-bottom:1px solid #444;cursor:pointer;min-height:44px;transition:all .2s;touch-action:manipulation;}
     .selector-row:active,.selector-row.row-selected {background:#333;}
-    .selector-row input[type="checkbox"] {width:auto;margin:.15rem 0 0 0;vertical-align:middle;cursor:pointer;min-width:24px;min-height:24px;flex:0 0 auto;pointer-events:auto;touch-action:manipulation;}
+    .selector-row input[type="checkbox"] {width:auto;margin:.15rem 0 0 0;vertical-align:middle;cursor:pointer;min-width:24px;min-height:24px;flex:0 0 auto;pointer-events:auto;}
     .selector-row .selector-copy {flex:1 1 auto;min-width:0;}
     .selector-row.row-disabled {opacity:.7;cursor:not-allowed;}
 
@@ -430,7 +431,8 @@
         </label>
         <button type="button" id="newInvoiceDraft" class="mini-btn">New Draft</button>
         <button type="button" id="saveInvoiceDraft" class="mini-btn">Save Draft</button>
-        <button type="button" id="appendInvoiceDraft" class="mini-btn" style="background:#17a2b8;">Append Work To Draft</button>
+        <button type="button" id="appendInvoiceDraft" class="mini-btn" style="background:#17a2b8;">Add Selected To Loaded Draft</button>
+        <button type="button" id="removeInvoiceEntries" class="mini-btn" style="background:#6c757d;">Remove Selected From Draft</button>
       </div>
 
       <div class="inline-group" style="margin-bottom:1rem;align-items:flex-end;gap:0.5rem;flex-wrap:wrap;">
@@ -443,8 +445,11 @@
         <button type="button" id="loadInvoiceDraft" class="mini-btn">Load Draft</button>
         <button type="button" id="deleteInvoiceDraft" class="mini-btn" style="background:#dc3545;">Delete Draft</button>
       </div>
-      <small class="muted-note" style="margin-top:-.35rem;margin-bottom:.85rem;">
-        To keep adding work on another day: load the draft, check the new timesheet entries, then click <b>Append Work To Draft</b>.
+      <div id="currentInvoiceDraftStatus" class="muted-note" style="margin-top:-.35rem;margin-bottom:.35rem;">
+        No draft loaded.
+      </div>
+      <small class="muted-note" style="margin-top:0;margin-bottom:.85rem;">
+        Mobile workflow: load a draft, check only the entries you want to add or remove, then use the draft buttons above.
       </small>
 
       <label>Include Entries In This Invoice:</label>
@@ -962,7 +967,9 @@
       saveInvoicesToStorage();
       syncEntryStatusesFromInvoices();
       renderTable();
+      setLoadedInvoiceDraftBaseIds([]);
       renderInvoiceEntrySelector([]);
+      updateCurrentInvoiceDraftStatus();
       updateInvoiceSummary();
       refreshInvoiceDraftList();
 
@@ -1685,27 +1692,13 @@
       if (singleAddress) addrField.value = singleAddress;
     }
 
-    let loadedDraftBaseIds = [];
-
-    function getLoadedDraftBaseIds() {
-      return [...new Set((loadedDraftBaseIds || []).map(String))];
-    }
-
-    function setLoadedDraftBaseIds(ids = []) {
-      loadedDraftBaseIds = [...new Set((ids || []).map(String))];
-    }
-
     function getSelectedInvoiceEntryIds() {
       return [...document.querySelectorAll('.invoice-entry-check:checked')].map(cb => cb.value);
     }
 
-    function getSelectedInvoiceEntryIdsIncludingLoadedDraft() {
-      return [...new Set([...getLoadedDraftBaseIds(), ...getSelectedInvoiceEntryIds().map(String)])];
-    }
-
     function getSelectedInvoiceEntries() {
-      const ids = getSelectedInvoiceEntryIdsIncludingLoadedDraft();
-      return entries.filter(e => ids.includes(String(e.id)));
+      const ids = getSelectedInvoiceEntryIds();
+      return entries.filter(e => ids.includes(e.id));
     }
 
     function getFilteredEntries() {
@@ -1744,13 +1737,39 @@
       return merged.join('\n');
     }
 
+    let loadedInvoiceDraftBaseIds = [];
+
+    function setLoadedInvoiceDraftBaseIds(ids = []) {
+      loadedInvoiceDraftBaseIds = [...new Set((ids || []).map(String))];
+      updateCurrentInvoiceDraftStatus();
+    }
+
+    function getLoadedInvoiceDraftBaseIds() {
+      const invoiceId = document.getElementById('invoiceId')?.value?.trim?.() || '';
+      if (invoiceId && invoices[invoiceId]) {
+        return [...new Set((invoices[invoiceId].linkedEntryIds || []).map(String))];
+      }
+      return [...loadedInvoiceDraftBaseIds];
+    }
+
+    function updateCurrentInvoiceDraftStatus() {
+      const statusEl = document.getElementById('currentInvoiceDraftStatus');
+      if (!statusEl) return;
+      const invoiceId = document.getElementById('invoiceId')?.value?.trim?.() || '';
+      if (!invoiceId || !invoices[invoiceId]) {
+        statusEl.innerHTML = 'No draft loaded.';
+        return;
+      }
+      const linkedIds = getLoadedInvoiceDraftBaseIds();
+      const linkedEntries = entries.filter(e => linkedIds.includes(String(e.id)));
+      const dateLabel = linkedEntries.length ? getSelectedDateRange(linkedEntries) : '—';
+      statusEl.innerHTML = `<b>Loaded Draft:</b> ${invoiceId} &nbsp;|&nbsp; <b>Linked Entries:</b> ${linkedIds.length} &nbsp;|&nbsp; <b>Date Range:</b> ${dateLabel}`;
+    }
+
     function populateInvoiceFromDraftAppend(existingDraft, newSelectedIds) {
       const existingIds = (existingDraft?.linkedEntryIds || []).map(String);
       const incomingIds = (newSelectedIds || []).map(String);
       const mergedIds = [...new Set([...existingIds, ...incomingIds])];
-
-      const existingEntries = entries.filter(e => existingIds.includes(String(e.id)));
-      const addedEntries = entries.filter(e => incomingIds.includes(String(e.id)) && !existingIds.includes(String(e.id)));
       const mergedEntries = entries.filter(e => mergedIds.includes(String(e.id)));
 
       document.getElementById('invoiceId').value = existingDraft.id || document.getElementById('invoiceId').value || '';
@@ -1762,7 +1781,6 @@
       document.getElementById('overtimeRate').value = document.getElementById('overtimeRate').value || (existingDraft.overtimeRate ?? 150);
       document.getElementById('hstRate').value = document.getElementById('hstRate').value || (existingDraft.hstRate ?? 0.13);
 
-      setLoadedDraftBaseIds(mergedIds);
       renderInvoiceEntrySelector(mergedIds);
 
       const tbody = document.querySelector('#itemsTable tbody');
@@ -1776,8 +1794,8 @@
       });
 
       const mergedDescription = mergeLaborDescriptions(
-        existingDraft.laborDescription || getLaborDescriptionFromTimesheet(existingEntries),
-        getLaborDescriptionFromTimesheet(addedEntries)
+        existingDraft.laborDescription || '',
+        getLaborDescriptionFromTimesheet(mergedEntries)
       ) || getLaborDescriptionFromTimesheet(mergedEntries);
       document.getElementById('laborDescription').value = mergedDescription;
 
@@ -1793,6 +1811,7 @@
         if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
       });
 
+      setLoadedInvoiceDraftBaseIds(mergedIds);
       updateInvoiceSummary();
       refreshInvoiceDraftList(existingDraft.id || '');
       return mergedIds;
@@ -1858,7 +1877,7 @@
       if (!box) return;
 
       const currentInvoiceId = document.getElementById('invoiceId').value.trim();
-      const currentIds = (selectedIds ?? getSelectedInvoiceEntryIdsIncludingLoadedDraft()).map(String);
+      const currentIds = (selectedIds ?? getLoadedInvoiceDraftBaseIds()).map(String);
       const lockedDraftAddress = getLockedDraftAddress(currentInvoiceId);
       const normalizedLockedDraftAddress = normalizeDraftAddress(lockedDraftAddress);
       box.innerHTML = '';
@@ -1941,7 +1960,6 @@
 
         cb.addEventListener('change', () => {
           syncRowState();
-          populateInvoiceFromEntries();
           updateInvoiceSummary();
         });
 
@@ -1995,8 +2013,7 @@
     }
 
     function populateInvoiceFromEntries() {
-      const selectedIds = getSelectedInvoiceEntryIdsIncludingLoadedDraft();
-      const filtered = entries.filter(e => selectedIds.includes(String(e.id)));
+      const filtered = getFilteredEntries();
 
       clearLaborRows();
 
@@ -2038,7 +2055,7 @@
       tbody.innerHTML = '';
 
       ensureServiceChargeRow();
-      setLoadedDraftBaseIds([]);
+      setLoadedInvoiceDraftBaseIds([]);
       renderInvoiceEntrySelector([]);
       updateInvoiceSummary();
     }
@@ -2058,13 +2075,15 @@
 
     function saveCurrentInvoiceDraft(options = {}) {
       const appendMode = !!options.appendMode;
+      const forcedSelectedIds = Array.isArray(options.selectedIds) ? options.selectedIds.map(String) : null;
+      const forcedNewIds = Array.isArray(options.newIds) ? options.newIds.map(String) : null;
       const invoiceId = document.getElementById('invoiceId').value.trim();
       if (!invoiceId) {
         alert('Enter or load an Invoice / Work Order ID first.');
         return;
       }
 
-      let selectedIds = (appendMode ? getSelectedInvoiceEntryIdsIncludingLoadedDraft() : getSelectedInvoiceEntryIds().map(String));
+      let selectedIds = (forcedSelectedIds || getSelectedInvoiceEntryIds()).map(String);
       const existingDraft = invoices[invoiceId];
 
       if (appendMode && !existingDraft) {
@@ -2074,7 +2093,7 @@
 
       if (appendMode && existingDraft) {
         const existingIds = (existingDraft.linkedEntryIds || []).map(String);
-        const addedIds = selectedIds.filter(id => !existingIds.includes(id));
+        const addedIds = (forcedNewIds || selectedIds.filter(id => !existingIds.includes(id))).map(String);
 
         if (!addedIds.length) {
           alert('Select the new timesheet entries you want to add to this draft first.');
@@ -2160,6 +2179,7 @@
         updatedAt: new Date().toISOString()
       };
 
+      setLoadedInvoiceDraftBaseIds(selectedIds);
       saveInvoicesToStorage();
       syncEntryStatusesFromInvoices();
       renderTable();
@@ -2170,24 +2190,45 @@
 
     function appendWorkToLoadedDraft() {
       const invoiceId = document.getElementById('invoiceId').value.trim();
-      const existingDraft = invoices[invoiceId];
-      if (!invoiceId || !existingDraft) {
+      if (!invoiceId || !invoices[invoiceId]) {
         alert('Load the draft you want to continue first.');
         return;
       }
 
-      const baseIds = (existingDraft.linkedEntryIds || []).map(String);
-      const checkedIds = getSelectedInvoiceEntryIds().map(String);
-      const newIds = checkedIds.filter(id => !baseIds.includes(id));
+      const currentIds = getLoadedInvoiceDraftBaseIds();
+      const selectedIds = getSelectedInvoiceEntryIds().map(String);
+      const newIds = selectedIds.filter(id => !currentIds.includes(id));
 
       if (!newIds.length) {
         alert('Select the new timesheet entries you want to add to this draft first.');
         return;
       }
 
-      setLoadedDraftBaseIds(baseIds);
-      populateInvoiceFromDraftAppend(existingDraft, newIds);
-      saveCurrentInvoiceDraft({ appendMode: true });
+      const mergedIds = [...new Set([...currentIds, ...newIds])];
+      saveCurrentInvoiceDraft({ appendMode: true, newIds, selectedIds: mergedIds });
+    }
+
+    function removeSelectedEntriesFromLoadedDraft() {
+      const invoiceId = document.getElementById('invoiceId').value.trim();
+      const existingDraft = invoices[invoiceId];
+      if (!invoiceId || !existingDraft) {
+        alert('Load the draft you want to edit first.');
+        return;
+      }
+
+      const currentIds = getLoadedInvoiceDraftBaseIds();
+      const selectedIds = getSelectedInvoiceEntryIds().map(String);
+      const idsToRemove = selectedIds.filter(id => currentIds.includes(id));
+
+      if (!idsToRemove.length) {
+        alert('Select the linked entries you want to remove from this draft first.');
+        return;
+      }
+
+      const remainingIds = currentIds.filter(id => !idsToRemove.includes(id));
+      renderInvoiceEntrySelector(remainingIds);
+      clearLaborRows();
+      saveCurrentInvoiceDraft({ selectedIds: remainingIds });
     }
 
     function loadInvoiceDraftById(invoiceId) {
@@ -2209,7 +2250,7 @@
       document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
       document.getElementById('laborDescription').value = inv.laborDescription || '';
 
-      setLoadedDraftBaseIds(inv.linkedEntryIds || []);
+      setLoadedInvoiceDraftBaseIds(inv.linkedEntryIds || []);
       renderInvoiceEntrySelector(inv.linkedEntryIds || []);
 
       const tbody = document.querySelector('#itemsTable tbody');
@@ -2271,6 +2312,7 @@
       if (btn) btn.classList.add('active');
 
       if (tabId === 'invoiceTab') {
+        updateCurrentInvoiceDraftStatus();
         renderInvoiceEntrySelector();
         populateInvoiceFromEntries();
         updateInvoiceSummary();
@@ -2571,6 +2613,7 @@
     document.getElementById('clearInvoice').onclick = () => clearInvoice();
     document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
     document.getElementById('appendInvoiceDraft').onclick = () => appendWorkToLoadedDraft();
+    document.getElementById('removeInvoiceEntries').onclick = () => removeSelectedEntriesFromLoadedDraft();
 
     document.getElementById('loadInvoiceDraft').onclick = () => {
       const chosen = document.getElementById('invoiceDraftList').value.trim();
