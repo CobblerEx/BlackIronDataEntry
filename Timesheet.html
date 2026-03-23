@@ -63,6 +63,15 @@
     .selector-row {display:flex;align-items:center;padding:.7rem .8rem;border-bottom:1px solid #444;cursor:pointer;min-height:44px;transition:all .2s;}
     .selector-row:active {background:#333;}
     .selector-row input[type="checkbox"] {width:auto;margin-right:.55rem;vertical-align:middle;cursor:pointer;min-width:24px;min-height:24px;}
+    #showArchivedInvoices {all:unset;}
+    .archive-toggle-wrap {display:flex;align-items:center;gap:.7rem;white-space:normal;padding-bottom:.35rem;cursor:pointer;user-select:none;-webkit-user-select:none;min-height:44px;}
+    .archive-switch {position:relative;display:inline-flex;align-items:center;width:54px;height:30px;flex:0 0 auto;}
+    .archive-switch input {position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none;}
+    .archive-slider {position:absolute;inset:0;background:#555;border:2px solid #ff4500;border-radius:999px;transition:all .2s ease;box-sizing:border-box;pointer-events:none;}
+    .archive-slider::before {content:"";position:absolute;width:22px;height:22px;left:2px;top:2px;background:#fff;border-radius:50%;transition:transform .2s ease;box-shadow:0 2px 6px rgba(0,0,0,.35);}
+    .archive-switch input:checked + .archive-slider {background:#ff4500;}
+    .archive-switch input:checked + .archive-slider::before {transform:translateX(24px);}
+    .archive-toggle-text {font-size:.95rem;line-height:1.1;}
 
     .status-pill {
       display:inline-block;
@@ -122,6 +131,11 @@
       .history-btn {width:40px;height:40px;right:8px;}
       .selector-row {min-height:40px;font-size:0.9rem;}
       .selector-row input[type="checkbox"] {min-width:20px;min-height:20px;}
+      .archive-toggle-wrap {width:100%;justify-content:flex-start;gap:.6rem;padding-bottom:0;}
+      .archive-toggle-text {font-size:.9rem;}
+      .archive-switch {width:50px;height:28px;}
+      .archive-slider::before {width:20px;height:20px;}
+      .archive-switch input:checked + .archive-slider::before {transform:translateX(22px);}
     }
 
     @media (max-width:480px) {
@@ -145,6 +159,8 @@
       .status-pill {padding:0.2rem 0.5rem;font-size:0.7rem;}
       .selector-row {padding:0.5rem;min-height:40px;font-size:0.85rem;}
       .selector-row input[type="checkbox"] {min-width:20px;min-height:20px;margin-right:0.5rem;}
+      .archive-toggle-wrap {align-items:center;}
+      .archive-toggle-text {font-size:0.88rem;}
       #totalTime {font-size:1.1rem;}
     }
 
@@ -438,9 +454,12 @@
             <option value="">Select a saved draft...</option>
           </select>
         </label>
-        <label style="display:flex;align-items:center;gap:.45rem;white-space:nowrap;padding-bottom:.35rem;">
-          <input type="checkbox" id="showArchivedInvoices">
-          Show archived/invoiced
+        <label class="archive-toggle-wrap" for="showArchivedInvoices">
+          <span class="archive-switch">
+            <input type="checkbox" id="showArchivedInvoices">
+            <span class="archive-slider"></span>
+          </span>
+          <span class="archive-toggle-text">Show archived/invoiced</span>
         </label>
         <button type="button" id="loadInvoiceDraft" class="mini-btn">Load Draft</button>
         <button type="button" id="deleteInvoiceDraft" class="mini-btn" style="background:#dc3545;">Delete Draft</button>
