@@ -234,6 +234,19 @@
     .material-option {padding:.6rem .7rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.18);min-height:44px;display:flex;align-items:center;transition:all .2s;}
     .material-option:last-child {border-bottom:none;}
     .material-option:active,.material-option.active {background:rgba(255,69,0,.16);}
+    .saved-materials-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:2000;padding:1rem;}
+    .saved-materials-modal.show{display:flex;}
+    .saved-materials-panel{width:min(720px,100%);max-height:85vh;overflow:hidden;background:#1f1f1f;border:2px solid #ff4500;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;}
+    .saved-materials-header{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:1rem 1rem .75rem;border-bottom:1px solid rgba(255,69,0,.25);}
+    .saved-materials-header h3{margin:0;font-size:1.05rem;}
+    .saved-materials-body{padding:1rem;overflow:auto;}
+    .saved-materials-search{width:100%;margin-bottom:.85rem;}
+    .saved-materials-list{display:flex;flex-direction:column;gap:.55rem;}
+    .saved-material-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;align-items:center;background:#2b2b2b;border:1px solid rgba(255,69,0,.15);border-radius:10px;padding:.7rem .8rem;}
+    .saved-material-main{min-width:0;}
+    .saved-material-name{font-weight:700;word-break:break-word;}
+    .saved-material-meta{font-size:.85rem;color:#bbb;margin-top:.2rem;word-break:break-word;}
+    .saved-material-empty{color:#bbb;padding:.4rem 0;}
     @media (hover:hover) and (pointer:fine) {
       .material-autocomplete {display:none !important;}
     }
@@ -490,6 +503,7 @@
       <div class="inline-group" style="margin-top:1rem;">
         <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Selected Entries</button>
         <button type="button" id="addItem" class="mini-btn">Add Item</button>
+        <button type="button" id="manageSavedMaterials" class="mini-btn">Saved Materials</button>
         <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
         <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
         <button id="generateBossCopy" type="button" class="mini-btn">Generate Boss Copy PDF</button>
@@ -516,8 +530,21 @@
       </table>
       <datalist id="materialSuggestions"></datalist>
       <small class="muted-note">
-        Material descriptions and their last saved costs are remembered on this device. Markup auto-calculates from distributor cost, and customer price can also be typed in directly. On mobile, the material field now uses the app's own suggestions instead of the iPhone keyboard suggestion bar.
+        Material descriptions and their last saved costs are remembered on this device. Markup auto-calculates from distributor cost, and customer price can also be typed in directly. Use <b>Saved Materials</b> to remove any bad dropdown entries you no longer want.
       </small>
+    </div>
+  </div>
+
+  <div id="savedMaterialsModal" class="saved-materials-modal" aria-hidden="true">
+    <div class="saved-materials-panel">
+      <div class="saved-materials-header">
+        <h3>Saved Materials</h3>
+        <button type="button" id="closeSavedMaterials" class="mini-btn" style="background:#dc3545;">Close</button>
+      </div>
+      <div class="saved-materials-body">
+        <input type="text" id="savedMaterialsSearch" class="saved-materials-search" placeholder="Search saved materials">
+        <div id="savedMaterialsList" class="saved-materials-list"></div>
+      </div>
     </div>
   </div>
 
@@ -899,6 +926,59 @@
           option.value = item.desc;
           list.appendChild(option);
         });
+    }
+
+    function deleteSavedMaterial(desc) {
+      const key = normalizeMaterialKey(desc);
+      if (!key || !materialCatalog[key]) return;
+      delete materialCatalog[key];
+      saveMaterialCatalog();
+      renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || '');
+    }
+
+    function renderSavedMaterialsList(filterText = '') {
+      const wrap = document.getElementById('savedMaterialsList');
+      if (!wrap) return;
+      const filter = normalizeMaterialKey(filterText);
+      const items = Object.values(materialCatalog)
+        .filter(item => !filter || normalizeMaterialKey(item.desc).includes(filter))
+        .sort((a, b) => a.desc.localeCompare(b.desc));
+      wrap.innerHTML = '';
+      if (!items.length) {
+        wrap.innerHTML = `<div class="saved-material-empty">No saved materials found.</div>`;
+        return;
+      }
+      items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'saved-material-row';
+        row.innerHTML = `
+          <div class="saved-material-main">
+            <div class="saved-material-name">${item.desc}</div>
+            <div class="saved-material-meta">Unit: ${item.unit || 'ea'} · Cost: $${formatMoney(item.distributorCost || 0)} · Sell: $${formatMoney(item.customerPrice || 0)}</div>
+          </div>
+          <button type="button" class="mini-btn" style="background:#dc3545;">Delete</button>
+        `;
+        row.querySelector('button').addEventListener('click', () => deleteSavedMaterial(item.desc));
+        wrap.appendChild(row);
+      });
+    }
+
+    function openSavedMaterialsModal() {
+      const modal = document.getElementById('savedMaterialsModal');
+      if (!modal) return;
+      renderSavedMaterialsList('');
+      const search = document.getElementById('savedMaterialsSearch');
+      if (search) search.value = '';
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => search?.focus(), 0);
+    }
+
+    function closeSavedMaterialsModal() {
+      const modal = document.getElementById('savedMaterialsModal');
+      if (!modal) return;
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden', 'true');
     }
 
     function getDefaultMarkupPercent() {
@@ -2509,6 +2589,10 @@
     };
 
     document.getElementById('addItem').onclick = () => createItemRow({ markup: getDefaultMarkupPercent() });
+    document.getElementById('manageSavedMaterials').onclick = () => openSavedMaterialsModal();
+    document.getElementById('closeSavedMaterials').onclick = () => closeSavedMaterialsModal();
+    document.getElementById('savedMaterialsSearch').addEventListener('input', (e) => renderSavedMaterialsList(e.target.value));
+    document.getElementById('savedMaterialsModal').addEventListener('click', (e) => { if (e.target.id === 'savedMaterialsModal') closeSavedMaterialsModal(); });
     document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
     document.getElementById('clearInvoice').onclick = () => clearInvoice();
     document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
