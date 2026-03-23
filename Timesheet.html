@@ -2697,8 +2697,11 @@
         }
 
         const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
+        const bossSubtotal = lines.reduce((sum, l) => sum + ((+l.distributorCost || 0) * (+l.quantity || 0)), 0);
         const hst = subtotal * hstRate;
         const total = subtotal + hst;
+        const bossHst = bossSubtotal * hstRate;
+        const bossTotal = bossSubtotal + bossHst;
         const materialCostTotal = detailedLines
           .filter(l => /black iron|gas pipe/i.test(l.desc || ''))
           .reduce((sum, l) => sum + ((+l.distributorCost || 0) * (+l.quantity || 0)), 0);
@@ -2777,14 +2780,28 @@
 
         doc.autoTable({
           startY: tableStartY,
-          head: [['QUANTITY', 'DESCRIPTION', 'UNIT PRICE', 'UNIT', 'AMOUNT']],
-          body: lines.map(l => [
-            l.quantity.toFixed(2),
-            l.desc,
-            '$' + formatMoney(l.customerPrice ?? l.price),
-            l.unit,
-            '$' + formatMoney(l.amount)
-          ]),
+          head: [[
+            'QUANTITY',
+            'DESCRIPTION',
+            copyType === 'boss' ? 'OUR COST EA' : 'UNIT PRICE',
+            'UNIT',
+            copyType === 'boss' ? 'OUR COST TOTAL' : 'AMOUNT'
+          ]],
+          body: lines.map(l => {
+            const unitValue = copyType === 'boss'
+              ? (+l.distributorCost || 0)
+              : (l.customerPrice ?? l.price);
+            const lineTotal = copyType === 'boss'
+              ? ((+l.distributorCost || 0) * (+l.quantity || 0))
+              : (+l.amount || 0);
+            return [
+              l.quantity.toFixed(2),
+              l.desc,
+              '$' + formatMoney(unitValue),
+              l.unit,
+              '$' + formatMoney(lineTotal)
+            ];
+          }),
           theme: 'grid',
           headStyles: { fillColor: [211, 211, 211], textColor: [0, 0, 0] },
           styles: { cellPadding: 5, fontSize: 10, overflow: 'linebreak' },
@@ -2821,9 +2838,21 @@
         }
 
         doc.setFont("helvetica", "bold");
-        doc.text("SUBTOTAL: $" + formatMoney(subtotal), 140, finalY);
-        doc.text("HST: $" + formatMoney(hst), 140, finalY + 8);
-        doc.text("TOTAL: $" + formatMoney(total), 140, finalY + 16);
+        doc.text(
+          (copyType === 'boss' ? 'OUR COST SUBTOTAL: $' : 'SUBTOTAL: $') + formatMoney(copyType === 'boss' ? bossSubtotal : subtotal),
+          132,
+          finalY
+        );
+        doc.text(
+          (copyType === 'boss' ? 'OUR COST HST: $' : 'HST: $') + formatMoney(copyType === 'boss' ? bossHst : hst),
+          132,
+          finalY + 8
+        );
+        doc.text(
+          (copyType === 'boss' ? 'OUR COST TOTAL: $' : 'TOTAL: $') + formatMoney(copyType === 'boss' ? bossTotal : total),
+          132,
+          finalY + 16
+        );
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
