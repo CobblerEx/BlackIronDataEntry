@@ -234,6 +234,9 @@
     .material-option {padding:.6rem .7rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.18);min-height:44px;display:flex;align-items:center;transition:all .2s;}
     .material-option:last-child {border-bottom:none;}
     .material-option:active,.material-option.active {background:rgba(255,69,0,.16);}
+    @media (hover:hover) and (pointer:fine) {
+      .material-autocomplete {display:none !important;}
+    }
 
   
 
@@ -513,7 +516,7 @@
       </table>
       <datalist id="materialSuggestions"></datalist>
       <small class="muted-note">
-        Material descriptions and their last saved costs are remembered on this device. Markup auto-calculates from distributor cost, and customer price can also be typed in directly.
+        Material descriptions and their last saved costs are remembered on this device. Markup auto-calculates from distributor cost, and customer price can also be typed in directly. On mobile, the material field now uses the app's own suggestions instead of the iPhone keyboard suggestion bar.
       </small>
     </div>
   </div>
@@ -1354,6 +1357,8 @@
       }
     });
 
+    const USE_CUSTOM_MATERIAL_DROPDOWN = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+
     function createItemRow(item = {}) {
       const savedMaterial = getSavedMaterial(item.desc);
       const defaultMarkup = item.markup ?? savedMaterial?.markup ?? getDefaultMarkupPercent();
@@ -1363,7 +1368,7 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="desc-cell">
-          <input type="text" class="item-desc" list="materialSuggestions" autocomplete="off" value="${(item.desc || '').replace(/"/g, '&quot;')}" placeholder="Material / extra service">
+          <input type="text" class="item-desc" list="materialSuggestions" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" value="${(item.desc || '').replace(/"/g, '&quot;')}" placeholder="Material / extra service">
           <div class="material-autocomplete"></div>
         </td>
         <td><input type="number" class="item-qty" min="0" step="0.01" value="${item.qty ?? 1}"></td>
@@ -1464,10 +1469,13 @@
 
       desc.addEventListener('input', () => {
         syncFromSaved(true);
-        showMaterialDropdown();
+        if (USE_CUSTOM_MATERIAL_DROPDOWN) showMaterialDropdown();
       });
-      desc.addEventListener('focus', showMaterialDropdown);
+      desc.addEventListener('focus', () => {
+        if (USE_CUSTOM_MATERIAL_DROPDOWN) showMaterialDropdown();
+      });
       desc.addEventListener('keydown', (e) => {
+        if (!USE_CUSTOM_MATERIAL_DROPDOWN) return;
         const options = [...autocompleteBox.querySelectorAll('.material-option')];
         if (!autocompleteBox.classList.contains('show') || !options.length) return;
         let activeIndex = options.findIndex(opt => opt.classList.contains('active'));
@@ -1493,11 +1501,11 @@
       });
       desc.addEventListener('change', () => {
         syncFromSaved();
-        hideMaterialDropdown();
+        if (USE_CUSTOM_MATERIAL_DROPDOWN) hideMaterialDropdown();
         saveCurrentMaterial();
       });
       desc.addEventListener('blur', () => {
-        setTimeout(hideMaterialDropdown, 120);
+        if (USE_CUSTOM_MATERIAL_DROPDOWN) setTimeout(hideMaterialDropdown, 120);
         saveCurrentMaterial();
       });
       unit.addEventListener('blur', saveCurrentMaterial);
