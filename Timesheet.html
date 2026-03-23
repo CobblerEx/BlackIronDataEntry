@@ -234,6 +234,23 @@
     .material-option {padding:.6rem .7rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.18);min-height:44px;display:flex;align-items:center;transition:all .2s;}
     .material-option:last-child {border-bottom:none;}
     .material-option:active,.material-option.active {background:rgba(255,69,0,.16);}
+    .invoice-tools-toggle{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin-top:1rem;padding:.85rem 1rem;border:1px solid rgba(255,69,0,.35);border-radius:12px;background:rgba(255,255,255,.03);} 
+    .invoice-tools-panel{display:none;gap:.75rem;flex-wrap:wrap;margin-top:.75rem;padding:.9rem 1rem;border:1px solid rgba(255,69,0,.2);border-radius:12px;background:rgba(255,255,255,.025);} 
+    .invoice-tools-panel.show{display:flex;} 
+    .profile-lock-wrap{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;padding:.75rem 1rem;border:1px solid rgba(255,69,0,.25);border-radius:12px;background:rgba(255,255,255,.03);margin-top:.9rem;} 
+    .profile-lock-wrap input[type="checkbox"]{width:auto;transform:scale(1.15);accent-color:#ff4500;} 
+    .profile-lock-status{font-size:.9rem;color:#bbb;} 
+    .profile-lock-status strong{color:#ffb08a;} 
+    .tools-toggle-label{font-weight:700;color:#ffb08a;} 
+    .profile-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1.3fr auto auto;gap:.5rem;align-items:center;} 
+    .profile-grid input{width:100%;} 
+    .profile-row{padding:.65rem 0;border-bottom:1px solid rgba(255,255,255,.08);} 
+    .profile-row:last-child{border-bottom:none;} 
+    .profile-list{display:flex;flex-direction:column;gap:.25rem;} 
+    .profile-section-title{margin:.25rem 0 .5rem;color:#ffb08a;} 
+    .profile-empty{padding:.8rem 0;color:#bbb;} 
+    @media (max-width:900px){.profile-grid{grid-template-columns:1fr 1fr;}.profile-grid .full-row{grid-column:1 / -1;}.profile-grid .action-cell{justify-self:start;}} 
+    @media (max-width:560px){.invoice-tools-toggle{padding:.75rem;}.invoice-tools-panel{padding:.75rem;}.profile-grid{grid-template-columns:1fr;}} 
     .saved-materials-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:2000;padding:1rem;}
     .saved-materials-modal.show{display:flex;}
     .saved-materials-panel{width:min(720px,100%);max-height:85vh;overflow:hidden;background:#1f1f1f;border:2px solid #ff4500;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;}
@@ -500,13 +517,39 @@
         <label>HST Rate: <input type="number" id="hstRate" min="0" step="0.01" value="0.13"></label>
       </div>
 
+      <div class="profile-lock-wrap">
+        <label style="display:flex;align-items:center;gap:.55rem;cursor:pointer;">
+          <input type="checkbox" id="lockClientProfileMap" checked>
+          <span>Lock saved client/address links</span>
+        </label>
+        <span id="profileLockStatus" class="profile-lock-status">Saved names and addresses will stay paired unless you turn this off or edit them in Clients / Addresses.</span>
+      </div>
+
       <div class="inline-group" style="margin-top:1rem;">
         <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Selected Entries</button>
         <button type="button" id="addItem" class="mini-btn">Add Item</button>
-        <button type="button" id="manageSavedMaterials" class="mini-btn">Saved Materials</button>
         <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
         <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
         <button id="generateBossCopy" type="button" class="mini-btn">Generate Boss Copy PDF</button>
+      </div>
+
+      <div class="invoice-tools-toggle">
+        <div>
+          <div class="tools-toggle-label">Invoice Tools</div>
+          <small class="muted-note" style="margin:0;">Open this when you need to clean up saved materials or edit saved client/contact info.</small>
+        </div>
+        <label class="archive-toggle-wrap" for="showInvoiceTools" style="padding-bottom:0;">
+          <span class="archive-switch">
+            <input type="checkbox" id="showInvoiceTools">
+            <span class="archive-slider"></span>
+          </span>
+          <span class="archive-toggle-text">Show tools</span>
+        </label>
+      </div>
+
+      <div id="invoiceToolsPanel" class="invoice-tools-panel">
+        <button type="button" id="manageSavedMaterials" class="mini-btn">Saved Materials</button>
+        <button type="button" id="manageClientProfiles" class="mini-btn">Clients / Addresses</button>
       </div>
 
       <label style="margin-top:1rem;">Labor Description:
@@ -548,7 +591,21 @@
     </div>
   </div>
 
-  
+  <div id="clientProfilesModal" class="saved-materials-modal" aria-hidden="true">
+    <div class="saved-materials-panel" style="width:min(1100px,100%);">
+      <div class="saved-materials-header">
+        <h3>Clients / Addresses</h3>
+        <button type="button" id="closeClientProfiles" class="mini-btn" style="background:#dc3545;">Close</button>
+      </div>
+      <div class="saved-materials-body">
+        <input type="text" id="clientProfilesSearch" class="saved-materials-search" placeholder="Search clients, phone, email, or address">
+        <h4 class="profile-section-title">Saved Clients</h4>
+        <div id="clientProfilesList" class="profile-list"></div>
+        <h4 class="profile-section-title" style="margin-top:1rem;">Saved Addresses</h4>
+        <div id="locationProfilesList" class="profile-list"></div>
+      </div>
+    </div>
+  </div>
 
   <div id="blackIronCalcTab" class="tab-panel">
 <div class="bi-wrap">
@@ -3112,35 +3169,292 @@
       return singleAddress;
     }
 
+    function setInvoiceToolsVisibility(show) {
+      const panel = document.getElementById('invoiceToolsPanel');
+      const toggle = document.getElementById('showInvoiceTools');
+      if (toggle) toggle.checked = !!show;
+      if (panel) panel.classList.toggle('show', !!show);
+    }
+
+    function openClientProfilesModal() {
+      const modal = document.getElementById('clientProfilesModal');
+      if (!modal) return;
+      const search = document.getElementById('clientProfilesSearch');
+      if (search) search.value = '';
+      renderClientProfilesLists('');
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => search?.focus(), 0);
+    }
+
+    function closeClientProfilesModal() {
+      const modal = document.getElementById('clientProfilesModal');
+      if (!modal) return;
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function saveClientProfileFromModal(originalKey, payload) {
+      const profiles = getClientProfiles();
+      if (originalKey && profiles[originalKey]) delete profiles[originalKey];
+      const nextKey = normalizeClientKey(payload.name);
+      if (!nextKey) return false;
+      profiles[nextKey] = {
+        name: String(payload.name || '').trim(),
+        phone: String(payload.phone || '').trim(),
+        email: String(payload.email || '').trim(),
+        address: String(payload.address || '').trim()
+      };
+      saveClientProfiles(profiles);
+      renderClientNameSuggestions();
+      enforceLockedClientProfile();
+      return true;
+    }
+
+    function deleteClientProfileByKey(key) {
+      const profiles = getClientProfiles();
+      if (!profiles[key]) return;
+      delete profiles[key];
+      saveClientProfiles(profiles);
+      renderClientNameSuggestions();
+      renderClientProfilesLists(document.getElementById('clientProfilesSearch')?.value || '');
+      updateProfileLockStatus();
+    }
+
+    function saveLocationProfileFromModal(originalKey, payload) {
+      const profiles = getLocationProfiles();
+      if (originalKey && profiles[originalKey]) delete profiles[originalKey];
+      const nextAddress = String(payload.address || '').trim();
+      const nextKey = normalizeAddressKey(nextAddress);
+      if (!nextKey) return false;
+      profiles[nextKey] = {
+        address: nextAddress,
+        name: String(payload.name || '').trim(),
+        phone: String(payload.phone || '').trim(),
+        email: String(payload.email || '').trim(),
+        billingAddress: String(payload.billingAddress || payload.address || '').trim() || nextAddress
+      };
+      saveLocationProfiles(profiles);
+      enforceLockedClientProfile();
+      return true;
+    }
+
+    function deleteLocationProfileByKey(key) {
+      const profiles = getLocationProfiles();
+      if (!profiles[key]) return;
+      delete profiles[key];
+      saveLocationProfiles(profiles);
+      renderClientProfilesLists(document.getElementById('clientProfilesSearch')?.value || '');
+      updateProfileLockStatus();
+    }
+
+    function makeProfileInput(value, placeholder, cls, fullRow=false) {
+      return `<input type="text" class="${cls}${fullRow ? ' full-row' : ''}" value="${String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}" placeholder="${placeholder}">`;
+    }
+
+    function renderClientProfilesLists(filterText = '') {
+      const clientWrap = document.getElementById('clientProfilesList');
+      const locationWrap = document.getElementById('locationProfilesList');
+      if (!clientWrap || !locationWrap) return;
+      const filter = String(filterText || '').trim().toLowerCase();
+
+      const clientProfiles = Object.entries(getClientProfiles())
+        .filter(([key, p]) => !filter || [p?.name, p?.phone, p?.email, p?.address].join(' ').toLowerCase().includes(filter))
+        .sort((a,b) => String(a[1]?.name || '').localeCompare(String(b[1]?.name || '')));
+      clientWrap.innerHTML = '';
+      if (!clientProfiles.length) {
+        clientWrap.innerHTML = '<div class="profile-empty">No saved clients found.</div>';
+      } else {
+        clientProfiles.forEach(([key, p]) => {
+          const row = document.createElement('div');
+          row.className = 'profile-row';
+          row.innerHTML = `
+            <div class="profile-grid" data-type="client" data-key="${key}">
+              ${makeProfileInput(p?.name, 'Client name', 'profile-name')}
+              ${makeProfileInput(p?.phone, 'Phone', 'profile-phone')}
+              ${makeProfileInput(p?.email, 'Email', 'profile-email')}
+              ${makeProfileInput(p?.address, 'Billing address', 'profile-address', true)}
+              <button type="button" class="mini-btn action-cell profile-save">Save</button>
+              <button type="button" class="mini-btn action-cell profile-delete" style="background:#dc3545;">Delete</button>
+            </div>`;
+          row.querySelector('.profile-save').addEventListener('click', () => {
+            const grid = row.querySelector('.profile-grid');
+            const ok = saveClientProfileFromModal(key, {
+              name: grid.querySelector('.profile-name').value,
+              phone: grid.querySelector('.profile-phone').value,
+              email: grid.querySelector('.profile-email').value,
+              address: grid.querySelector('.profile-address').value
+            });
+            if (ok) renderClientProfilesLists(document.getElementById('clientProfilesSearch')?.value || '');
+          });
+          row.querySelector('.profile-delete').addEventListener('click', () => deleteClientProfileByKey(key));
+          clientWrap.appendChild(row);
+        });
+      }
+
+      const locationProfiles = Object.entries(getLocationProfiles())
+        .filter(([key, p]) => !filter || [p?.address, p?.name, p?.phone, p?.email, p?.billingAddress].join(' ').toLowerCase().includes(filter))
+        .sort((a,b) => String(a[1]?.address || '').localeCompare(String(b[1]?.address || '')));
+      locationWrap.innerHTML = '';
+      if (!locationProfiles.length) {
+        locationWrap.innerHTML = '<div class="profile-empty">No saved addresses found.</div>';
+      } else {
+        locationProfiles.forEach(([key, p]) => {
+          const row = document.createElement('div');
+          row.className = 'profile-row';
+          row.innerHTML = `
+            <div class="profile-grid" data-type="location" data-key="${key}">
+              ${makeProfileInput(p?.address, 'Service address', 'profile-address full-row', true)}
+              ${makeProfileInput(p?.name, 'Client name', 'profile-name')}
+              ${makeProfileInput(p?.phone, 'Phone', 'profile-phone')}
+              ${makeProfileInput(p?.email, 'Email', 'profile-email')}
+              ${makeProfileInput(p?.billingAddress || p?.address, 'Billing address', 'profile-billing full-row', true)}
+              <button type="button" class="mini-btn action-cell location-save">Save</button>
+              <button type="button" class="mini-btn action-cell location-delete" style="background:#dc3545;">Delete</button>
+            </div>`;
+          row.querySelector('.location-save').addEventListener('click', () => {
+            const grid = row.querySelector('.profile-grid');
+            const ok = saveLocationProfileFromModal(key, {
+              address: grid.querySelector('.profile-address').value,
+              name: grid.querySelector('.profile-name').value,
+              phone: grid.querySelector('.profile-phone').value,
+              email: grid.querySelector('.profile-email').value,
+              billingAddress: grid.querySelector('.profile-billing').value
+            });
+            if (ok) renderClientProfilesLists(document.getElementById('clientProfilesSearch')?.value || '');
+          });
+          row.querySelector('.location-delete').addEventListener('click', () => deleteLocationProfileByKey(key));
+          locationWrap.appendChild(row);
+        });
+      }
+    }
+
+    function isClientProfileLockEnabled() {
+      return !!document.getElementById('lockClientProfileMap')?.checked;
+    }
+
+    function findClientProfileByName(name) {
+      const key = normalizeClientKey(name);
+      return key ? (getClientProfiles()[key] || null) : null;
+    }
+
+    function findLocationProfileByAddress(address) {
+      const key = normalizeAddressKey(address);
+      return key ? (getLocationProfiles()[key] || null) : null;
+    }
+
+    function updateProfileLockStatus() {
+      const status = document.getElementById('profileLockStatus');
+      if (!status) return;
+      if (!isClientProfileLockEnabled()) {
+        status.textContent = 'Link lock is off. You can make one-off invoice changes without changing the saved client/address pair.';
+        return;
+      }
+      const byName = findClientProfileByName(document.getElementById('clientName')?.value || '');
+      const byAddr = findLocationProfileByAddress(document.getElementById('clientAddress')?.value || '');
+      const active = byName || byAddr;
+      if (active) {
+        const label = active.name || active.address || 'saved profile';
+        status.innerHTML = `Locked to <strong>${String(label).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</strong>. Edit it in Clients / Addresses or turn this lock off for a one-off change.`;
+      } else {
+        status.textContent = 'Saved names and addresses will stay paired unless you turn this off or edit them in Clients / Addresses.';
+      }
+    }
+
+    function enforceLockedClientProfile() {
+      if (!isClientProfileLockEnabled()) {
+        updateProfileLockStatus();
+        return false;
+      }
+      const clientNameEl = document.getElementById('clientName');
+      const clientPhoneEl = document.getElementById('clientPhone');
+      const clientEmailEl = document.getElementById('clientEmail');
+      const clientAddressEl = document.getElementById('clientAddress');
+      if (!clientNameEl || !clientPhoneEl || !clientEmailEl || !clientAddressEl) return false;
+
+      const byName = findClientProfileByName(clientNameEl.value);
+      if (byName) {
+        clientNameEl.value = byName.name || clientNameEl.value;
+        clientPhoneEl.value = byName.phone || '';
+        clientEmailEl.value = byName.email || '';
+        clientAddressEl.value = byName.address || clientAddressEl.value;
+        const location = findLocationProfileByAddress(clientAddressEl.value);
+        if (location) {
+          if (location.name) clientNameEl.value = location.name;
+          if (location.phone) clientPhoneEl.value = location.phone;
+          if (location.email) clientEmailEl.value = location.email;
+          if (location.billingAddress) clientAddressEl.value = location.billingAddress;
+        }
+        updateProfileLockStatus();
+        return true;
+      }
+
+      const byAddr = findLocationProfileByAddress(clientAddressEl.value);
+      if (byAddr) {
+        if (byAddr.name) clientNameEl.value = byAddr.name;
+        if (byAddr.phone) clientPhoneEl.value = byAddr.phone;
+        if (byAddr.email) clientEmailEl.value = byAddr.email;
+        clientAddressEl.value = byAddr.billingAddress || byAddr.address || clientAddressEl.value;
+        const client = findClientProfileByName(clientNameEl.value);
+        if (client) {
+          clientPhoneEl.value = client.phone || clientPhoneEl.value;
+          clientEmailEl.value = client.email || clientEmailEl.value;
+          clientAddressEl.value = client.address || clientAddressEl.value;
+        }
+        updateProfileLockStatus();
+        return true;
+      }
+
+      updateProfileLockStatus();
+      return false;
+    }
+
     function setupClientAutoFill() {
       const clientName = document.getElementById('clientName');
       const clientPhone = document.getElementById('clientPhone');
       const clientEmail = document.getElementById('clientEmail');
       const clientAddress = document.getElementById('clientAddress');
+      const lockToggle = document.getElementById('lockClientProfileMap');
       if (!clientName || !clientPhone || !clientEmail || !clientAddress) return;
 
       renderClientNameSuggestions();
+      updateProfileLockStatus();
+
+      lockToggle?.addEventListener('change', () => {
+        if (lockToggle.checked) enforceLockedClientProfile();
+        updateProfileLockStatus();
+      });
 
       clientName.addEventListener('change', () => {
-        if (!fillClientProfileByName(clientName.value)) rememberCurrentClient(true);
-        rememberCurrentLocationProfile(true);
+        if (!fillClientProfileByName(clientName.value) && !enforceLockedClientProfile()) {
+          rememberCurrentClient(true);
+          rememberCurrentLocationProfile(true);
+        }
+        enforceLockedClientProfile();
       });
 
       clientName.addEventListener('blur', () => {
-        if (!fillClientProfileByName(clientName.value)) rememberCurrentClient(true);
-        rememberCurrentLocationProfile(true);
+        if (!fillClientProfileByName(clientName.value) && !enforceLockedClientProfile()) {
+          rememberCurrentClient(true);
+          rememberCurrentLocationProfile(true);
+        }
+        enforceLockedClientProfile();
       });
 
       [clientPhone, clientEmail, clientAddress].forEach(el => {
         el.addEventListener('change', () => {
           if (el === clientAddress) fillClientProfileByAddress(clientAddress.value, false);
-          rememberCurrentClient(true);
-          rememberCurrentLocationProfile(true);
+          if (!enforceLockedClientProfile()) {
+            rememberCurrentClient(true);
+            rememberCurrentLocationProfile(true);
+          }
         });
         el.addEventListener('blur', () => {
           if (el === clientAddress) fillClientProfileByAddress(clientAddress.value, false);
-          rememberCurrentClient(true);
-          rememberCurrentLocationProfile(true);
+          if (!enforceLockedClientProfile()) {
+            rememberCurrentClient(true);
+            rememberCurrentLocationProfile(true);
+          }
         });
       });
     }
@@ -3151,6 +3465,12 @@
       }
     });
 
+    document.getElementById('showInvoiceTools')?.addEventListener('change', e => setInvoiceToolsVisibility(e.target.checked));
+    document.getElementById('manageClientProfiles')?.addEventListener('click', openClientProfilesModal);
+    document.getElementById('closeClientProfiles')?.addEventListener('click', closeClientProfilesModal);
+    document.getElementById('clientProfilesSearch')?.addEventListener('input', e => renderClientProfilesLists(e.target.value));
+    document.getElementById('clientProfilesModal')?.addEventListener('click', e => { if (e.target.id === 'clientProfilesModal') closeClientProfilesModal(); });
+    setInvoiceToolsVisibility(false);
     renderMaterialSuggestions();
     setupClientAutoFill();
     loadData();
