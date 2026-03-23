@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1662,9 +1663,72 @@
       return [...document.querySelectorAll('.invoice-entry-check:checked')].map(cb => cb.value);
     }
 
+    function getAllInvoiceEntries() {
+      const archive = getArchivedDays();
+      const archivedEntries = archive.flatMap(day =>
+        (day.entries || []).map(entry => ({
+          ...entry,
+          dateStr: entry.dateStr || day.date || '',
+          __source: 'archive',
+          __archiveDate: day.date || '',
+          __archiveArchivedAt: day.archivedAt || ''
+        }))
+      );
+
+      const currentEntries = entries.map(entry => ({
+        ...entry,
+        __source: 'current'
+      }));
+
+      const deduped = new Map();
+      [...archivedEntries, ...currentEntries].forEach(entry => {
+        if (!entry || !entry.id) return;
+        deduped.set(String(entry.id), entry);
+      });
+
+      return [...deduped.values()];
+    }
+
+    function updateArchiveEntryStatuses(linkedMap) {
+      const archive = getArchivedDays();
+      let changed = false;
+
+      const updatedArchive = archive.map(day => {
+        let dayChanged = false;
+        const updatedEntries = (day.entries || []).map(entry => {
+          const linked = linkedMap[entry.id];
+          const nextStatus = linked ? linked.status : 'unbilled';
+          const nextInvoiceId = linked ? linked.invoiceId : '';
+
+          if ((entry.billingStatus || 'unbilled') !== nextStatus || (entry.invoiceId || '') !== nextInvoiceId) {
+            dayChanged = true;
+            return {
+              ...entry,
+              billingStatus: nextStatus,
+              invoiceId: nextInvoiceId
+            };
+          }
+          return entry;
+        });
+
+        if (dayChanged) {
+          changed = true;
+          return { ...day, entries: updatedEntries };
+        }
+        return day;
+      });
+
+      if (changed) {
+        saveArchivedDays(updatedArchive);
+        refreshArchiveList();
+        const selected = getSelectedArchiveDay();
+        if (selected) loadArchiveDay();
+      }
+    }
+
     function getSelectedInvoiceEntries() {
       const ids = getSelectedInvoiceEntryIds();
-      return entries.filter(e => ids.includes(e.id));
+      return getAllInvoiceEntries().filter(e => ids.includes(e.id));
     }
 
     function getFilteredEntries() {
@@ -1706,9 +1770,10 @@
       const mergedIds = [...new Set([...existingIds, ...incomingIds])];
       const addedIds = mergedIds.filter(id => !existingIds.includes(id));
 
-      const existingEntries = entries.filter(e => existingIds.includes(String(e.id)));
-      const addedEntries = entries.filter(e => addedIds.includes(String(e.id)));
-      const mergedEntries = entries.filter(e => mergedIds.includes(String(e.id)));
+      const allInvoiceEntries = getAllInvoiceEntries();
+      const existingEntries = allInvoiceEntries.filter(e => existingIds.includes(String(e.id)));
+      const addedEntries = allInvoiceEntries.filter(e => addedIds.includes(String(e.id)));
+      const mergedEntries = allInvoiceEntries.filter(e => mergedIds.includes(String(e.id)));
 
       document.getElementById('invoiceId').value = existingDraft.id || document.getElementById('invoiceId').value || '';
       document.getElementById('clientName').value = document.getElementById('clientName').value.trim() || existingDraft.clientName || '';
@@ -1787,6 +1852,7 @@
         };
       });
 
+      updateArchiveEntryStatuses(linkedMap);
       saveData();
     }
 
@@ -1823,12 +1889,14 @@
       const normalizedLockedDraftAddress = normalizeDraftAddress(lockedDraftAddress);
       box.innerHTML = '';
 
-      if (!entries.length) {
+      const invoiceEntries = getAllInvoiceEntries();
+
+      if (!invoiceEntries.length) {
         box.innerHTML = '<div style="padding:.9rem;">No timesheet entries available.</div>';
         return;
       }
 
-      entries
+      invoiceEntries
         .slice()
         .sort((a, b) => {
           const da = `${a.dateStr} ${a.timeIn}`;
@@ -2003,7 +2071,8 @@
         }
       }
 
-      const conflicts = entries.filter(e =>
+      const allInvoiceEntries = getAllInvoiceEntries();
+      const conflicts = allInvoiceEntries.filter(e =>
         selectedIds.includes(e.id) &&
         e.billingStatus === 'draft-linked' &&
         e.invoiceId &&
@@ -2018,7 +2087,7 @@
         return;
       }
 
-      const selectedEntries = entries.filter(e => selectedIds.includes(e.id));
+      const selectedEntries = allInvoiceEntries.filter(e => selectedIds.includes(e.id));
       const serviceDate = getServiceDateForEntries(selectedEntries);
       const serviceDateLabel = getServiceDateLabelForEntries(selectedEntries);
       const currentFormAddress = document.getElementById('clientAddress').value.trim();
@@ -2045,7 +2114,7 @@
       }
 
       rememberCurrentClient(true);
-      rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(e.id))));
+      rememberCurrentLocationProfile(true, getSingleFilteredAddress(selectedEntries));
 
       invoices[invoiceId] = {
         id: invoiceId,
@@ -2107,7 +2176,8 @@
       document.getElementById('clientEmail').value = inv.clientEmail || '';
       document.getElementById('clientAddress').value = inv.clientAddress || '';
       rememberCurrentClient(true);
-      rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(entries.filter(e => (inv.linkedEntryIds || []).includes(e.id))));
+      const allInvoiceEntries = getAllInvoiceEntries();
+      rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(allInvoiceEntries.filter(e => (inv.linkedEntryIds || []).includes(e.id))));
       document.getElementById('hourlyRate').value = inv.hourlyRate ?? 100;
       document.getElementById('overtimeRate').value = inv.overtimeRate ?? 150;
       document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
