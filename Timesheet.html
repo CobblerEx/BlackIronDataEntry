@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -171,6 +172,98 @@
       table {font-size:0.7rem;}
       th,td {padding:0.2rem;}
       .tab-btn {padding:0.4rem 0.6rem;font-size:0.75rem;}
+    }
+
+    /* ── Invoice items: card layout on mobile ── */
+    @media (max-width:640px) {
+      #itemsTable thead { display:none; }
+      #itemsTable tbody tr {
+        display:block;
+        background:rgba(30,30,30,.95);
+        border:1px solid rgba(255,69,0,.4);
+        border-radius:10px;
+        padding:.85rem;
+        margin-bottom:.75rem;
+      }
+      #itemsTable tbody td {
+        display:none; /* hide all by default; shown via named layout below */
+        border:none;
+        padding:0;
+      }
+      /* Description – full width, prominent */
+      #itemsTable tbody td.imt-desc {
+        display:block;
+        margin-bottom:.6rem;
+        padding-bottom:.6rem;
+        border-bottom:1px solid rgba(255,69,0,.2);
+      }
+      #itemsTable tbody td.imt-desc input {
+        font-size:1rem;
+        font-weight:700;
+        background:transparent;
+        border:1px solid rgba(255,69,0,.35);
+        border-radius:6px;
+        color:#e0e0e0;
+        width:100%;
+      }
+      /* Fields grid: qty / unit / dist cost / markup / sell price */
+      .imt-fields-grid {
+        display:grid;
+        grid-template-columns:1fr 1fr 1fr;
+        gap:.5rem;
+        margin-bottom:.6rem;
+      }
+      #itemsTable tbody td.imt-qty,
+      #itemsTable tbody td.imt-unit,
+      #itemsTable tbody td.imt-distcost,
+      #itemsTable tbody td.imt-markup,
+      #itemsTable tbody td.imt-price {
+        display:block;
+      }
+      #itemsTable tbody td[data-label]::before {
+        content: attr(data-label);
+        display:block;
+        font-size:.72rem;
+        color:#ff6a30;
+        margin-bottom:.2rem;
+        font-weight:700;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+      }
+      #itemsTable tbody td.imt-qty input,
+      #itemsTable tbody td.imt-unit input,
+      #itemsTable tbody td.imt-distcost input,
+      #itemsTable tbody td.imt-markup input,
+      #itemsTable tbody td.imt-price input {
+        font-size:.95rem;
+        padding:.45rem .5rem;
+        min-height:40px;
+      }
+      /* Amount + remove row */
+      .imt-footer {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-top:.5rem;
+        padding-top:.5rem;
+        border-top:1px solid rgba(255,69,0,.2);
+      }
+      #itemsTable tbody td.imt-amount {
+        display:block;
+        font-size:1.15rem;
+        font-weight:700;
+        color:#ff4500;
+      }
+      #itemsTable tbody td.imt-action {
+        display:block;
+      }
+      #itemsTable tbody td.imt-action button {
+        background:#dc3545;
+        font-size:.85rem;
+        padding:.4rem .8rem;
+        min-height:36px;
+        margin:0;
+      }
     }
 
     /* Tablet landscape */
@@ -575,6 +668,12 @@
       <small class="muted-note">
         Material descriptions and their last saved costs are remembered on this device. Markup auto-calculates from distributor cost, and customer price can also be typed in directly. Use <b>Saved Materials</b> to remove any bad dropdown entries you no longer want.
       </small>
+
+      <div id="invoiceRunningTotal" style="margin-top:1rem;padding:1rem 1.25rem;background:rgba(255,69,0,.07);border:1px solid rgba(255,69,0,.4);border-radius:10px;text-align:right;font-size:1rem;line-height:2;">
+        <div>Subtotal: <b id="rtSubtotal">$0.00</b></div>
+        <div>HST (<span id="rtHstPct">13%</span>): <b id="rtHst">$0.00</b></div>
+        <div style="font-size:1.2rem;color:#ff4500;">Total: <b id="rtTotal">$0.00</b></div>
+      </div>
     </div>
   </div>
 
@@ -1113,7 +1212,7 @@
       refreshInvoiceDraftList();
 
       if (document.getElementById('invoiceId').value.trim() === invoiceId) {
-        clearInvoice();
+        clearInvoice(true);
       }
 
       alert(`Invoice draft "${invoiceId}" deleted.`);
@@ -1264,6 +1363,13 @@
       saveArchivedDays(selected.archive);
       refreshArchiveList('');
       renderArchiveTable(null);
+
+      // Recalculate drawer height so content isn't clipped after removal
+      const panel = document.getElementById('archivePanel');
+      if (panel && panel.dataset.open === 'true') {
+        requestAnimationFrame(() => { panel.style.maxHeight = panel.scrollHeight + 40 + 'px'; });
+      }
+
       alert('Archived timesheet deleted.');
     }
 
@@ -1272,6 +1378,11 @@
       if (!selected) {
         alert('Select an archived day to restore.');
         return;
+      }
+
+      if (entries.length > 0) {
+        const msg = `You have ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} on the current timesheet.\n\nRestoring will replace them. Continue?`;
+        if (!confirm(msg)) return;
       }
 
       entries = JSON.parse(JSON.stringify(selected.day.entries || []));
@@ -1291,12 +1402,21 @@
       if (!entries.length) return false;
 
       const archive = getArchivedDays();
-      archive.unshift({
+      const snapshot = {
         archivedAt: new Date().toISOString(),
         employee,
         date: sessionDate,
         entries: JSON.parse(JSON.stringify(entries))
-      });
+      };
+
+      // Replace existing archive entry for the same date rather than stacking duplicates
+      const existingIndex = archive.findIndex(d => d.date === sessionDate && d.employee === employee);
+      if (existingIndex !== -1) {
+        archive[existingIndex] = snapshot;
+      } else {
+        archive.unshift(snapshot);
+      }
+
       saveArchivedDays(archive.slice(0, 60));
       refreshArchiveList();
       return true;
@@ -1504,17 +1624,17 @@
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="desc-cell">
+        <td class="desc-cell imt-desc">
           <input type="text" class="item-desc" list="materialSuggestions" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" value="${(item.desc || '').replace(/"/g, '&quot;')}" placeholder="Material / extra service">
           <div class="material-autocomplete"></div>
         </td>
-        <td><input type="number" class="item-qty" min="0" step="0.01" value="${item.qty ?? 1}"></td>
-        <td><input type="text" class="item-unit" value="${(item.unit || savedMaterial?.unit || 'ea').replace(/"/g, '&quot;')}"></td>
-        <td><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></td>
-        <td><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></td>
-        <td><input type="number" class="item-customer-price select-on-focus" min="0" step="0.01" value="${formatMoney(fallbackCustomerPrice)}"></td>
-        <td class="item-amount text-right">$0.00</td>
-        <td><button type="button" class="mini-btn remove-item">Remove</button></td>
+        <td class="imt-qty" data-label="Qty"><input type="number" class="item-qty" min="0" step="0.01" value="${item.qty ?? 1}"></td>
+        <td class="imt-unit" data-label="Unit"><input type="text" class="item-unit" value="${(item.unit || savedMaterial?.unit || 'ea').replace(/"/g, '&quot;')}"></td>
+        <td class="imt-distcost" data-label="Dist. cost"><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></td>
+        <td class="imt-markup" data-label="Markup %"><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></td>
+        <td class="imt-price" data-label="Sell price"><input type="number" class="item-customer-price select-on-focus" min="0" step="0.01" value="${formatMoney(fallbackCustomerPrice)}"></td>
+        <td class="item-amount imt-amount text-right" data-label="Amount">$0.00</td>
+        <td class="imt-action"><button type="button" class="mini-btn remove-item">Remove</button></td>
       `;
 
       const desc = tr.querySelector('.item-desc');
@@ -1602,6 +1722,7 @@
 
       function recalc() {
         amountCell.textContent = `$${formatMoney((+qty.value || 0) * (+customerPrice.value || 0))}`;
+        updateInvoiceRunningTotal();
       }
 
       desc.addEventListener('input', () => {
@@ -1666,10 +1787,43 @@
         input.addEventListener('focus', () => setTimeout(() => input.select(), 0));
         input.addEventListener('mouseup', (e) => e.preventDefault());
       });
-      tr.querySelector('.remove-item').onclick = () => tr.remove();
+      tr.querySelector('.remove-item').onclick = () => { tr.remove(); updateInvoiceRunningTotal(); };
       recalc();
 
       document.querySelector('#itemsTable tbody').appendChild(tr);
+
+      // Mobile card: group the 5 editable fields into a CSS grid wrapper
+      const fieldsGrid = document.createElement('div');
+      fieldsGrid.className = 'imt-fields-grid';
+      const qtyTd   = tr.querySelector('.imt-qty');
+      const unitTd  = tr.querySelector('.imt-unit');
+      const distTd  = tr.querySelector('.imt-distcost');
+      const markTd  = tr.querySelector('.imt-markup');
+      const priceTd = tr.querySelector('.imt-price');
+      qtyTd.parentNode.insertBefore(fieldsGrid, qtyTd);
+      fieldsGrid.appendChild(qtyTd);
+      fieldsGrid.appendChild(unitTd);
+      fieldsGrid.appendChild(distTd);
+      fieldsGrid.appendChild(markTd);
+      fieldsGrid.appendChild(priceTd);
+      const fieldsWrap = document.createElement('td');
+      fieldsWrap.style.cssText = 'display:block;padding:0;border:none;';
+      fieldsGrid.parentNode.insertBefore(fieldsWrap, fieldsGrid);
+      fieldsWrap.appendChild(fieldsGrid);
+
+      // Mobile card: group amount + remove into a footer wrapper
+      const footer = document.createElement('div');
+      footer.className = 'imt-footer';
+      const amtTd    = tr.querySelector('.imt-amount');
+      const actionTd = tr.querySelector('.imt-action');
+      amtTd.parentNode.insertBefore(footer, amtTd);
+      footer.appendChild(amtTd);
+      footer.appendChild(actionTd);
+      const footerWrap = document.createElement('td');
+      footerWrap.style.cssText = 'display:block;padding:0;border:none;';
+      footer.parentNode.insertBefore(footerWrap, footer);
+      footerWrap.appendChild(footer);
+
       return tr;
     }
 
@@ -1750,6 +1904,47 @@
 
     function clearLaborRows() {
       getLaborRows().forEach(row => row.remove());
+    }
+
+    // Sums hours across ALL provided entries into a single Regular row and
+    // (if needed) a single Overtime row — instead of one row per entry.
+    function populateLaborRowsFromEntries(entryList) {
+      clearLaborRows();
+      let totalRegular = 0;
+      let totalOvertime = 0;
+      entryList.forEach(entry => {
+        const split = getHoursBreakdown(entry);
+        totalRegular  += split.regular;
+        totalOvertime += split.overtime;
+      });
+
+      if (totalRegular > 0) {
+        const row = ensureRegularLaborRow();
+        row.querySelector('.item-qty').value = totalRegular.toFixed(2);
+        row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      }
+      if (totalOvertime > 0) {
+        const row = ensureOvertimeLaborRow();
+        row.querySelector('.item-qty').value = totalOvertime.toFixed(2);
+        row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      }
+    }
+
+    function updateInvoiceRunningTotal() {
+      const hstRate = parseFloat(document.getElementById('hstRate')?.value || '0.13') || 0;
+      let subtotal = 0;
+      document.querySelectorAll('#itemsTable tbody tr').forEach(row => {
+        const qty = parseFloat(row.querySelector('.item-qty')?.value || '0') || 0;
+        const price = parseFloat(row.querySelector('.item-customer-price')?.value || '0') || 0;
+        subtotal += qty * price;
+      });
+      const hst = subtotal * hstRate;
+      const total = subtotal + hst;
+      const el = id => document.getElementById(id);
+      if (el('rtSubtotal')) el('rtSubtotal').textContent = '$' + formatMoney(subtotal);
+      if (el('rtHst')) el('rtHst').textContent = '$' + formatMoney(hst);
+      if (el('rtTotal')) el('rtTotal').textContent = '$' + formatMoney(total);
+      if (el('rtHstPct')) el('rtHstPct').textContent = Math.round(hstRate * 100) + '%';
     }
 
     function createLaborEntryRow(entry, kind, qty) {
@@ -1918,16 +2113,7 @@
         document.getElementById('clientAddress').value = matchedClientFromAddress;
       }
 
-      existingEntries.forEach(entry => {
-        const split = getHoursBreakdown(entry);
-        if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
-        if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
-      });
-      addedEntries.forEach(entry => {
-        const split = getHoursBreakdown(entry);
-        if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
-        if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
-      });
+      populateLaborRowsFromEntries(mergedEntries);
 
       updateInvoiceSummary();
       refreshInvoiceDraftList(existingDraft.id || '');
@@ -2110,18 +2296,15 @@
       const clientAddressInput = document.getElementById('clientAddress');
       if (!clientAddressInput.value.trim()) clientAddressInput.value = matchedClientFromAddress || lastClient.address || '';
 
-      filtered.forEach(entry => {
-        const split = getHoursBreakdown(entry);
-        if (split.regular > 0) createLaborEntryRow(entry, 'regular', split.regular.toFixed(2));
-        if (split.overtime > 0) createLaborEntryRow(entry, 'overtime', split.overtime.toFixed(2));
-      });
+      populateLaborRowsFromEntries(filtered);
 
       updateInvoiceSummary();
       const currentInvoiceId = document.getElementById('invoiceId').value.trim();
       refreshInvoiceDraftList(currentInvoiceId);
     }
 
-    function clearInvoice() {
+    function clearInvoice(skipConfirm = false) {
+      if (!skipConfirm && !confirm('Clear all invoice data? Any unsaved changes will be lost.')) return;
       document.getElementById('invoiceId').value = '';
       document.getElementById('clientName').value = '';
       document.getElementById('clientPhone').value = '';
@@ -2277,6 +2460,14 @@
         return;
       }
 
+      // Warn if the form has a different draft loaded with actual content
+      const currentId = document.getElementById('invoiceId').value.trim();
+      const currentClient = document.getElementById('clientName').value.trim();
+      const hasContent = (currentId && currentId !== invoiceId) || currentClient;
+      if (hasContent) {
+        if (!confirm(`Load draft "${invoiceId}"? Any unsaved changes to the current invoice will be lost.`)) return;
+      }
+
       document.getElementById('invoiceId').value = inv.id || '';
       document.getElementById('clientName').value = inv.clientName || '';
       document.getElementById('clientPhone').value = inv.clientPhone || '';
@@ -2294,15 +2485,18 @@
       const tbody = document.querySelector('#itemsTable tbody');
       tbody.innerHTML = '';
       (inv.items || []).forEach(item => {
+        if ((item.type || '').startsWith('labor-')) return; // rebuilt fresh below
         createItemRow(item);
         const row = tbody.lastElementChild;
         if (item.type) row.dataset.type = item.type;
-        if ((item.type || '').startsWith('labor-')) {
-          row.querySelector('.remove-item').style.display = 'none';
-        }
       });
 
+      // Rebuild labor rows fresh from linked entries so hours are always correct
+      const linkedEntries = entries.filter(e => (inv.linkedEntryIds || []).includes(e.id));
+      populateLaborRowsFromEntries(linkedEntries);
+
       updateInvoiceSummary();
+      updateInvoiceRunningTotal();
     }
 
     function getStatusMarkup(entry) {
@@ -2689,7 +2883,10 @@
       ensureRegularLaborRow();
       renderInvoiceEntrySelector([]);
       updateInvoiceSummary();
+      updateInvoiceRunningTotal();
     };
+
+    document.getElementById('hstRate').addEventListener('input', updateInvoiceRunningTotal);
 
     document.getElementById('invoiceId').addEventListener('input', () => {
       renderInvoiceEntrySelector();
@@ -2823,7 +3020,6 @@
       loading.style.display = 'block';
 
       try {
-        populateInvoiceFromEntries();
         updateInvoiceSummary();
 
         const hstRate = parseFloat(document.getElementById('hstRate').value || '0.13');
