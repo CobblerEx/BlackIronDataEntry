@@ -1899,7 +1899,10 @@
     }
 
     function getLaborRows() {
-      return [...document.querySelectorAll('#itemsTable tbody tr')].filter(row => (row.dataset.type || '').startsWith('labor-'));
+      return [...document.querySelectorAll('#itemsTable tbody tr')].filter(row => {
+        const t = row.dataset.type || '';
+        return t.startsWith('labor-') || t === 'regular-labor' || t === 'overtime-labor';
+      });
     }
 
     function clearLaborRows() {
@@ -2485,7 +2488,7 @@
       const tbody = document.querySelector('#itemsTable tbody');
       tbody.innerHTML = '';
       (inv.items || []).forEach(item => {
-        if ((item.type || '').startsWith('labor-')) return; // rebuilt fresh below
+        if ((item.type || '').startsWith('labor-') || item.type === 'regular-labor' || item.type === 'overtime-labor') return; // rebuilt fresh below
         createItemRow(item);
         const row = tbody.lastElementChild;
         if (item.type) row.dataset.type = item.type;
@@ -3117,11 +3120,23 @@
         const visitsY = 108 + ((splitAddress.length - 1) * 6);
         doc.text(splitEntryLines, 10, visitsY);
 
+        let tableStartY = visitsY + ((splitEntryLines.length - 1) * 6) + 8;
+
+        // Print the labor / service description below visits
+        const laborDescription = document.getElementById('laborDescription').value.trim();
+        if (laborDescription) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.text("DESCRIPTION OF SERVICES:", 10, tableStartY);
+          doc.setFont("helvetica", "normal");
+          const splitDesc = doc.splitTextToSize(laborDescription, 190);
+          doc.text(splitDesc, 10, tableStartY + 6);
+          tableStartY += 6 + (splitDesc.length * 5) + 6;
+        }
+
         if (typeof doc.autoTable !== "function") {
           throw new Error("jsPDF AutoTable not available (CDN not loaded).");
         }
-
-        const tableStartY = visitsY + ((splitEntryLines.length - 1) * 6) + 8;
 
         doc.autoTable({
           startY: tableStartY,
