@@ -429,15 +429,28 @@
       <label>Job Type (optional auto-description):
         <select id="jobType">
           <option value="">-- Select to auto-fill description --</option>
-          <option value="Furnace Tune-Up">Furnace Tune-Up</option>
-          <option value="AC Maintenance">Air Conditioner Maintenance</option>
-          <option value="Gas Line Install">Gas Line Installation</option>
-          <option value="Water Heater Service">Water Heater Service</option>
-          <option value="Duct Cleaning">Duct Cleaning</option>
-          <option value="Compressor Replacement">Compressor Replacement</option>
-          <option value="Pool Heater Install">Pool Heater Gas Line / Install</option>
-          <option value="Underground Gas Line">Underground Gas Line</option>
-          <option value="General Service Call">General Service Call</option>
+          <optgroup label="HVAC / Gas">
+            <option value="Furnace Tune-Up">Furnace Tune-Up</option>
+            <option value="AC Maintenance">Air Conditioner Maintenance</option>
+            <option value="Rooftop Unit Maintenance">Rooftop Unit Maintenance</option>
+            <option value="Compressor Replacement">Compressor Replacement</option>
+            <option value="Duct Cleaning">Duct Cleaning</option>
+            <option value="Gas Line Install">Gas Line Installation</option>
+            <option value="Underground Gas Line">Underground Gas Line</option>
+            <option value="Pool Heater Install">Pool Heater Gas Line / Install</option>
+            <option value="Water Heater Service">Water Heater Service</option>
+          </optgroup>
+          <optgroup label="Commercial Kitchen">
+            <option value="Ice Machine Cleaning">Ice Machine Cleaning</option>
+            <option value="Panini Grill Repair">Panini Grill Repair</option>
+            <option value="Deep Fryer Service">Deep Fryer Service</option>
+            <option value="Commercial Dishwasher Service">Commercial Dishwasher Service</option>
+            <option value="Hood &amp; Exhaust Service">Hood &amp; Exhaust Service</option>
+            <option value="Refrigeration Service">Refrigeration Service</option>
+          </optgroup>
+          <optgroup label="General">
+            <option value="General Service Call">General Service Call</option>
+          </optgroup>
         </select>
       </label>
 
@@ -647,6 +660,9 @@
 
       <label style="margin-top:1rem;">Labor Description:
         <textarea id="laborDescription" placeholder="Service summary auto-filled from your selected timesheet entries."></textarea>
+        <small class="muted-note" id="laborDescSyncHint" style="display:none;color:#ffb08a;">
+          Description edited. <button type="button" id="syncDescToTimesheetBtn" style="background:none;border:none;color:#ff4500;text-decoration:underline;cursor:pointer;font-size:.88rem;padding:0;min-height:auto;">Update matching timesheet entries</button>
+        </small>
       </label>
 
       <table class="items-table" id="itemsTable">
@@ -946,7 +962,14 @@
       "Compressor Replacement": "Recovered refrigerant, removed failed compressor, installed new compressor with compatible oil charge. Replaced filter drier, brazed connections, evacuated system to 500 microns, and recharged to manufacturer specifications.",
       "Pool Heater Install": "Installed new natural gas pool heater including gas line extension, electrical connection, bonding, and venting. Performed startup and verified proper operation.",
       "Underground Gas Line": "Installed underground polyethylene gas line from meter to building entrance. Trenched, bedded with sand, installed tracer wire, riser, and transition fitting. Pressure tested per local code.",
-      "General Service Call": "Responded to customer service call. Diagnosed issue, performed necessary repairs/adjustments, and verified proper operation of equipment."
+      "General Service Call": "Responded to customer service call. Diagnosed issue, performed necessary repairs/adjustments, and verified proper operation of equipment.",
+      "Ice Machine Cleaning": "Performed full ice machine cleaning and sanitizing service. Removed and cleaned ice bin, evaporator, condenser coils, water distribution components, and float valve. Flushed and sanitized water system. Replaced water filter. Inspected for proper ice production and verified unit is operating within manufacturer specifications.",
+      "Panini Grill Repair": "Diagnosed and repaired Panini grill. Inspected heating elements, thermostat, and control components. Cleaned and degreased cooking surfaces and internal components. Tested grill at operating temperature and verified consistent heat across cooking surface.",
+      "Rooftop Unit Maintenance": "Performed preventive maintenance on rooftop HVAC unit. Replaced air filters, inspected and adjusted belts for proper tension and wear, checked all electrical connections and contactors, cleaned condenser coils, inspected heat exchanger and burner assembly, lubricated bearings and moving parts, verified refrigerant pressures, and confirmed proper unit operation including supply and return air temperatures.",
+      "Refrigeration Service": "Inspected and serviced commercial refrigeration unit. Checked refrigerant pressures and temperatures, inspected evaporator and condenser coils, cleaned condenser, checked door gaskets and hinges, tested defrost cycle, verified thermostat calibration, and confirmed unit is maintaining proper temperature.",
+      "Commercial Dishwasher Service": "Serviced commercial dishwasher. Inspected and cleaned wash and rinse arms, checked water temperature at wash and final rinse, inspected door gaskets and latches, cleaned strainer and sump, checked chemical dispenser operation, descaled unit as required, and verified proper sanitizing temperatures.",
+      "Deep Fryer Service": "Serviced commercial deep fryer. Drained and cleaned fry tank, inspected burners and ignition system (gas) or heating elements (electric), checked thermostat calibration, inspected high-limit safety, cleaned pilot assembly, and verified proper oil temperature and recovery time.",
+      "Hood & Exhaust Service": "Inspected and cleaned commercial kitchen exhaust hood and makeup air system. Removed and cleaned filters, inspected fan and motor, checked belt tension, cleaned grease from plenum and exhaust duct access areas, and verified adequate exhaust and makeup air flow."
     };
 
     const timeOptions = [];
@@ -1981,13 +2004,14 @@
     }
 
     function getLaborDescriptionFromTimesheet(filtered) {
+      const multipleDates = new Set(filtered.map(e => e.dateStr).filter(Boolean)).size > 1;
       const lines = filtered
         .map(e => {
           const desc = (e.description || '').trim();
           const job = (e.jobName || '').trim();
           if (!desc && !job) return null;
-          if (!desc) return job;
-          return job ? `${job}: ${desc}` : desc;
+          const detail = job && desc ? `${job}: ${desc}` : (desc || job);
+          return multipleDates && e.dateStr ? `${formatDate(e.dateStr)} — ${detail}` : detail;
         })
         .filter(Boolean);
 
@@ -2069,7 +2093,9 @@
       const appendedLines = String(appendedText || '').split('\n').map(s => s.trim()).filter(Boolean);
       const merged = [...existingLines];
       appendedLines.forEach(line => {
-        if (!merged.includes(line)) merged.push(line);
+        // Deduplicate by normalised text so the same job+date isn't added twice
+        const norm = line.toLowerCase();
+        if (!merged.some(l => l.toLowerCase() === norm)) merged.push(line);
       });
       return merged.join('\n');
     }
@@ -2081,34 +2107,87 @@
       const addedIds = mergedIds.filter(id => !existingIds.includes(id));
 
       const existingEntries = entries.filter(e => existingIds.includes(String(e.id)));
-      const addedEntries = entries.filter(e => addedIds.includes(String(e.id)));
-      const mergedEntries = entries.filter(e => mergedIds.includes(String(e.id)));
+      const addedEntries    = entries.filter(e => addedIds.includes(String(e.id)));
+      const mergedEntries   = entries.filter(e => mergedIds.includes(String(e.id)));
 
-      document.getElementById('invoiceId').value = existingDraft.id || document.getElementById('invoiceId').value || '';
-      document.getElementById('clientName').value = document.getElementById('clientName').value.trim() || existingDraft.clientName || '';
-      document.getElementById('clientPhone').value = document.getElementById('clientPhone').value.trim() || existingDraft.clientPhone || '';
-      document.getElementById('clientEmail').value = document.getElementById('clientEmail').value.trim() || existingDraft.clientEmail || '';
-      document.getElementById('clientAddress').value = document.getElementById('clientAddress').value.trim() || existingDraft.clientAddress || '';
-      document.getElementById('hourlyRate').value = document.getElementById('hourlyRate').value || (existingDraft.hourlyRate ?? 100);
+      document.getElementById('invoiceId').value    = existingDraft.id || document.getElementById('invoiceId').value || '';
+      document.getElementById('clientName').value   = document.getElementById('clientName').value.trim()   || existingDraft.clientName   || '';
+      document.getElementById('clientPhone').value  = document.getElementById('clientPhone').value.trim()  || existingDraft.clientPhone  || '';
+      document.getElementById('clientEmail').value  = document.getElementById('clientEmail').value.trim()  || existingDraft.clientEmail  || '';
+      document.getElementById('clientAddress').value= document.getElementById('clientAddress').value.trim()|| existingDraft.clientAddress|| '';
+      document.getElementById('hourlyRate').value   = document.getElementById('hourlyRate').value   || (existingDraft.hourlyRate   ?? 100);
       document.getElementById('overtimeRate').value = document.getElementById('overtimeRate').value || (existingDraft.overtimeRate ?? 150);
-      document.getElementById('hstRate').value = document.getElementById('hstRate').value || (existingDraft.hstRate ?? 0.13);
+      document.getElementById('hstRate').value      = document.getElementById('hstRate').value      || (existingDraft.hstRate      ?? 0.13);
 
       renderInvoiceEntrySelector(mergedIds);
 
+      // Restore non-labor items from the saved draft
       const tbody = document.querySelector('#itemsTable tbody');
       tbody.innerHTML = '';
       (existingDraft.items || []).forEach(item => {
-        if (!(item.type || '').startsWith('labor-')) {
-          createItemRow(item);
-          const row = tbody.lastElementChild;
-          if (item.type) row.dataset.type = item.type;
-        }
+        const t = item.type || '';
+        if (t.startsWith('labor-') || t === 'regular-labor' || t === 'overtime-labor') return;
+        createItemRow(item);
+        const row = tbody.lastElementChild;
+        if (t) row.dataset.type = t;
       });
 
+      // ── Hours ──────────────────────────────────────────────────────────────
+      // Sum hours from the NEW entries that are actually in memory.
+      let addedRegular  = 0;
+      let addedOvertime = 0;
+      addedEntries.forEach(e => {
+        const s = getHoursBreakdown(e);
+        addedRegular  += s.regular;
+        addedOvertime += s.overtime;
+      });
+
+      // For the EXISTING draft entries: prefer live data if still in memory,
+      // otherwise fall back to the hours that were saved in the draft's labor rows.
+      let existingRegular  = 0;
+      let existingOvertime = 0;
+
+      if (existingEntries.length > 0) {
+        existingEntries.forEach(e => {
+          const s = getHoursBreakdown(e);
+          existingRegular  += s.regular;
+          existingOvertime += s.overtime;
+        });
+      } else {
+        // Entries were archived — recover from saved draft labor items
+        (existingDraft.items || []).forEach(item => {
+          const t = item.type || '';
+          if (t === 'regular-labor'  || t.includes('regular'))  existingRegular  += (+item.qty || 0);
+          if (t === 'overtime-labor' || t.includes('overtime'))  existingOvertime += (+item.qty || 0);
+        });
+      }
+
+      const totalRegular  = existingRegular  + addedRegular;
+      const totalOvertime = existingOvertime + addedOvertime;
+
+      clearLaborRows();
+      if (totalRegular > 0) {
+        const row = ensureRegularLaborRow();
+        row.querySelector('.item-qty').value = totalRegular.toFixed(2);
+        row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      }
+      if (totalOvertime > 0) {
+        const row = ensureOvertimeLaborRow();
+        row.querySelector('.item-qty').value = totalOvertime.toFixed(2);
+        row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      }
+
+      // ── Description ────────────────────────────────────────────────────────
+      // Build description from live entries; fall back to what the draft saved
+      // when old entries are no longer in memory.
+      const existingDescText = existingEntries.length > 0
+        ? getLaborDescriptionFromTimesheet(existingEntries)
+        : (existingDraft.laborDescription || '');
+
       const mergedDescription = mergeLaborDescriptions(
-        existingDraft.laborDescription || getLaborDescriptionFromTimesheet(existingEntries),
+        existingDescText,
         getLaborDescriptionFromTimesheet(addedEntries)
-      ) || getLaborDescriptionFromTimesheet(mergedEntries);
+      ) || getLaborDescriptionFromTimesheet(mergedEntries) || existingDraft.laborDescription || '';
       document.getElementById('laborDescription').value = mergedDescription;
 
       const matchedClientFromAddress = fillClientProfileFromFilteredEntries(mergedEntries, false);
@@ -2116,9 +2195,8 @@
         document.getElementById('clientAddress').value = matchedClientFromAddress;
       }
 
-      populateLaborRowsFromEntries(mergedEntries);
-
       updateInvoiceSummary();
+      updateInvoiceRunningTotal();
       refreshInvoiceDraftList(existingDraft.id || '');
       return mergedIds;
     }
@@ -2912,6 +2990,33 @@
       populateInvoiceFromEntries();
     });
 
+    // Show sync hint when the user manually edits the labor description
+    let _laborDescOriginal = '';
+    document.getElementById('laborDescription').addEventListener('focus', function() {
+      _laborDescOriginal = this.value;
+    });
+    document.getElementById('laborDescription').addEventListener('input', function() {
+      const hint = document.getElementById('laborDescSyncHint');
+      if (hint) hint.style.display = this.value !== _laborDescOriginal ? 'block' : 'none';
+    });
+
+    document.getElementById('syncDescToTimesheetBtn').addEventListener('click', function() {
+      const newDesc = document.getElementById('laborDescription').value.trim();
+      if (!newDesc) return;
+      const selectedIds = getSelectedInvoiceEntryIds();
+      if (!selectedIds.length) { alert('No timesheet entries are selected.'); return; }
+      if (!confirm(`Update the description on all ${selectedIds.length} selected timesheet entr${selectedIds.length === 1 ? 'y' : 'ies'} to match the invoice description?`)) return;
+      entries = entries.map(e => {
+        if (selectedIds.includes(e.id)) return { ...e, description: newDesc };
+        return e;
+      });
+      saveData();
+      renderTable();
+      _laborDescOriginal = newDesc;
+      document.getElementById('laborDescSyncHint').style.display = 'none';
+      alert('Timesheet descriptions updated.');
+    });
+
     document.getElementById('generateExcel').onclick = () => {
       document.getElementById('loading').style.display = 'block';
       setTimeout(() => {
@@ -3023,6 +3128,30 @@
       loading.style.display = 'block';
 
       try {
+        // Auto-save draft before generating so nothing is lost
+        const invoiceIdForSave = document.getElementById('invoiceId').value.trim();
+        if (invoiceIdForSave) {
+          const selectedIds = getSelectedInvoiceEntryIds();
+          invoices[invoiceIdForSave] = {
+            ...(invoices[invoiceIdForSave] || {}),
+            id: invoiceIdForSave,
+            clientName: document.getElementById('clientName').value.trim(),
+            clientPhone: document.getElementById('clientPhone').value.trim(),
+            clientEmail: document.getElementById('clientEmail').value.trim(),
+            clientAddress: document.getElementById('clientAddress').value.trim(),
+            hourlyRate: +document.getElementById('hourlyRate').value || 0,
+            overtimeRate: +document.getElementById('overtimeRate').value || 0,
+            hstRate: +document.getElementById('hstRate').value || 0.13,
+            laborDescription: document.getElementById('laborDescription').value.trim(),
+            linkedEntryIds: selectedIds,
+            items: collectInvoiceItems(),
+            status: invoices[invoiceIdForSave]?.status || 'draft',
+            createdAt: invoices[invoiceIdForSave]?.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          saveInvoicesToStorage();
+        }
+
         updateInvoiceSummary();
 
         const hstRate = parseFloat(document.getElementById('hstRate').value || '0.13');
