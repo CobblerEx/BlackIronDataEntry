@@ -117,6 +117,44 @@
     }
 
     @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+
+    /* ── Sticky floating action bars ── */
+    .sticky-action-bar {
+      position:fixed;
+      bottom:0;
+      left:0;
+      right:0;
+      z-index:500;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:.6rem;
+      flex-wrap:wrap;
+      padding:.5rem 1rem;
+      background:rgba(26,26,26,.92);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+      border-top:1px solid rgba(255,69,0,.35);
+      box-shadow:0 -2px 16px rgba(0,0,0,.4);
+      transition:transform .25s ease, opacity .25s ease;
+    }
+    .sticky-action-bar.hidden {
+      transform:translateY(110%);
+      opacity:0;
+      pointer-events:none;
+    }
+    .sticky-action-bar .sab-label {
+      font-size:.8rem;
+      color:rgba(255,255,255,.45);
+      white-space:nowrap;
+      margin-right:.2rem;
+    }
+    .sticky-action-bar button {
+      margin:0;
+      padding:.5rem 1rem;
+      font-size:.88rem;
+      min-height:38px;
+    }
     
     @media (max-width:768px) {
       body {padding:0.75rem;}
@@ -4903,8 +4941,62 @@ document.addEventListener("DOMContentLoaded",function(){
   if (typeof checkBackupReminder === 'function') checkBackupReminder();
 });
 
-document.addEventListener("DOMContentLoaded",function(){
-  const sendBtn=document.getElementById("biSendToParts");
+  // ── Sticky action bars ──────────────────────────────────────────────────
+
+  (function initStickyBars() {
+    // ── Invoice bar: show when the original button row is out of view ──
+    const invoiceBar    = document.getElementById('invoiceStickyBar');
+    const invoiceBtnRow = document.querySelector('#invoiceBuilder .inline-group');
+
+    if (invoiceBar && invoiceBtnRow) {
+      const obs = new IntersectionObserver(entries => {
+        const visible = entries[0].isIntersecting;
+        // Only show bar when on the invoice tab
+        const onInvoiceTab = document.getElementById('invoiceTab')?.classList.contains('active');
+        if (!visible && onInvoiceTab) {
+          invoiceBar.classList.remove('hidden');
+        } else {
+          invoiceBar.classList.add('hidden');
+        }
+      }, { threshold: 0, rootMargin: '0px 0px 0px 0px' });
+
+      obs.observe(invoiceBtnRow);
+
+      // Re-evaluate when switching tabs
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const onInvoice = btn.dataset.tab === 'invoiceTab';
+          if (!onInvoice) invoiceBar.classList.add('hidden');
+        });
+      });
+
+      // Wire sticky buttons to same actions as originals
+      document.getElementById('addItemSticky').addEventListener('click', () =>
+        document.getElementById('addItem').click());
+      document.getElementById('generateInvoiceSticky').addEventListener('click', () =>
+        document.getElementById('generateInvoice').click());
+      document.getElementById('generateBossCopySticky').addEventListener('click', () =>
+        document.getElementById('generateBossCopy').click());
+    }
+
+    // ── Black Iron bar: always visible on that tab ──
+    const biBar = document.getElementById('biStickyBar');
+    if (biBar) {
+      function updateBiBar() {
+        const onBi = document.getElementById('blackIronTab')?.classList.contains('active');
+        onBi ? biBar.classList.remove('hidden') : biBar.classList.add('hidden');
+      }
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => setTimeout(updateBiBar, 50));
+      });
+      updateBiBar();
+
+      document.getElementById('biAddItemSticky').addEventListener('click', () =>
+        document.getElementById('biAddItem').click());
+      document.getElementById('biSendInvoiceSticky').addEventListener('click', () =>
+        document.getElementById('biSendInvoice').click());
+    }
+  })();
   if(sendBtn){
     sendBtn.addEventListener("click",function(){
       const calcBtn=document.getElementById("biCalcTotal");
@@ -4917,6 +5009,21 @@ document.addEventListener("DOMContentLoaded",function(){
 });
 
 </script>
+
+  <!-- Invoice sticky bar: appears when original buttons scroll out of view -->
+  <div id="invoiceStickyBar" class="sticky-action-bar hidden">
+    <span class="sab-label">Invoice:</span>
+    <button type="button" id="addItemSticky" class="mini-btn">+ Add Item</button>
+    <button type="button" id="generateInvoiceSticky" class="mini-btn">Generate PDF</button>
+    <button type="button" id="generateBossCopySticky" class="mini-btn">Boss Copy</button>
+  </div>
+
+  <!-- Black Iron sticky bar: always visible on that tab -->
+  <div id="biStickyBar" class="sticky-action-bar hidden">
+    <span class="sab-label">Black Iron:</span>
+    <button type="button" id="biAddItemSticky">+ Add Item</button>
+    <button type="button" id="biSendInvoiceSticky" style="background:#28a745;">Send All To Invoice</button>
+  </div>
 
 </body>
 </html>
