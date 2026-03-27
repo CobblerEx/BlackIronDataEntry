@@ -2321,6 +2321,14 @@
 
       box.querySelectorAll('.invoice-entry-check').forEach(cb => {
         cb.addEventListener('change', () => {
+          // If the work order field is blank and an entry is being checked, fill it from the job name
+          const invoiceIdField = document.getElementById('invoiceId');
+          if (!invoiceIdField.value.trim() && cb.checked) {
+            const entry = entries.find(e => e.id === cb.value);
+            if (entry && entry.jobName) {
+              invoiceIdField.value = entry.jobName.trim();
+            }
+          }
           populateInvoiceFromEntries();
           updateInvoiceSummary();
         });
@@ -2628,6 +2636,23 @@
         renderInvoiceEntrySelector();
         populateInvoiceFromEntries();
         updateInvoiceSummary();
+
+        // Auto-fill Invoice/Work Order from job name if the field is empty
+        const invoiceIdField = document.getElementById('invoiceId');
+        if (!invoiceIdField.value.trim()) {
+          const uniqueJobs = [...new Set(entries.map(e => (e.jobName || '').trim()).filter(Boolean))];
+          if (uniqueJobs.length === 1) {
+            invoiceIdField.value = uniqueJobs[0];
+          } else if (uniqueJobs.length > 1) {
+            // Use client name + first date if multiple jobs
+            const firstDate = entries.map(e => e.dateStr).filter(Boolean).sort()[0];
+            const clientName = document.getElementById('clientName').value.trim();
+            if (clientName) invoiceIdField.value = clientName + (firstDate ? '-' + firstDate : '');
+          }
+          renderInvoiceEntrySelector();
+          updateInvoiceSummary();
+        }
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
@@ -3162,8 +3187,9 @@
         const clientAddress = document.getElementById('clientAddress').value.trim();
         const selectedEntries = getFilteredEntries();
 
-        if (!selectedEntries.length) {
-          return alert('Select at least one timesheet entry for this invoice.');
+        // Allow generation with no checked entries if a draft is loaded
+        if (!selectedEntries.length && !invoiceId) {
+          return alert('Select at least one timesheet entry, or load a saved draft first.');
         }
 
         const lines = collectInvoiceLines(copyType === 'boss' ? 'boss' : 'customer');
@@ -3231,7 +3257,8 @@
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(12);
-        doc.text("DATE RANGE: " + getSelectedDateRange(selectedEntries), 10, 48);
+        const dateRangeText = selectedEntries.length ? getSelectedDateRange(selectedEntries) : (invoices[invoiceId]?.serviceDateLabel || '—');
+        doc.text("DATE RANGE: " + dateRangeText, 10, 48);
         if (invoiceId) doc.text("INVOICE ID: " + invoiceId, 10, 58);
         doc.text("NAME: " + (clientName || '-'), 10, 68);
         doc.text("PHONE: " + (clientPhone || '-'), 10, 78);
@@ -3240,16 +3267,17 @@
         const splitAddress = doc.splitTextToSize("ADDRESS: " + (clientAddress || '-'), 190);
         doc.text(splitAddress, 10, 98);
 
-        const entryLines = selectedEntries
-          .slice()
-          .sort((a, b) => (`${a.dateStr} ${a.timeIn}`).localeCompare(`${b.dateStr} ${b.timeIn}`))
-          .map(e => `${formatDate(e.dateStr)} - ${e.jobName} (${to12hr(e.timeIn)} to ${to12hr(e.timeOut)})`);
+        let tableStartY = 108 + ((splitAddress.length - 1) * 6);
 
-        const splitEntryLines = doc.splitTextToSize("VISITS: " + entryLines.join(" | "), 190);
-        const visitsY = 108 + ((splitAddress.length - 1) * 6);
-        doc.text(splitEntryLines, 10, visitsY);
-
-        let tableStartY = visitsY + ((splitEntryLines.length - 1) * 6) + 8;
+        if (selectedEntries.length) {
+          const entryLines = selectedEntries
+            .slice()
+            .sort((a, b) => (`${a.dateStr} ${a.timeIn}`).localeCompare(`${b.dateStr} ${b.timeIn}`))
+            .map(e => `${formatDate(e.dateStr)} - ${e.jobName} (${to12hr(e.timeIn)} to ${to12hr(e.timeOut)})`);
+          const splitEntryLines = doc.splitTextToSize("VISITS: " + entryLines.join(" | "), 190);
+          doc.text(splitEntryLines, 10, tableStartY);
+          tableStartY += ((splitEntryLines.length - 1) * 6) + 8;
+        }
 
         // Print the labor / service description below visits
         const laborDescription = document.getElementById('laborDescription').value.trim();
@@ -3269,85 +3297,70 @@
 
         doc.autoTable({
           startY: tableStartY,
-          head: [[
-            'QUANTITY',
-            'DESCRIPTION',
-            copyType === 'boss' ? 'OUR COST EA' : 'UNIT PRICE',
-            'UNIT',
-            copyType === 'boss' ? 'OUR COST TOTAL' : 'AMOUNT'
-          ]],
+          head: copyType === 'boss'
+            ? [['QTY', 'DESCRIPTION', 'UNIT', 'COST EA', 'COST TOTAL', 'SELL PRICE', 'SELL TOTAL']]
+            : [['QUANTITY', 'DESCRIPTION', 'UNIT PRICE', 'UNIT', 'AMOUNT']],
           body: lines.map(l => {
-            const unitValue = copyType === 'boss'
-              ? (+l.distributorCost || 0)
-              : (l.customerPrice ?? l.price);
-            const lineTotal = copyType === 'boss'
-              ? ((+l.distributorCost || 0) * (+l.quantity || 0))
-              : (+l.amount || 0);
+            if (copyType === 'boss') {
+              const costEa    = +l.distributorCost || 0;
+              const costTotal = costEa * (+l.quantity || 0);
+              const sellEa    = l.customerPrice ?? l.price ?? 0;
+              const sellTotal = +l.amount || 0;
+              return [
+                l.quantity.toFixed(2),
+                l.desc,
+                l.unit,
+                '$' + formatMoney(costEa),
+                '$' + formatMoney(costTotal),
+                '$' + formatMoney(sellEa),
+                '$' + formatMoney(sellTotal)
+              ];
+            }
             return [
               l.quantity.toFixed(2),
               l.desc,
-              '$' + formatMoney(unitValue),
+              '$' + formatMoney(l.customerPrice ?? l.price),
               l.unit,
-              '$' + formatMoney(lineTotal)
+              '$' + formatMoney(l.amount)
             ];
           }),
           theme: 'grid',
           headStyles: { fillColor: [211, 211, 211], textColor: [0, 0, 0] },
-          styles: { cellPadding: 5, fontSize: 10, overflow: 'linebreak' },
-          columnStyles: { 1: { cellWidth: 80 } },
+          styles: { cellPadding: 4, fontSize: copyType === 'boss' ? 8.5 : 10, overflow: 'linebreak' },
+          columnStyles: copyType === 'boss'
+            ? { 1: { cellWidth: 55 } }
+            : { 1: { cellWidth: 80 } },
         });
 
         let finalY = doc.lastAutoTable.finalY + 10;
 
-        if (copyType === 'boss') {
-          const detailedBlackIron = detailedLines.filter(l => /black iron|gas pipe/i.test(l.desc || ''));
-          if (detailedBlackIron.length) {
-            doc.autoTable({
-              startY: finalY,
-              head: [['MATERIAL', 'QTY', 'COST EA', 'COST TOTAL', 'SELL TOTAL']],
-              body: detailedBlackIron.map(l => [
-                l.desc,
-                l.quantity.toFixed(2),
-                '$' + formatMoney(l.distributorCost || 0),
-                '$' + formatMoney((+l.distributorCost || 0) * (+l.quantity || 0)),
-                '$' + formatMoney(l.amount || 0)
-              ]),
-              theme: 'grid',
-              headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0] },
-              styles: { cellPadding: 4, fontSize: 9, overflow: 'linebreak' },
-              columnStyles: { 0: { cellWidth: 82 } },
-            });
-            finalY = doc.lastAutoTable.finalY + 10;
-            doc.setFont("helvetica", "bold");
-            doc.text("MATERIAL COST TOTAL: $" + formatMoney(materialCostTotal), 120, finalY);
-            doc.text("MATERIAL SELL TOTAL: $" + formatMoney(materialSellTotal), 120, finalY + 8);
-            doc.text("MATERIAL MARGIN: $" + formatMoney(materialSellTotal - materialCostTotal), 120, finalY + 16);
-            finalY += 22;
-          }
+        if (copyType === 'boss' && (materialCostTotal > 0 || materialSellTotal > 0)) {
+          doc.setFont("helvetica", "bold");
+          doc.text("MATERIAL COST TOTAL: $"   + formatMoney(materialCostTotal),              10, finalY);
+          doc.text("MATERIAL SELL TOTAL: $"   + formatMoney(materialSellTotal),              10, finalY + 8);
+          doc.text("MATERIAL MARGIN: $"        + formatMoney(materialSellTotal - materialCostTotal), 10, finalY + 16);
+          finalY += 26;
         }
 
         doc.setFont("helvetica", "bold");
-        doc.text(
-          (copyType === 'boss' ? 'OUR COST SUBTOTAL: $' : 'SUBTOTAL: $') + formatMoney(copyType === 'boss' ? bossSubtotal : subtotal),
-          132,
-          finalY
-        );
-        doc.text(
-          (copyType === 'boss' ? 'OUR COST HST: $' : 'HST: $') + formatMoney(copyType === 'boss' ? bossHst : hst),
-          132,
-          finalY + 8
-        );
-        doc.text(
-          (copyType === 'boss' ? 'OUR COST TOTAL: $' : 'TOTAL: $') + formatMoney(copyType === 'boss' ? bossTotal : total),
-          132,
-          finalY + 16
-        );
+        if (copyType === 'boss') {
+          doc.text("OUR COST SUBTOTAL: $" + formatMoney(bossSubtotal), 10,  finalY);
+          doc.text("OUR COST HST: $"      + formatMoney(bossHst),      10,  finalY + 8);
+          doc.text("OUR COST TOTAL: $"    + formatMoney(bossTotal),     10,  finalY + 16);
+          doc.text("SELL SUBTOTAL: $"     + formatMoney(subtotal),      120, finalY);
+          doc.text("SELL HST: $"          + formatMoney(hst),           120, finalY + 8);
+          doc.text("SELL TOTAL: $"        + formatMoney(total),         120, finalY + 16);
+        } else {
+          doc.text("SUBTOTAL: $" + formatMoney(subtotal), 132, finalY);
+          doc.text("HST: $"     + formatMoney(hst),       132, finalY + 8);
+          doc.text("TOTAL: $"   + formatMoney(total),     132, finalY + 16);
+        }
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
         doc.text(copyType === 'boss' ? 'Internal copy for costing review' : 'e-transfer accepted at Jason@archerser.ca', 105, 280, { align: 'center' });
 
-        const serviceDateForFile = getServiceDateForEntries(selectedEntries) || new Date().toISOString().split('T')[0];
+        const serviceDateForFile = (selectedEntries.length ? getServiceDateForEntries(selectedEntries) : null) || invoices[invoiceId]?.serviceDate || new Date().toISOString().split('T')[0];
         const safeClientName = (clientName || 'Client').replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
         doc.save(`${safeClientName || 'Client'}_${serviceDateForFile}_${copyType === 'boss' ? 'Boss_Copy' : 'Invoice'}.pdf`);
 
@@ -3358,7 +3371,7 @@
           address: clientAddress
         }));
         rememberCurrentClient(true);
-        rememberCurrentLocationProfile(true, getSingleFilteredAddress(selectedEntries));
+        rememberCurrentLocationProfile(true, selectedEntries.length ? getSingleFilteredAddress(selectedEntries) : clientAddress);
 
         if (invoiceId && invoices[invoiceId]) {
           invoices[invoiceId].status = 'invoiced';
