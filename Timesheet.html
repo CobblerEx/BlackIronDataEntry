@@ -1303,15 +1303,6 @@
         }));
       }
 
-      // Always start with a clean invoice form on page load —
-      // prevents browser autocomplete / cached values bleeding in
-      document.getElementById('invoiceId').value      = '';
-      document.getElementById('clientName').value     = '';
-      document.getElementById('clientPhone').value    = '';
-      document.getElementById('clientEmail').value    = '';
-      document.getElementById('clientAddress').value  = '';
-      document.getElementById('laborDescription').value = '';
-
       renderTable();
       refreshArchiveList();
     }
@@ -2421,17 +2412,13 @@
       const laborDescriptionField = document.getElementById('laborDescription');
       laborDescriptionField.value = getLaborDescriptionFromTimesheet(filtered);
 
+      // Only fill client fields from the address-matched profile — never from lastClient,
+      // which was causing old customer data to reappear after a page refresh
       const matchedClientFromAddress = fillClientProfileFromFilteredEntries(filtered, false);
-
-      const lastClient = JSON.parse(localStorage.getItem('lastClient') || '{}');
-      const clientNameInput = document.getElementById('clientName');
-      if (!clientNameInput.value.trim()) clientNameInput.value = lastClient.name || '';
-      const clientPhoneInput = document.getElementById('clientPhone');
-      if (!clientPhoneInput.value.trim()) clientPhoneInput.value = lastClient.phone || '';
-      const clientEmailInput = document.getElementById('clientEmail');
-      if (!clientEmailInput.value.trim()) clientEmailInput.value = lastClient.email || '';
       const clientAddressInput = document.getElementById('clientAddress');
-      if (!clientAddressInput.value.trim()) clientAddressInput.value = matchedClientFromAddress || lastClient.address || '';
+      if (!clientAddressInput.value.trim() && matchedClientFromAddress) {
+        clientAddressInput.value = matchedClientFromAddress;
+      }
 
       populateLaborRowsFromEntries(filtered);
 
