@@ -1289,6 +1289,61 @@
       localStorage.setItem('addressHistory', JSON.stringify(addressHistory));
     }
 
+    function saveInvoiceSession() {
+      const items = collectInvoiceItems();
+      const session = {
+        invoiceId:        document.getElementById('invoiceId').value,
+        clientName:       document.getElementById('clientName').value,
+        clientPhone:      document.getElementById('clientPhone').value,
+        clientEmail:      document.getElementById('clientEmail').value,
+        clientAddress:    document.getElementById('clientAddress').value,
+        hourlyRate:       document.getElementById('hourlyRate').value,
+        overtimeRate:     document.getElementById('overtimeRate').value,
+        hstRate:          document.getElementById('hstRate').value,
+        laborDescription: document.getElementById('laborDescription').value,
+        selectedEntryIds: getSelectedInvoiceEntryIds(),
+        items
+      };
+      localStorage.setItem('invoiceSession', JSON.stringify(session));
+    }
+
+    function loadInvoiceSession() {
+      const raw = localStorage.getItem('invoiceSession');
+      if (!raw) return;
+      try {
+        const s = JSON.parse(raw);
+        if (s.invoiceId)        document.getElementById('invoiceId').value        = s.invoiceId;
+        if (s.clientName)       document.getElementById('clientName').value       = s.clientName;
+        if (s.clientPhone)      document.getElementById('clientPhone').value      = s.clientPhone;
+        if (s.clientEmail)      document.getElementById('clientEmail').value      = s.clientEmail;
+        if (s.clientAddress)    document.getElementById('clientAddress').value    = s.clientAddress;
+        if (s.hourlyRate)       document.getElementById('hourlyRate').value       = s.hourlyRate;
+        if (s.overtimeRate)     document.getElementById('overtimeRate').value     = s.overtimeRate;
+        if (s.hstRate)          document.getElementById('hstRate').value          = s.hstRate;
+        if (s.laborDescription) document.getElementById('laborDescription').value = s.laborDescription;
+
+        if (Array.isArray(s.items) && s.items.length) {
+          const tbody = document.querySelector('#itemsTable tbody');
+          tbody.innerHTML = '';
+          s.items.forEach(item => {
+            createItemRow(item);
+            const row = tbody.lastElementChild;
+            if (item.type) row.dataset.type = item.type;
+          });
+        }
+
+        // Re-check the previously selected entries
+        if (Array.isArray(s.selectedEntryIds) && s.selectedEntryIds.length) {
+          renderInvoiceEntrySelector(s.selectedEntryIds);
+        }
+
+        updateInvoiceSummary();
+        updateInvoiceRunningTotal();
+      } catch(e) {
+        console.warn('Could not restore invoice session:', e);
+      }
+    }
+
     function loadData() {
       const saved = localStorage.getItem('timesheetData');
       if (saved) {
@@ -1305,6 +1360,7 @@
 
       renderTable();
       refreshArchiveList();
+      loadInvoiceSession();
     }
 
     function getTodayDateString() {
@@ -1785,6 +1841,7 @@
       function recalc() {
         amountCell.textContent = `$${formatMoney((+qty.value || 0) * (+customerPrice.value || 0))}`;
         updateInvoiceRunningTotal();
+        saveInvoiceSession();
       }
 
       desc.addEventListener('input', () => {
@@ -2370,6 +2427,7 @@
           }
           populateInvoiceFromEntries();
           updateInvoiceSummary();
+          saveInvoiceSession();
         });
       });
     }
@@ -2429,6 +2487,7 @@
 
     function clearInvoice(skipConfirm = false) {
       if (!skipConfirm && !confirm('Clear all invoice data? Any unsaved changes will be lost.')) return;
+      localStorage.removeItem('invoiceSession');
       document.getElementById('invoiceId').value = '';
       document.getElementById('clientName').value = '';
       document.getElementById('clientPhone').value = '';
@@ -3031,6 +3090,7 @@
     };
 
     document.getElementById('newInvoiceDraft').onclick = () => {
+      localStorage.removeItem('invoiceSession');
       document.getElementById('invoiceId').value = '';
       document.getElementById('clientName').value = '';
       document.getElementById('clientPhone').value = '';
@@ -3045,11 +3105,16 @@
       updateInvoiceRunningTotal();
     };
 
-    document.getElementById('hstRate').addEventListener('input', updateInvoiceRunningTotal);
+    document.getElementById('hstRate').addEventListener('input', () => { updateInvoiceRunningTotal(); saveInvoiceSession(); });
 
     document.getElementById('invoiceId').addEventListener('input', () => {
       renderInvoiceEntrySelector();
       updateInvoiceSummary();
+      saveInvoiceSession();
+    });
+
+    ['clientName','clientPhone','clientEmail','clientAddress','laborDescription'].forEach(id => {
+      document.getElementById(id).addEventListener('input', saveInvoiceSession);
     });
 
     document.getElementById('hourlyRate').addEventListener('input', () => {
@@ -3057,6 +3122,7 @@
       r.querySelector('.item-customer-price').value = formatMoney(document.getElementById('hourlyRate').value || 0);
       r.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
       populateInvoiceFromEntries();
+      saveInvoiceSession();
     });
 
     document.getElementById('overtimeRate').addEventListener('input', () => {
@@ -3066,6 +3132,7 @@
         otRow.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
       }
       populateInvoiceFromEntries();
+      saveInvoiceSession();
     });
 
     // Show sync hint when the user manually edits the labor description
