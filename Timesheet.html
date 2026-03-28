@@ -1302,6 +1302,16 @@
           ...e
         }));
       }
+
+      // Always start with a clean invoice form on page load —
+      // prevents browser autocomplete / cached values bleeding in
+      document.getElementById('invoiceId').value      = '';
+      document.getElementById('clientName').value     = '';
+      document.getElementById('clientPhone').value    = '';
+      document.getElementById('clientEmail').value    = '';
+      document.getElementById('clientAddress').value  = '';
+      document.getElementById('laborDescription').value = '';
+
       renderTable();
       refreshArchiveList();
     }
@@ -2661,6 +2671,8 @@
       }
     }
 
+    let _invoiceTabUserVisited = false;
+
     function setActiveTab(tabId) {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -2672,23 +2684,36 @@
 
       if (tabId === 'invoiceTab') {
         renderInvoiceEntrySelector();
-        populateInvoiceFromEntries();
-        updateInvoiceSummary();
 
-        // Auto-fill Invoice/Work Order from job name if the field is empty
-        const invoiceIdField = document.getElementById('invoiceId');
-        if (!invoiceIdField.value.trim()) {
-          const uniqueJobs = [...new Set(entries.map(e => (e.jobName || '').trim()).filter(Boolean))];
-          if (uniqueJobs.length === 1) {
-            invoiceIdField.value = uniqueJobs[0];
-          } else if (uniqueJobs.length > 1) {
-            // Use client name + first date if multiple jobs
-            const firstDate = entries.map(e => e.dateStr).filter(Boolean).sort()[0];
-            const clientName = document.getElementById('clientName').value.trim();
-            if (clientName) invoiceIdField.value = clientName + (firstDate ? '-' + firstDate : '');
+        // Only auto-populate if there's no invoice already in progress —
+        // if a draft is loaded or the user has started filling things in,
+        // just refresh the summary so their work isn't overwritten
+        const hasInvoiceInProgress = !!document.getElementById('invoiceId').value.trim()
+          || !!document.getElementById('clientName').value.trim();
+
+        if (!hasInvoiceInProgress) {
+          populateInvoiceFromEntries();
+        }
+
+        updateInvoiceSummary();
+        updateInvoiceRunningTotal();
+
+        // Auto-fill Invoice/Work Order from job name only when the user
+        // explicitly navigates to the tab (not on initial page load)
+        if (_invoiceTabUserVisited) {
+          const invoiceIdField = document.getElementById('invoiceId');
+          if (!invoiceIdField.value.trim()) {
+            const uniqueJobs = [...new Set(entries.map(e => (e.jobName || '').trim()).filter(Boolean))];
+            if (uniqueJobs.length === 1) {
+              invoiceIdField.value = uniqueJobs[0];
+            } else if (uniqueJobs.length > 1) {
+              const firstDate = entries.map(e => e.dateStr).filter(Boolean).sort()[0];
+              const clientName = document.getElementById('clientName').value.trim();
+              if (clientName) invoiceIdField.value = clientName + (firstDate ? '-' + firstDate : '');
+            }
+            renderInvoiceEntrySelector();
+            updateInvoiceSummary();
           }
-          renderInvoiceEntrySelector();
-          updateInvoiceSummary();
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2696,10 +2721,13 @@
     }
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+      btn.addEventListener('click', () => {
+        if (btn.dataset.tab === 'invoiceTab') _invoiceTabUserVisited = true;
+        setActiveTab(btn.dataset.tab);
+      });
     });
 
-    document.getElementById('goToInvoice').addEventListener('click', () => setActiveTab('invoiceTab'));
+    document.getElementById('goToInvoice').addEventListener('click', () => { _invoiceTabUserVisited = true; setActiveTab('invoiceTab'); });
     document.getElementById('toggleArchiveButton').addEventListener('click', () => toggleArchiveDrawer());
     document.getElementById('archiveDates').addEventListener('change', () => {
       loadArchiveDay();
