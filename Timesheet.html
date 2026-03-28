@@ -909,6 +909,23 @@
           </div>
           <small class="bi-muted">Leave blank to use a straight tee matching the main pipe size.</small>
         </label>
+        <label id="biGastiteFlexLengthWrap" class="bi-hidden">Flex Length:
+          <select id="biGastiteFlexLength">
+            <option value="">Select length</option>
+            <option value='12"'>12"</option>
+            <option value='24"'>24"</option>
+            <option value='36"'>36"</option>
+            <option value='48"'>48"</option>
+          </select>
+        </label>
+        <label id="biGasCopperSizeWrap" class="bi-hidden">Copper Tube Size:
+          <select id="biGasCopperSize">
+            <option value="">Select size</option>
+            <option value='1/2"'>1/2"</option>
+            <option value='5/8"'>5/8"</option>
+            <option value='3/4"'>3/4"</option>
+          </select>
+        </label>
       </div>
 
       <div class="bi-actions">
@@ -3958,7 +3975,13 @@
 
   <script>
   (function(){
-    const FITTINGS = ['Nipple','90 degree elbow','45 degree elbow','Tee','Union','Shut-off','Reducer','Cap','Plug','Coupling','Bushing','Flexconnector','Gastiite','Stand Off (Long)','Stand Off (Short)','Paint'];
+    const FITTING_GROUPS = [
+      { label: 'Black Iron', fittings: ['Nipple','90° Elbow','45° Elbow','Tee','Union','Reducer','Cap','Plug','Coupling','Bushing','Shut-off Indoor','Shut-off Outdoor'] },
+      { label: 'Gastite / CSST', fittings: ['Gastite Straight','Gastite Flange','Gastite Wall','Gastite Flex'] },
+      { label: 'Gas Copper', fittings: ['Gas Copper'] },
+      { label: 'Other', fittings: ['Stand Off (Long)','Stand Off (Short)','Paint'] }
+    ];
+    const FITTINGS = FITTING_GROUPS.flatMap(g => g.fittings);
     const STORAGE_KEY = 'blackIronMergedState';
     const HISTORY_KEY = 'blackIronMergedJobHistory';
     const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', 'lastBackupDate', STORAGE_KEY, HISTORY_KEY];
@@ -3979,6 +4002,10 @@
       tee1: document.getElementById('biTee1'),
       tee2: document.getElementById('biTee2'),
       tee3: document.getElementById('biTee3'),
+      gastiteFlexLengthWrap: document.getElementById('biGastiteFlexLengthWrap'),
+      gastiteFlexLength: document.getElementById('biGastiteFlexLength'),
+      gasCopperSizeWrap: document.getElementById('biGasCopperSizeWrap'),
+      gasCopperSize: document.getElementById('biGasCopperSize'),
       add: document.getElementById('biAddItem'),
       voice: document.getElementById('biVoiceBtn'),
       send: document.getElementById('biSendInvoice'),
@@ -4164,13 +4191,24 @@
     window.checkBackupReminder = checkBackupReminder;
 
     function renderFitButtons(){
-      els.fitGrid.innerHTML = FITTINGS.map(name => `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}" data-fit="${esc(name)}">${esc(name)}</button>`).join('\n');
+      els.fitGrid.innerHTML = FITTING_GROUPS.map(group => {
+        const header = `<div style="grid-column:1/-1;font-size:.72rem;font-weight:700;color:#ff6a30;text-transform:uppercase;letter-spacing:.06em;margin-top:.6rem;padding-bottom:.25rem;border-bottom:1px solid rgba(255,69,0,.2);">${esc(group.label)}</div>`;
+        const buttons = group.fittings.map(name =>
+          `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}" data-fit="${esc(name)}">${esc(name)}</button>`
+        ).join('\n');
+        return header + buttons;
+      }).join('\n');
     }
     function updateConditionalFields(){
       const f = state.selectedFitting;
       els.reducerWrap.classList.toggle('bi-hidden', f !== 'Reducer');
       els.nippleWrap.classList.toggle('bi-hidden', f !== 'Nipple');
       els.teeWrap.classList.toggle('bi-hidden', f !== 'Tee');
+      els.gastiteFlexLengthWrap.classList.toggle('bi-hidden', f !== 'Gastite Flex');
+      els.gasCopperSizeWrap.classList.toggle('bi-hidden', f !== 'Gas Copper');
+      // Hide pipe size selector for items that don't use black iron sizing
+      const hideOd = f === 'Gas Copper';
+      document.querySelector('label:has(#biOdSize)') && (document.querySelector('label:has(#biOdSize)').style.display = hideOd ? 'none' : '');
     }
     function buildSizeDetail(){
       if (state.selectedFitting === 'Nipple') {
@@ -4185,6 +4223,14 @@
         const vals = [els.tee1.value, els.tee2.value, els.tee3.value].filter(Boolean);
         return vals.length === 3 ? `${vals[0]}" x ${vals[1]}" x ${vals[2]}"` : `${els.od.value}" x ${els.od.value}" x ${els.od.value}"`;
       }
+      if (state.selectedFitting === 'Gastite Flex') {
+        if (!els.gastiteFlexLength.value) throw new Error('Select a flex connector length.');
+        return els.gastiteFlexLength.value;
+      }
+      if (state.selectedFitting === 'Gas Copper') {
+        if (!els.gasCopperSize.value) throw new Error('Select a copper tube size.');
+        return els.gasCopperSize.value;
+      }
       return '';
     }
     function formatInches(value){
@@ -4194,15 +4240,26 @@
     }
     function buildDisplay(item){
       if (item.fittingType === 'Pipe') return `${item.odSize}" Pipe, ${item.sizeDetail}, Qty: ${item.quantity}`;
+      if (item.fittingType === 'Tee' && item.sizeDetail && item.sizeDetail.includes(' x ')) return `${item.fittingType}, ${item.sizeDetail}, Qty: ${item.quantity}`;
+      if (item.fittingType === 'Gastite Flex') return `Gastite Flex Connector, ${item.odSize}", ${item.sizeDetail}, Qty: ${item.quantity}`;
+      if (item.fittingType === 'Gas Copper') return `Gas Copper Tube, ${item.sizeDetail}, Qty: ${item.quantity}`;
+      if (['Gastite Straight','Gastite Flange','Gastite Wall'].includes(item.fittingType)) return `${item.fittingType} Connector, ${item.odSize}", Qty: ${item.quantity}`;
+      if (['Shut-off Indoor','Shut-off Outdoor'].includes(item.fittingType)) return `${item.fittingType} Shut-off, ${item.odSize}", Qty: ${item.quantity}`;
       let extra = item.sizeDetail ? `, ${item.sizeDetail}` : '';
-      if (item.fittingType === 'Tee' && item.sizeDetail.includes(' x ')) return `${item.fittingType}, ${item.sizeDetail}, Qty: ${item.quantity}`;
       return `${item.fittingType}, ${item.odSize}"${extra}, Qty: ${item.quantity}`;
     }
     function buildInvoiceDescription(item){
       if (item.fittingType === 'Pipe') return `${item.odSize}" Black Iron Gas Pipe - ${item.sizeDetail}`;
-      if (item.fittingType === 'Tee' && item.sizeDetail.includes(' x ')) return `${item.sizeDetail} Black Iron Tee - Supply & Install`;
+      if (item.fittingType === 'Tee' && item.sizeDetail && item.sizeDetail.includes(' x ')) return `${item.sizeDetail} Black Iron Tee - Supply & Install`;
       if (item.fittingType === 'Reducer') return `${item.odSize}" Black Iron Reducing Fitting - ${item.sizeDetail}`;
       if (item.fittingType === 'Nipple') return `${item.odSize}" Black Iron Pipe Nipple - ${item.sizeDetail}`;
+      if (item.fittingType === 'Gastite Straight') return `${item.odSize}" Gastite Straight Connector - Supply & Install`;
+      if (item.fittingType === 'Gastite Flange') return `${item.odSize}" Gastite Flange Connector - Supply & Install`;
+      if (item.fittingType === 'Gastite Wall') return `${item.odSize}" Gastite Wall Connector - Supply & Install`;
+      if (item.fittingType === 'Gastite Flex') return `${item.odSize}" Gastite Flex Connector ${item.sizeDetail} - Supply & Install`;
+      if (item.fittingType === 'Gas Copper') return `${item.sizeDetail} Gas Copper Tube - Supply & Install`;
+      if (item.fittingType === 'Shut-off Indoor') return `${item.odSize}" Indoor Gas Shut-off Valve - Supply & Install`;
+      if (item.fittingType === 'Shut-off Outdoor') return `${item.odSize}" Outdoor Gas Shut-off Valve - Supply & Install`;
       if (item.sizeDetail) return `${item.odSize}" Black Iron ${item.fittingType} - ${item.sizeDetail}`;
       return `${item.odSize}" Black Iron ${item.fittingType} - Supply & Install`;
     }
