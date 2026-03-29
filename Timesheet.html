@@ -1115,16 +1115,19 @@
       return String(desc || '').trim().toLowerCase();
     }
 
-    function saveMaterialFromValues(values = {}) {
+    function saveMaterialFromValues(values = {}, markPriceUpdated = false) {
       const desc = String(values.desc || '').trim();
       if (!desc) return;
       const key = normalizeMaterialKey(desc);
+      const existing = materialCatalog[key] || {};
       materialCatalog[key] = {
         desc,
         unit: String(values.unit || 'ea').trim() || 'ea',
         distributorCost: +values.distributorCost || 0,
         markup: +values.markup || 0,
-        customerPrice: +values.customerPrice || 0
+        customerPrice: +values.customerPrice || 0,
+        priceAlertEnabled: existing.priceAlertEnabled !== false, // default true
+        priceLastUpdated: markPriceUpdated ? new Date().toISOString() : (existing.priceLastUpdated || null)
       };
       saveMaterialCatalog();
     }
@@ -1170,6 +1173,24 @@
       renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || '');
     }
 
+    function daysSince(isoDate) {
+      if (!isoDate) return null;
+      const diff = Date.now() - new Date(isoDate).getTime();
+      return Math.floor(diff / (1000 * 60 * 60 * 24));
+    }
+
+    function checkPriceAlerts() {
+      const overdue = Object.values(materialCatalog).filter(item => {
+        if (!item.priceAlertEnabled && item.priceAlertEnabled !== undefined) return false;
+        const days = daysSince(item.priceLastUpdated);
+        return days === null || days >= 30;
+      });
+      if (!overdue.length) return;
+      const names = overdue.slice(0, 5).map(i => `• ${i.desc}`).join('\n');
+      const extra = overdue.length > 5 ? `\n…and ${overdue.length - 5} more.` : '';
+      alert(`Price check reminder:\n\nThe following ${overdue.length} material${overdue.length > 1 ? 's have' : ' has'} not had a price update in 30+ days:\n\n${names}${extra}\n\nOpen Saved Materials to update.`);
+    }
+
     function renderSavedMaterialsList(filterText = '') {
       const wrap = document.getElementById('savedMaterialsList');
       if (!wrap) return;
@@ -1183,16 +1204,47 @@
         return;
       }
       items.forEach(item => {
+        const key = normalizeMaterialKey(item.desc);
+        const days = daysSince(item.priceLastUpdated);
+        const alertOn = item.priceAlertEnabled !== false;
+        const overdue = alertOn && (days === null || days >= 30);
+        const daysLabel = days === null ? 'Never updated' : days === 0 ? 'Updated today' : `Updated ${days}d ago`;
+        const daysColor = overdue ? '#ff9f9f' : days !== null && days < 14 ? '#7CFF9B' : '#ffd86a';
+
         const row = document.createElement('div');
         row.className = 'saved-material-row';
+        row.style.cssText = overdue ? 'border-color:rgba(255,80,80,.45);' : '';
         row.innerHTML = `
           <div class="saved-material-main">
             <div class="saved-material-name">${item.desc}</div>
             <div class="saved-material-meta">Unit: ${item.unit || 'ea'} · Cost: $${formatMoney(item.distributorCost || 0)} · Sell: $${formatMoney(item.customerPrice || 0)}</div>
+            <div style="display:flex;align-items:center;gap:.6rem;margin-top:.35rem;flex-wrap:wrap;">
+              <span style="font-size:.78rem;color:${daysColor};">${daysLabel}</span>
+              <button type="button" class="mini-btn sml-mark-updated" style="padding:.25rem .55rem;font-size:.75rem;min-height:auto;background:#28a745;">✓ Mark Updated</button>
+              <label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer;margin:0;">
+                <input type="checkbox" class="sml-alert-toggle" ${alertOn ? 'checked' : ''} style="width:auto;min-height:auto;margin:0;accent-color:#ff4500;">
+                <span style="color:#bbb;">Price alerts</span>
+              </label>
+            </div>
           </div>
-          <button type="button" class="mini-btn" style="background:#dc3545;">Delete</button>
+          <button type="button" class="mini-btn sml-delete" style="background:#dc3545;align-self:flex-start;">Delete</button>
         `;
-        row.querySelector('button').addEventListener('click', () => deleteSavedMaterial(item.desc));
+
+        row.querySelector('.sml-mark-updated').addEventListener('click', () => {
+          if (materialCatalog[key]) {
+            materialCatalog[key].priceLastUpdated = new Date().toISOString();
+            saveMaterialCatalog();
+            renderSavedMaterialsList(filterText);
+          }
+        });
+        row.querySelector('.sml-alert-toggle').addEventListener('change', function() {
+          if (materialCatalog[key]) {
+            materialCatalog[key].priceAlertEnabled = this.checked;
+            saveMaterialCatalog();
+            renderSavedMaterialsList(filterText);
+          }
+        });
+        row.querySelector('.sml-delete').addEventListener('click', () => deleteSavedMaterial(item.desc));
         wrap.appendChild(row);
       });
     }
@@ -1844,7 +1896,7 @@
         recalc();
       }
 
-      function saveCurrentMaterial() {
+      function saveCurrentMaterial(markPriceUpdated = false) {
         if ((tr.dataset.type || '').startsWith('labor-')) return;
         saveMaterialFromValues({
           desc: desc.value,
@@ -1852,7 +1904,7 @@
           distributorCost: distributorCost.value,
           markup: markup.value,
           customerPrice: customerPrice.value
-        });
+        }, markPriceUpdated);
       }
 
       function recalc() {
@@ -1916,9 +1968,9 @@
         markup.value = formatMoney(markupFromCostAndPrice(distributorCost.value, customerPrice.value));
         recalc();
       });
-      distributorCost.addEventListener('blur', saveCurrentMaterial);
+      distributorCost.addEventListener('blur', () => saveCurrentMaterial(true));
       markup.addEventListener('blur', saveCurrentMaterial);
-      customerPrice.addEventListener('blur', saveCurrentMaterial);
+      customerPrice.addEventListener('blur', () => saveCurrentMaterial(true));
       [distributorCost, markup, customerPrice].forEach(input => {
         input.addEventListener('focus', () => setTimeout(() => input.select(), 0));
         input.addEventListener('mouseup', (e) => e.preventDefault());
@@ -3971,15 +4023,19 @@
     populateInvoiceFromEntries();
     updateInvoiceSummary();
     refreshInvoiceDraftList();
+    // Check for overdue price alerts after a brief delay
+    setTimeout(checkPriceAlerts, 1200);
   </script>
 
   <script>
   (function(){
     const FITTING_GROUPS = [
-      { label: 'Black Iron', fittings: ['Nipple','90° Elbow','45° Elbow','Tee','Union','Reducer','Cap','Plug','Coupling','Bushing','Shut-off Indoor','Shut-off Outdoor'] },
-      { label: 'Gastite / CSST', fittings: ['Gastite Straight','Gastite Flange','Gastite Wall','Gastite Flex'] },
+      { label: 'Black Iron — Fittings', fittings: ['Nipple','Close Nipple','90° Elbow','Street 90° Elbow','45° Elbow','Street 45° Elbow','Tee','Wye','Union','Reducer','Coupling','Bushing','Cap','Plug'] },
+      { label: 'Black Iron — Valves & Hardware', fittings: ['Shut-off Indoor','Shut-off Outdoor','Drip Leg / Sediment Trap','Stand Off (Long)','Stand Off (Short)','Paint'] },
+      { label: 'Gastite / CSST', fittings: ['Gastite Straight','Gastite Flange','Gastite Wall','Gastite Bonding Clamp'] },
+      { label: 'Flex Connectors (one tap)', fittings: ['Flex Connector 12"','Flex Connector 24"','Flex Connector 36"','Flex Connector 48"','Commercial Flex 3/4 48"'] },
       { label: 'Gas Copper', fittings: ['Gas Copper'] },
-      { label: 'Other', fittings: ['Stand Off (Long)','Stand Off (Short)','Paint'] }
+      { label: 'Appliance Connectors (one tap)', fittings: ['Appliance Connector 12"','Appliance Connector 24"','Appliance Connector 36"','Appliance Connector 48"','Appliance Connector 60"'] },
     ];
     const FITTINGS = FITTING_GROUPS.flatMap(g => g.fittings);
     const STORAGE_KEY = 'blackIronMergedState';
@@ -4204,33 +4260,37 @@
       els.reducerWrap.classList.toggle('bi-hidden', f !== 'Reducer');
       els.nippleWrap.classList.toggle('bi-hidden', f !== 'Nipple');
       els.teeWrap.classList.toggle('bi-hidden', f !== 'Tee');
-      els.gastiteFlexLengthWrap.classList.toggle('bi-hidden', f !== 'Gastite Flex');
+      // Gastite Flex dropdown replaced by direct buttons — always hide
+      els.gastiteFlexLengthWrap.classList.add('bi-hidden');
+      // Gas Copper still uses dropdown
       els.gasCopperSizeWrap.classList.toggle('bi-hidden', f !== 'Gas Copper');
-      // Hide pipe size selector for items that don't use black iron sizing
-      const hideOd = f === 'Gas Copper';
-      document.querySelector('label:has(#biOdSize)') && (document.querySelector('label:has(#biOdSize)').style.display = hideOd ? 'none' : '');
+      // Hide pipe size for items that don't use black iron sizing
+      const hideOd = f === 'Gas Copper' || f.startsWith('Flex Connector') || f.startsWith('Commercial Flex') || f.startsWith('Appliance Connector') || f === 'Gastite Bonding Clamp';
+      const odLabel = document.querySelector('label:has(#biOdSize)');
+      if (odLabel) odLabel.style.display = hideOd ? 'none' : '';
     }
     function buildSizeDetail(){
-      if (state.selectedFitting === 'Nipple') {
+      const f = state.selectedFitting;
+      if (f === 'Nipple') {
         if (!els.nipple.value) throw new Error('Select a nipple length.');
         return `${els.nipple.value}"`;
       }
-      if (state.selectedFitting === 'Reducer') {
+      if (f === 'Reducer') {
         if (!els.reducer.value) throw new Error('Select the reducer size.');
         return `Reduced to ${els.reducer.value}"`;
       }
-      if (state.selectedFitting === 'Tee') {
+      if (f === 'Tee') {
         const vals = [els.tee1.value, els.tee2.value, els.tee3.value].filter(Boolean);
         return vals.length === 3 ? `${vals[0]}" x ${vals[1]}" x ${vals[2]}"` : `${els.od.value}" x ${els.od.value}" x ${els.od.value}"`;
       }
-      if (state.selectedFitting === 'Gastite Flex') {
-        if (!els.gastiteFlexLength.value) throw new Error('Select a flex connector length.');
-        return els.gastiteFlexLength.value;
-      }
-      if (state.selectedFitting === 'Gas Copper') {
+      if (f === 'Gas Copper') {
         if (!els.gasCopperSize.value) throw new Error('Select a copper tube size.');
         return els.gasCopperSize.value;
       }
+      // One-tap fittings — size/length is encoded in the fitting type name
+      if (f.startsWith('Flex Connector '))       return f.replace('Flex Connector ', '');
+      if (f === 'Commercial Flex 3/4 48"')        return '3/4" x 48"';
+      if (f.startsWith('Appliance Connector '))   return f.replace('Appliance Connector ', '');
       return '';
     }
     function formatInches(value){
@@ -4239,29 +4299,47 @@
       return Number.isInteger(num) ? String(num) : num.toFixed(3).replace(/0+$/,'').replace(/\.$/,'');
     }
     function buildDisplay(item){
-      if (item.fittingType === 'Pipe') return `${item.odSize}" Pipe, ${item.sizeDetail}, Qty: ${item.quantity}`;
-      if (item.fittingType === 'Tee' && item.sizeDetail && item.sizeDetail.includes(' x ')) return `${item.fittingType}, ${item.sizeDetail}, Qty: ${item.quantity}`;
-      if (item.fittingType === 'Gastite Flex') return `Gastite Flex Connector, ${item.odSize}", ${item.sizeDetail}, Qty: ${item.quantity}`;
-      if (item.fittingType === 'Gas Copper') return `Gas Copper Tube, ${item.sizeDetail}, Qty: ${item.quantity}`;
-      if (['Gastite Straight','Gastite Flange','Gastite Wall'].includes(item.fittingType)) return `${item.fittingType} Connector, ${item.odSize}", Qty: ${item.quantity}`;
-      if (['Shut-off Indoor','Shut-off Outdoor'].includes(item.fittingType)) return `${item.fittingType} Shut-off, ${item.odSize}", Qty: ${item.quantity}`;
-      let extra = item.sizeDetail ? `, ${item.sizeDetail}` : '';
-      return `${item.fittingType}, ${item.odSize}"${extra}, Qty: ${item.quantity}`;
+      const f = item.fittingType;
+      if (f === 'Pipe')                           return `${item.odSize}" Pipe, ${item.sizeDetail}, Qty: ${item.quantity}`;
+      if (f === 'Tee' && item.sizeDetail?.includes(' x ')) return `Tee, ${item.sizeDetail}, Qty: ${item.quantity}`;
+      if (f === 'Close Nipple')                   return `${item.odSize}" Close Nipple, Qty: ${item.quantity}`;
+      if (f === 'Street 90° Elbow')               return `${item.odSize}" Street 90° Elbow, Qty: ${item.quantity}`;
+      if (f === 'Street 45° Elbow')               return `${item.odSize}" Street 45° Elbow, Qty: ${item.quantity}`;
+      if (f === 'Wye')                            return `${item.odSize}" Wye, Qty: ${item.quantity}`;
+      if (f === 'Drip Leg / Sediment Trap')       return `${item.odSize}" Drip Leg, Qty: ${item.quantity}`;
+      if (['Gastite Straight','Gastite Flange','Gastite Wall'].includes(f)) return `${f} Connector, ${item.odSize}", Qty: ${item.quantity}`;
+      if (f === 'Gastite Bonding Clamp')          return `Gastite Bonding Clamp, Qty: ${item.quantity}`;
+      if (f.startsWith('Flex Connector '))        return `Flex Connector ${item.sizeDetail}, ${item.odSize}", Qty: ${item.quantity}`;
+      if (f === 'Commercial Flex 3/4 48"')        return `Commercial Flex Connector 3/4" x 48", Qty: ${item.quantity}`;
+      if (f === 'Gas Copper')                     return `Gas Copper Tube, ${item.sizeDetail}, Qty: ${item.quantity}`;
+      if (f.startsWith('Appliance Connector '))   return `Appliance Connector ${item.sizeDetail}, ${item.odSize}", Qty: ${item.quantity}`;
+      if (['Shut-off Indoor','Shut-off Outdoor'].includes(f)) return `${f} Shut-off, ${item.odSize}", Qty: ${item.quantity}`;
+      const extra = item.sizeDetail ? `, ${item.sizeDetail}` : '';
+      return `${f}, ${item.odSize}"${extra}, Qty: ${item.quantity}`;
     }
     function buildInvoiceDescription(item){
-      if (item.fittingType === 'Pipe') return `${item.odSize}" Black Iron Gas Pipe - ${item.sizeDetail}`;
-      if (item.fittingType === 'Tee' && item.sizeDetail && item.sizeDetail.includes(' x ')) return `${item.sizeDetail} Black Iron Tee - Supply & Install`;
-      if (item.fittingType === 'Reducer') return `${item.odSize}" Black Iron Reducing Fitting - ${item.sizeDetail}`;
-      if (item.fittingType === 'Nipple') return `${item.odSize}" Black Iron Pipe Nipple - ${item.sizeDetail}`;
-      if (item.fittingType === 'Gastite Straight') return `${item.odSize}" Gastite Straight Connector - Supply & Install`;
-      if (item.fittingType === 'Gastite Flange') return `${item.odSize}" Gastite Flange Connector - Supply & Install`;
-      if (item.fittingType === 'Gastite Wall') return `${item.odSize}" Gastite Wall Connector - Supply & Install`;
-      if (item.fittingType === 'Gastite Flex') return `${item.odSize}" Gastite Flex Connector ${item.sizeDetail} - Supply & Install`;
-      if (item.fittingType === 'Gas Copper') return `${item.sizeDetail} Gas Copper Tube - Supply & Install`;
-      if (item.fittingType === 'Shut-off Indoor') return `${item.odSize}" Indoor Gas Shut-off Valve - Supply & Install`;
-      if (item.fittingType === 'Shut-off Outdoor') return `${item.odSize}" Outdoor Gas Shut-off Valve - Supply & Install`;
-      if (item.sizeDetail) return `${item.odSize}" Black Iron ${item.fittingType} - ${item.sizeDetail}`;
-      return `${item.odSize}" Black Iron ${item.fittingType} - Supply & Install`;
+      const f = item.fittingType;
+      if (f === 'Pipe')                           return `${item.odSize}" Black Iron Gas Pipe - ${item.sizeDetail}`;
+      if (f === 'Tee' && item.sizeDetail?.includes(' x ')) return `${item.sizeDetail} Black Iron Tee - Supply & Install`;
+      if (f === 'Reducer')                        return `${item.odSize}" Black Iron Reducing Fitting - ${item.sizeDetail}`;
+      if (f === 'Nipple')                         return `${item.odSize}" Black Iron Pipe Nipple - ${item.sizeDetail}`;
+      if (f === 'Close Nipple')                   return `${item.odSize}" Black Iron Close Nipple - Supply & Install`;
+      if (f === 'Street 90° Elbow')               return `${item.odSize}" Black Iron Street 90° Elbow - Supply & Install`;
+      if (f === 'Street 45° Elbow')               return `${item.odSize}" Black Iron Street 45° Elbow - Supply & Install`;
+      if (f === 'Wye')                            return `${item.odSize}" Black Iron Wye - Supply & Install`;
+      if (f === 'Drip Leg / Sediment Trap')       return `${item.odSize}" Drip Leg / Sediment Trap - Supply & Install`;
+      if (f === 'Gastite Straight')               return `${item.odSize}" Gastite Straight Connector - Supply & Install`;
+      if (f === 'Gastite Flange')                 return `${item.odSize}" Gastite Flange Connector - Supply & Install`;
+      if (f === 'Gastite Wall')                   return `${item.odSize}" Gastite Wall Connector - Supply & Install`;
+      if (f === 'Gastite Bonding Clamp')          return `Gastite / CSST Bonding Clamp - Supply & Install`;
+      if (f.startsWith('Flex Connector '))        return `${item.odSize}" Flexible Gas Connector ${item.sizeDetail} - Supply & Install`;
+      if (f === 'Commercial Flex 3/4 48"')        return `3/4" Commercial Flexible Gas Connector 48" - Supply & Install`;
+      if (f === 'Gas Copper')                     return `${item.sizeDetail} Gas Copper Tube - Supply & Install`;
+      if (f.startsWith('Appliance Connector '))   return `${item.odSize}" Appliance Flexible Gas Connector ${item.sizeDetail} - Supply & Install`;
+      if (f === 'Shut-off Indoor')                return `${item.odSize}" Indoor Gas Shut-off Valve - Supply & Install`;
+      if (f === 'Shut-off Outdoor')               return `${item.odSize}" Outdoor Gas Shut-off Valve - Supply & Install`;
+      if (item.sizeDetail)                        return `${item.odSize}" Black Iron ${f} - ${item.sizeDetail}`;
+      return `${item.odSize}" Black Iron ${f} - Supply & Install`;
     }
     function getGroupKey(item){
       return JSON.stringify([item.fittingType, item.odSize, item.sizeDetail || '']);
@@ -5118,8 +5196,39 @@ document.addEventListener("DOMContentLoaded",function(){
       document.getElementById('generateBossCopySticky').addEventListener('click', () => document.getElementById('generateBossCopy').click());
     }
     if (biBar) {
-      document.getElementById('biAddItemSticky').addEventListener('click', () => document.getElementById('biAddItem').click());
-      document.getElementById('biSendInvoiceSticky').addEventListener('click', () => document.getElementById('biSendInvoice').click());
+      const stickyOd  = document.getElementById('biOdSizeSticky');
+      const stickyQty = document.getElementById('biQtySticky');
+      const mainOd    = document.getElementById('biOdSize');
+      const mainQty   = document.getElementById('biQty');
+
+      function syncStickyFromMain() {
+        if (mainOd  && stickyOd)  stickyOd.value  = mainOd.value;
+        if (mainQty && stickyQty) stickyQty.value = mainQty.value;
+      }
+      function syncMainFromSticky() {
+        if (mainOd  && stickyOd)  { mainOd.value  = stickyOd.value;  mainOd.dispatchEvent(new Event('change')); }
+        if (mainQty && stickyQty)   mainQty.value = stickyQty.value;
+      }
+
+      if (stickyOd)  stickyOd.addEventListener('change', syncMainFromSticky);
+      if (stickyQty) stickyQty.addEventListener('input',  syncMainFromSticky);
+      if (mainOd)    mainOd.addEventListener('change',    syncStickyFromMain);
+      if (mainQty)   mainQty.addEventListener('input',    syncStickyFromMain);
+
+      document.getElementById('biAddItemSticky').addEventListener('click', () => {
+        syncMainFromSticky();
+        document.getElementById('biAddItem').click();
+        setTimeout(syncStickyFromMain, 80);
+      });
+      document.getElementById('biSendInvoiceSticky').addEventListener('click', () =>
+        document.getElementById('biSendInvoice').click());
+
+      // Sync when bar becomes visible
+      const _origUpdateBiBar = updateBiBar;
+      updateBiBar = function() {
+        _origUpdateBiBar();
+        if (isTabActive('blackIronTab')) syncStickyFromMain();
+      };
     }
   });
 
@@ -5149,6 +5258,17 @@ document.addEventListener("DOMContentLoaded",function(){
   <!-- Black Iron sticky bar: always visible on that tab -->
   <div id="biStickyBar" class="sticky-action-bar hidden">
     <span class="sab-label">Black Iron:</span>
+    <select id="biOdSizeSticky" style="background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;padding:.35rem .5rem;font-size:.88rem;min-height:38px;width:80px;">
+      <option value="3/8">3/8"</option>
+      <option value="1/2" selected>1/2"</option>
+      <option value="3/4">3/4"</option>
+      <option value="1">1"</option>
+      <option value="1 1/4">1 1/4"</option>
+      <option value="1 1/2">1 1/2"</option>
+      <option value="2">2"</option>
+      <option value="2 1/2">2 1/2"</option>
+    </select>
+    <input type="number" id="biQtySticky" min="1" value="1" style="background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;padding:.35rem .5rem;font-size:.88rem;min-height:38px;width:54px;text-align:center;">
     <button type="button" id="biAddItemSticky">+ Add Item</button>
     <button type="button" id="biSendInvoiceSticky" style="background:#28a745;">Send All To Invoice</button>
   </div>
