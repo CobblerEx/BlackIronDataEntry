@@ -926,6 +926,18 @@
             <option value='3/4"'>3/4"</option>
           </select>
         </label>
+        <label id="biGastitePipeSizeWrap" class="bi-hidden">Gastite Pipe Size:
+          <select id="biGastitePipeSize">
+            <option value="">Select size</option>
+            <option value='3/8"'>3/8"</option>
+            <option value='1/2"'>1/2"</option>
+            <option value='3/4"'>3/4"</option>
+            <option value='1"'>1"</option>
+            <option value='1-1/4"'>1-1/4"</option>
+            <option value='1-1/2"'>1-1/2"</option>
+            <option value='2"'>2"</option>
+          </select>
+        </label>
       </div>
 
       <div class="bi-actions">
@@ -4032,7 +4044,7 @@
     const FITTING_GROUPS = [
       { label: 'Black Iron — Fittings', fittings: ['Nipple','Close Nipple','90° Elbow','Street 90° Elbow','45° Elbow','Street 45° Elbow','Tee','Wye','Union','Reducer','Coupling','Bushing','Cap','Plug'] },
       { label: 'Black Iron — Valves & Hardware', fittings: ['Shut-off Indoor','Shut-off Outdoor','Drip Leg / Sediment Trap','Stand Off (Long)','Stand Off (Short)','Paint'] },
-      { label: 'Gastite / CSST', fittings: ['Gastite Straight','Gastite Flange','Gastite Wall','Gastite Bonding Clamp'] },
+      { label: 'Gastite / CSST', fittings: ['Gastite Pipe','Gastite Straight','Gastite Flange','Gastite Wall','Gastite Bonding Clamp'] },
       { label: 'Flex Connectors (one tap)', fittings: ['Flex Connector 12"','Flex Connector 24"','Flex Connector 36"','Flex Connector 48"','Commercial Flex 3/4 48"'] },
       { label: 'Gas Copper', fittings: ['Gas Copper'] },
       { label: 'Appliance Connectors (one tap)', fittings: ['Appliance Connector 12"','Appliance Connector 24"','Appliance Connector 36"','Appliance Connector 48"','Appliance Connector 60"'] },
@@ -4062,6 +4074,8 @@
       gastiteFlexLength: document.getElementById('biGastiteFlexLength'),
       gasCopperSizeWrap: document.getElementById('biGasCopperSizeWrap'),
       gasCopperSize: document.getElementById('biGasCopperSize'),
+      gastitePipeSizeWrap: document.getElementById('biGastitePipeSizeWrap'),
+      gastitePipeSize: document.getElementById('biGastitePipeSize'),
       add: document.getElementById('biAddItem'),
       voice: document.getElementById('biVoiceBtn'),
       send: document.getElementById('biSendInvoice'),
@@ -4260,12 +4274,12 @@
       els.reducerWrap.classList.toggle('bi-hidden', f !== 'Reducer');
       els.nippleWrap.classList.toggle('bi-hidden', f !== 'Nipple');
       els.teeWrap.classList.toggle('bi-hidden', f !== 'Tee');
-      // Gastite Flex dropdown replaced by direct buttons — always hide
-      els.gastiteFlexLengthWrap.classList.add('bi-hidden');
+      // Gastite Pipe uses its own size dropdown
+      els.gastitePipeSizeWrap.classList.toggle('bi-hidden', f !== 'Gastite Pipe');
       // Gas Copper still uses dropdown
       els.gasCopperSizeWrap.classList.toggle('bi-hidden', f !== 'Gas Copper');
       // Hide pipe size for items that don't use black iron sizing
-      const hideOd = f === 'Gas Copper' || f.startsWith('Flex Connector') || f.startsWith('Commercial Flex') || f.startsWith('Appliance Connector') || f === 'Gastite Bonding Clamp';
+      const hideOd = f === 'Gas Copper' || f === 'Gastite Pipe' || f.startsWith('Flex Connector') || f === 'Commercial Flex 3/4 48"' || f.startsWith('Appliance Connector') || f === 'Gastite Bonding Clamp';
       const odLabel = document.querySelector('label:has(#biOdSize)');
       if (odLabel) odLabel.style.display = hideOd ? 'none' : '';
     }
@@ -4286,6 +4300,10 @@
       if (f === 'Gas Copper') {
         if (!els.gasCopperSize.value) throw new Error('Select a copper tube size.');
         return els.gasCopperSize.value;
+      }
+      if (f === 'Gastite Pipe') {
+        if (!els.gastitePipeSize.value) throw new Error('Select a Gastite pipe size.');
+        return els.gastitePipeSize.value;
       }
       // One-tap fittings — size/length is encoded in the fitting type name
       if (f.startsWith('Flex Connector '))       return f.replace('Flex Connector ', '');
@@ -4308,6 +4326,7 @@
       if (f === 'Wye')                            return `${item.odSize}" Wye, Qty: ${item.quantity}`;
       if (f === 'Drip Leg / Sediment Trap')       return `${item.odSize}" Drip Leg, Qty: ${item.quantity}`;
       if (['Gastite Straight','Gastite Flange','Gastite Wall'].includes(f)) return `${f} Connector, ${item.odSize}", Qty: ${item.quantity}`;
+      if (f === 'Gastite Pipe')                   return `Gastite CSST Pipe, ${item.sizeDetail}, Qty: ${item.quantity}`;
       if (f === 'Gastite Bonding Clamp')          return `Gastite Bonding Clamp, Qty: ${item.quantity}`;
       if (f.startsWith('Flex Connector '))        return `Flex Connector ${item.sizeDetail}, ${item.odSize}", Qty: ${item.quantity}`;
       if (f === 'Commercial Flex 3/4 48"')        return `Commercial Flex Connector 3/4" x 48", Qty: ${item.quantity}`;
@@ -4329,6 +4348,7 @@
       if (f === 'Wye')                            return `${item.odSize}" Black Iron Wye - Supply & Install`;
       if (f === 'Drip Leg / Sediment Trap')       return `${item.odSize}" Drip Leg / Sediment Trap - Supply & Install`;
       if (f === 'Gastite Straight')               return `${item.odSize}" Gastite Straight Connector - Supply & Install`;
+      if (f === 'Gastite Pipe')                   return `${item.sizeDetail} Gastite CSST Gas Pipe - Supply & Install`;
       if (f === 'Gastite Flange')                 return `${item.odSize}" Gastite Flange Connector - Supply & Install`;
       if (f === 'Gastite Wall')                   return `${item.odSize}" Gastite Wall Connector - Supply & Install`;
       if (f === 'Gastite Bonding Clamp')          return `Gastite / CSST Bonding Clamp - Supply & Install`;
