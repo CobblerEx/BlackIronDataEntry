@@ -143,6 +143,27 @@
       opacity:0;
       pointer-events:none;
     }
+
+    #priceAlertBanner {
+      position:fixed;
+      top:0;left:0;right:0;
+      z-index:600;
+      background:#8b3a00;
+      color:#fff;
+      padding:.65rem 1rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:.75rem;
+      flex-wrap:wrap;
+      font-size:.9rem;
+      box-shadow:0 2px 10px rgba(0,0,0,.4);
+      transform:translateY(-110%);
+      transition:transform .3s ease;
+    }
+    #priceAlertBanner.show { transform:translateY(0); }
+    #priceAlertBanner b { color:#ffcc88; }
+    #priceAlertBanner button { margin:0; padding:.35rem .8rem; font-size:.85rem; min-height:34px; }
     .sticky-action-bar .sab-label {
       font-size:.8rem;
       color:rgba(255,255,255,.45);
@@ -1189,9 +1210,25 @@
         return days === null || days >= 30;
       });
       if (!overdue.length) return;
-      const names = overdue.slice(0, 5).map(i => `• ${i.desc}`).join('\n');
-      const extra = overdue.length > 5 ? `\n…and ${overdue.length - 5} more.` : '';
-      alert(`Price check reminder:\n\nThe following ${overdue.length} material${overdue.length > 1 ? 's have' : ' has'} not had a price update in 30+ days:\n\n${names}${extra}\n\nOpen Saved Materials to update.`);
+
+      const banner = document.getElementById('priceAlertBanner');
+      const msg    = document.getElementById('priceAlertMsg');
+      const goTo   = document.getElementById('priceAlertGoTo');
+      const dismiss= document.getElementById('priceAlertDismiss');
+      if (!banner || !msg) return;
+
+      const count = overdue.length;
+      msg.innerHTML = `<b>Price check:</b> ${count} material${count > 1 ? 's have' : ' has'} not been updated in 30+ days.`;
+
+      banner.classList.add('show');
+
+      goTo.onclick = () => {
+        banner.classList.remove('show');
+        // Switch to invoice tab and open saved materials modal
+        setActiveTab('invoiceTab');
+        setTimeout(() => openSavedMaterialsModal(), 200);
+      };
+      dismiss.onclick = () => banner.classList.remove('show');
     }
 
     function renderSavedMaterialsList(filterText = '') {
@@ -2171,15 +2208,15 @@
       return `Performed ${jobList}${addrNote}. Completed diagnostics, adjustments, cleanup, and final system operation checks.`;
     }
 
-    function getLaborDescriptionFromTimesheet(filtered) {
-      const multipleDates = new Set(filtered.map(e => e.dateStr).filter(Boolean)).size > 1;
+    function getLaborDescriptionFromTimesheet(filtered, forceDates = false) {
+      const multipleDates = forceDates || new Set(filtered.map(e => e.dateStr).filter(Boolean)).size > 1;
       const lines = filtered
         .map(e => {
           const desc = (e.description || '').trim();
           const job = (e.jobName || '').trim();
           if (!desc && !job) return null;
           const detail = job && desc ? `${job}: ${desc}` : (desc || job);
-          return multipleDates && e.dateStr ? `${formatDate(e.dateStr)} — ${detail}` : detail;
+          return (multipleDates && e.dateStr) ? `${formatDate(e.dateStr)} — ${detail}` : detail;
         })
         .filter(Boolean);
 
@@ -2301,17 +2338,7 @@
       });
 
       // ── Hours ──────────────────────────────────────────────────────────────
-      // Sum hours from the NEW entries that are actually in memory.
-      let addedRegular  = 0;
-      let addedOvertime = 0;
-      addedEntries.forEach(e => {
-        const s = getHoursBreakdown(e);
-        addedRegular  += s.regular;
-        addedOvertime += s.overtime;
-      });
-
-      // For the EXISTING draft entries: prefer live data if still in memory,
-      // otherwise fall back to the hours that were saved in the draft's labor rows.
+      // Priority: live entries → saved regularHours field → items parsing (old drafts)
       let existingRegular  = 0;
       let existingOvertime = 0;
 
@@ -2321,14 +2348,26 @@
           existingRegular  += s.regular;
           existingOvertime += s.overtime;
         });
+      } else if (existingDraft.regularHours != null) {
+        // Reliably saved field (new drafts)
+        existingRegular  = +existingDraft.regularHours  || 0;
+        existingOvertime = +existingDraft.overtimeHours || 0;
       } else {
-        // Entries were archived — recover from saved draft labor items
+        // Fallback for old drafts that pre-date the regularHours field
         (existingDraft.items || []).forEach(item => {
           const t = item.type || '';
           if (t === 'regular-labor'  || t.includes('regular'))  existingRegular  += (+item.qty || 0);
           if (t === 'overtime-labor' || t.includes('overtime'))  existingOvertime += (+item.qty || 0);
         });
       }
+
+      let addedRegular  = 0;
+      let addedOvertime = 0;
+      addedEntries.forEach(e => {
+        const s = getHoursBreakdown(e);
+        addedRegular  += s.regular;
+        addedOvertime += s.overtime;
+      });
 
       const totalRegular  = existingRegular  + addedRegular;
       const totalOvertime = existingOvertime + addedOvertime;
@@ -2346,16 +2385,18 @@
       }
 
       // ── Description ────────────────────────────────────────────────────────
-      // Build description from live entries; fall back to what the draft saved
-      // when old entries are no longer in memory.
+      // Priority: live entries (with dates forced) → saved laborDescriptionDated → plain laborDescription
       const existingDescText = existingEntries.length > 0
-        ? getLaborDescriptionFromTimesheet(existingEntries)
-        : (existingDraft.laborDescription || '');
+        ? getLaborDescriptionFromTimesheet(existingEntries, true)
+        : (existingDraft.laborDescriptionDated || existingDraft.laborDescription || '');
 
-      const mergedDescription = mergeLaborDescriptions(
-        existingDescText,
-        getLaborDescriptionFromTimesheet(addedEntries)
-      ) || getLaborDescriptionFromTimesheet(mergedEntries) || existingDraft.laborDescription || '';
+      const addedDescText = getLaborDescriptionFromTimesheet(addedEntries, true);
+
+      const mergedDescription = mergeLaborDescriptions(existingDescText, addedDescText)
+        || getLaborDescriptionFromTimesheet(mergedEntries, true)
+        || existingDraft.laborDescriptionDated
+        || existingDraft.laborDescription
+        || '';
       document.getElementById('laborDescription').value = mergedDescription;
 
       const matchedClientFromAddress = fillClientProfileFromFilteredEntries(mergedEntries, false);
@@ -2661,6 +2702,18 @@
       rememberCurrentClient(true);
       rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(e.id))));
 
+      // Compute hours from the current table (already built by populateInvoiceFromDraftAppend or populateLaborRowsFromEntries)
+      const regularRow  = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
+      const overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+      const savedRegularHours  = regularRow  ? (+regularRow.querySelector('.item-qty').value  || 0) : 0;
+      const savedOvertimeHours = overtimeRow ? (+overtimeRow.querySelector('.item-qty').value || 0) : 0;
+
+      // Build a dated description from all linked entries so recovery always has dates
+      const allLinkedEntries = entries.filter(e => selectedIds.includes(e.id));
+      const savedLaborDescriptionDated = allLinkedEntries.length > 0
+        ? getLaborDescriptionFromTimesheet(allLinkedEntries, true)
+        : document.getElementById('laborDescription').value.trim();
+
       invoices[invoiceId] = {
         id: invoiceId,
         clientName: document.getElementById('clientName').value.trim(),
@@ -2671,6 +2724,9 @@
         overtimeRate: +document.getElementById('overtimeRate').value || 0,
         hstRate: +document.getElementById('hstRate').value || 0.13,
         laborDescription: document.getElementById('laborDescription').value.trim(),
+        laborDescriptionDated: savedLaborDescriptionDated,
+        regularHours: savedRegularHours,
+        overtimeHours: savedOvertimeHours,
         linkedEntryIds: selectedIds,
         items: collectInvoiceItems(),
         serviceDate,
@@ -2746,9 +2802,39 @@
         if (item.type) row.dataset.type = item.type;
       });
 
-      // Rebuild labor rows fresh from linked entries so hours are always correct
-      const linkedEntries = entries.filter(e => (inv.linkedEntryIds || []).includes(e.id));
-      populateLaborRowsFromEntries(linkedEntries);
+      // Rebuild labor rows from live entries → saved regularHours field → items parsing (old drafts)
+      const linkedEntries = entries.filter(e => (inv.linkedEntryIds || []).map(String).includes(String(e.id)));
+      if (linkedEntries.length > 0) {
+        populateLaborRowsFromEntries(linkedEntries);
+      } else {
+        clearLaborRows();
+        let savedRegular  = 0;
+        let savedOvertime = 0;
+
+        if (inv.regularHours != null) {
+          // Reliable saved field (new drafts)
+          savedRegular  = +inv.regularHours  || 0;
+          savedOvertime = +inv.overtimeHours || 0;
+        } else {
+          // Fallback for old drafts
+          (inv.items || []).forEach(item => {
+            const t = item.type || '';
+            if (t === 'regular-labor'  || t.includes('regular'))  savedRegular  += (+item.qty || 0);
+            if (t === 'overtime-labor' || t.includes('overtime'))  savedOvertime += (+item.qty || 0);
+          });
+        }
+
+        if (savedRegular > 0) {
+          const row = ensureRegularLaborRow();
+          row.querySelector('.item-qty').value = savedRegular.toFixed(2);
+          row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+        }
+        if (savedOvertime > 0) {
+          const row = ensureOvertimeLaborRow();
+          row.querySelector('.item-qty').value = savedOvertime.toFixed(2);
+          row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+        }
+      }
 
       updateInvoiceSummary();
       updateInvoiceRunningTotal();
@@ -3349,6 +3435,9 @@
         const invoiceIdForSave = document.getElementById('invoiceId').value.trim();
         if (invoiceIdForSave) {
           const selectedIds = getSelectedInvoiceEntryIds();
+          const rRow = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
+          const oRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
+          const pdfLinkedEntries = entries.filter(e => selectedIds.includes(e.id));
           invoices[invoiceIdForSave] = {
             ...(invoices[invoiceIdForSave] || {}),
             id: invoiceIdForSave,
@@ -3360,6 +3449,11 @@
             overtimeRate: +document.getElementById('overtimeRate').value || 0,
             hstRate: +document.getElementById('hstRate').value || 0.13,
             laborDescription: document.getElementById('laborDescription').value.trim(),
+            laborDescriptionDated: pdfLinkedEntries.length > 0
+              ? getLaborDescriptionFromTimesheet(pdfLinkedEntries, true)
+              : document.getElementById('laborDescription').value.trim(),
+            regularHours:  rRow ? (+rRow.querySelector('.item-qty').value  || 0) : 0,
+            overtimeHours: oRow ? (+oRow.querySelector('.item-qty').value || 0) : 0,
             linkedEntryIds: selectedIds,
             items: collectInvoiceItems(),
             status: invoices[invoiceIdForSave]?.status || 'draft',
@@ -5279,6 +5373,12 @@ document.addEventListener("DOMContentLoaded",function(){
     <input type="number" id="biQtySticky" min="1" value="1" style="background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;padding:.35rem .5rem;font-size:.88rem;min-height:38px;width:54px;text-align:center;">
     <button type="button" id="biAddItemSticky">+ Add Item</button>
     <button type="button" id="biSendInvoiceSticky" style="background:#28a745;">Send All To Invoice</button>
+  </div>
+  <!-- Price alert banner -->
+  <div id="priceAlertBanner">
+    <span id="priceAlertMsg"></span>
+    <button type="button" id="priceAlertGoTo" class="mini-btn" style="background:#ff4500;">Go To Saved Materials</button>
+    <button type="button" id="priceAlertDismiss" class="mini-btn" style="background:#555;">Dismiss</button>
   </div>
 
 </body>
