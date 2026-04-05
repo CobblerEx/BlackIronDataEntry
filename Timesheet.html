@@ -677,7 +677,7 @@
         <label>Client Phone: <input type="text" id="clientPhone" placeholder="Phone number"></label>
         <label>Client Email: <input type="email" id="clientEmail" placeholder="Email"></label>
         <label>Client Address: <input type="text" id="clientAddress" placeholder="Address"></label>
-        <label>Regular Rate ($): <input type="number" id="hourlyRate" min="0" step="0.01" value="175"></label>
+        <label>Regular Rate ($): <input type="number" id="hourlyRate" min="0" step="0.01" value="110"></label>
         <label>Overtime Rate ($): <input type="number" id="overtimeRate" min="0" step="0.01" value="175"></label>
         <label>HST Rate: <input type="number" id="hstRate" min="0" step="0.01" value="0.13"></label>
       </div>
@@ -719,7 +719,7 @@
         <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;width:100%;">
           <label style="display:flex;align-items:center;gap:.5rem;margin:0;font-size:.9rem;white-space:nowrap;">
             Default Service Charge ($):
-            <input type="number" id="defaultServiceCharge" min="0" step="1" value="175"
+            <input type="number" id="defaultServiceCharge" min="0" step="1" value="110"
               style="width:90px;padding:.4rem .5rem;font-size:.9rem;margin:0;">
           </label>
           <button type="button" id="applyServiceCharge" class="mini-btn" style="white-space:nowrap;">Apply to Invoice</button>
@@ -1411,6 +1411,7 @@
     function saveInvoiceSession() {
       const items = collectInvoiceItems();
       const session = {
+        _v: 2,
         invoiceId:        document.getElementById('invoiceId').value,
         clientName:       document.getElementById('clientName').value,
         clientPhone:      document.getElementById('clientPhone').value,
@@ -1431,6 +1432,11 @@
       if (!raw) return;
       try {
         const s = JSON.parse(raw);
+        // Version check — clear sessions saved before stale type filtering was added
+        if (!s._v || s._v < 2) {
+          localStorage.removeItem('invoiceSession');
+          return;
+        }
         if (s.invoiceId)        document.getElementById('invoiceId').value        = s.invoiceId;
         if (s.clientName)       document.getElementById('clientName').value       = s.clientName;
         if (s.clientPhone)      document.getElementById('clientPhone').value      = s.clientPhone;
@@ -1444,10 +1450,19 @@
         if (Array.isArray(s.items) && s.items.length) {
           const tbody = document.querySelector('#itemsTable tbody');
           tbody.innerHTML = '';
+          // Filter out any stale row types that are now auto-managed
+          const STALE_TYPES = ['overtime-service-charge', 'regular-labor', 'overtime-labor'];
           s.items.forEach(item => {
+            if (STALE_TYPES.includes(item.type || '')) return;
             createItemRow(item);
             const row = tbody.lastElementChild;
             if (item.type) row.dataset.type = item.type;
+            // Hide remove button on protected rows
+            const protectedTypes = ['service-charge'];
+            if (protectedTypes.includes(item.type || '')) {
+              const btn = row.querySelector('.remove-item');
+              if (btn) btn.style.display = 'none';
+            }
           });
         }
 
@@ -2066,7 +2081,7 @@
     }
 
     function getDefaultServiceCharge() {
-      return parseFloat(localStorage.getItem('defaultServiceCharge') || '175') || 175;
+      return parseFloat(localStorage.getItem('defaultServiceCharge') || '110') || 110;
     }
 
     function setDefaultServiceCharge(val) {
@@ -2222,6 +2237,14 @@
         const row = ensureOvertimeLaborRow();
         row.querySelector('.item-qty').value = totalOvertime.toFixed(2);
         row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      }
+
+      // Auto-switch service charge: $175 if any overtime, $110 (default) for regular calls
+      const scRow = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
+      if (scRow) {
+        const scRate = totalOvertime > 0 ? 175 : getDefaultServiceCharge();
+        scRow.querySelector('.item-customer-price').value = formatMoney(scRate);
+        scRow.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
       }
     }
 
@@ -2384,7 +2407,7 @@
       document.getElementById('clientPhone').value  = document.getElementById('clientPhone').value.trim()  || existingDraft.clientPhone  || '';
       document.getElementById('clientEmail').value  = document.getElementById('clientEmail').value.trim()  || existingDraft.clientEmail  || '';
       document.getElementById('clientAddress').value= document.getElementById('clientAddress').value.trim()|| existingDraft.clientAddress|| '';
-      document.getElementById('hourlyRate').value   = document.getElementById('hourlyRate').value   || (existingDraft.hourlyRate   ?? 175);
+      document.getElementById('hourlyRate').value   = document.getElementById('hourlyRate').value   || (existingDraft.hourlyRate   ?? 110);
       document.getElementById('overtimeRate').value = document.getElementById('overtimeRate').value || (existingDraft.overtimeRate ?? 175);
       document.getElementById('hstRate').value      = document.getElementById('hstRate').value      || (existingDraft.hstRate      ?? 0.13);
 
@@ -2446,6 +2469,14 @@
         const row = ensureOvertimeLaborRow();
         row.querySelector('.item-qty').value = totalOvertime.toFixed(2);
         row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      }
+
+      // Auto-switch service charge based on overtime
+      const _scRow = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
+      if (_scRow) {
+        const _scRate = totalOvertime > 0 ? 175 : getDefaultServiceCharge();
+        _scRow.querySelector('.item-customer-price').value = formatMoney(_scRate);
+        _scRow.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
       }
 
       // ── Description ────────────────────────────────────────────────────────
@@ -2850,7 +2881,7 @@
       document.getElementById('clientAddress').value = inv.clientAddress || '';
       rememberCurrentClient(true);
       rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(entries.filter(e => (inv.linkedEntryIds || []).includes(e.id))));
-      document.getElementById('hourlyRate').value = inv.hourlyRate ?? 175;
+      document.getElementById('hourlyRate').value = inv.hourlyRate ?? 110;
       document.getElementById('overtimeRate').value = inv.overtimeRate ?? 175;
       document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
       document.getElementById('laborDescription').value = inv.laborDescription || '';
@@ -2868,36 +2899,42 @@
 
       // Rebuild labor rows from live entries → saved regularHours field → items parsing (old drafts)
       const linkedEntries = entries.filter(e => (inv.linkedEntryIds || []).map(String).includes(String(e.id)));
+      let resolvedRegular = 0;
+      let resolvedOvertime = 0;
+
       if (linkedEntries.length > 0) {
-        populateLaborRowsFromEntries(linkedEntries);
+        linkedEntries.forEach(e => {
+          const s = getHoursBreakdown(e);
+          resolvedRegular  += s.regular;
+          resolvedOvertime += s.overtime;
+        });
+      } else if (inv.regularHours != null) {
+        resolvedRegular  = +inv.regularHours  || 0;
+        resolvedOvertime = +inv.overtimeHours || 0;
       } else {
-        clearLaborRows();
-        let savedRegular  = 0;
-        let savedOvertime = 0;
+        // Fallback for old drafts — parse from saved items
+        (inv.items || []).forEach(item => {
+          const t = item.type || '';
+          if (t === 'regular-labor'  || t.includes('regular'))  resolvedRegular  += (+item.qty || 0);
+          if (t === 'overtime-labor' || t.includes('overtime'))  resolvedOvertime += (+item.qty || 0);
+        });
+      }
 
-        if (inv.regularHours != null) {
-          // Reliable saved field (new drafts)
-          savedRegular  = +inv.regularHours  || 0;
-          savedOvertime = +inv.overtimeHours || 0;
-        } else {
-          // Fallback for old drafts
-          (inv.items || []).forEach(item => {
-            const t = item.type || '';
-            if (t === 'regular-labor'  || t.includes('regular'))  savedRegular  += (+item.qty || 0);
-            if (t === 'overtime-labor' || t.includes('overtime'))  savedOvertime += (+item.qty || 0);
-          });
-        }
+      // Always write resolved hours back to the in-memory draft so append can find them
+      // even if the stored draft pre-dates the regularHours field
+      invoices[invoiceId].regularHours  = resolvedRegular;
+      invoices[invoiceId].overtimeHours = resolvedOvertime;
 
-        if (savedRegular > 0) {
-          const row = ensureRegularLaborRow();
-          row.querySelector('.item-qty').value = savedRegular.toFixed(2);
-          row.querySelector('.item-qty').dispatchEvent(new Event('input'));
-        }
-        if (savedOvertime > 0) {
-          const row = ensureOvertimeLaborRow();
-          row.querySelector('.item-qty').value = savedOvertime.toFixed(2);
-          row.querySelector('.item-qty').dispatchEvent(new Event('input'));
-        }
+      clearLaborRows();
+      if (resolvedRegular > 0) {
+        const row = ensureRegularLaborRow();
+        row.querySelector('.item-qty').value = resolvedRegular.toFixed(2);
+        row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      }
+      if (resolvedOvertime > 0) {
+        const row = ensureOvertimeLaborRow();
+        row.querySelector('.item-qty').value = resolvedOvertime.toFixed(2);
+        row.querySelector('.item-qty').dispatchEvent(new Event('input'));
       }
 
       updateInvoiceSummary();
