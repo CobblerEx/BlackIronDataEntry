@@ -2121,21 +2121,6 @@
       return overtimeRow;
     }
 
-    function ensureOvertimeServiceChargeRow() {
-      let row = document.querySelector('#itemsTable tbody tr[data-type="overtime-service-charge"]');
-      if (!row) {
-        createItemRow({ desc: 'Overtime Service Charge', qty: 1, unit: 'ea', distributorCost: 0, markup: 0, customerPrice: getDefaultServiceCharge() });
-        row = document.querySelector('#itemsTable tbody tr:last-child');
-        row.dataset.type = 'overtime-service-charge';
-      }
-      return row;
-    }
-
-    function removeOvertimeServiceChargeRow() {
-      const row = document.querySelector('#itemsTable tbody tr[data-type="overtime-service-charge"]');
-      if (row) row.remove();
-    }
-
     function removeOvertimeLaborRowIfExists() {
       const overtimeRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
       if (overtimeRow) overtimeRow.remove();
@@ -2208,7 +2193,7 @@
       return [...document.querySelectorAll('#itemsTable tbody tr')].filter(row => {
         const t = row.dataset.type || '';
         return t.startsWith('labor-') || t === 'regular-labor' || t === 'overtime-labor';
-        // Note: overtime-service-charge is NOT included here — it's managed separately
+
       });
     }
 
@@ -2237,9 +2222,6 @@
         const row = ensureOvertimeLaborRow();
         row.querySelector('.item-qty').value = totalOvertime.toFixed(2);
         row.querySelector('.item-qty').dispatchEvent(new Event('input'));
-        ensureOvertimeServiceChargeRow();
-      } else {
-        removeOvertimeServiceChargeRow();
       }
     }
 
@@ -2413,7 +2395,7 @@
       tbody.innerHTML = '';
       (existingDraft.items || []).forEach(item => {
         const t = item.type || '';
-        if (t.startsWith('labor-') || t === 'regular-labor' || t === 'overtime-labor' || t === 'overtime-service-charge') return;
+        if (t.startsWith('labor-') || t === 'regular-labor' || t === 'overtime-labor') return;
         createItemRow(item);
         const row = tbody.lastElementChild;
         if (t) row.dataset.type = t;
@@ -2878,7 +2860,7 @@
       const tbody = document.querySelector('#itemsTable tbody');
       tbody.innerHTML = '';
       (inv.items || []).forEach(item => {
-        if ((item.type || '').startsWith('labor-') || item.type === 'regular-labor' || item.type === 'overtime-labor' || item.type === 'overtime-service-charge') return; // rebuilt fresh below
+        if ((item.type || '').startsWith('labor-') || item.type === 'regular-labor' || item.type === 'overtime-labor') return; // rebuilt fresh below
         createItemRow(item);
         const row = tbody.lastElementChild;
         if (item.type) row.dataset.type = item.type;
