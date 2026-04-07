@@ -1,6 +1,5 @@
 
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -588,7 +587,10 @@
 
     <div id="archivePanel" style="max-height:0;overflow:hidden;opacity:0;transform:translateY(-6px);transition:max-height .35s ease, opacity .25s ease, transform .25s ease;margin:0 auto 1.5rem;max-width:100%;">
       <div id="invoiceBuilder" style="margin-top:1rem;">
-        <h2 style="margin-top:0;">Archived Timesheets</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+          <h2 style="margin:0;">Archived Timesheets</h2>
+          <button type="button" id="hideArchiveButton" class="mini-btn" style="background:#555;">Hide Archive ▲</button>
+        </div>
         <div class="inline-group" style="margin-bottom:1rem;align-items:flex-end;gap:.5rem;flex-wrap:wrap;">
           <label style="flex:1;min-width:260px;">
             Archived Days:
@@ -3034,6 +3036,7 @@
 
     document.getElementById('goToInvoice').addEventListener('click', () => { _invoiceTabUserVisited = true; setActiveTab('invoiceTab'); });
     document.getElementById('toggleArchiveButton').addEventListener('click', () => toggleArchiveDrawer());
+    document.getElementById('hideArchiveButton')?.addEventListener('click', () => toggleArchiveDrawer(false));
     document.getElementById('archiveDates').addEventListener('change', () => {
       loadArchiveDay();
       const panel = document.getElementById('archivePanel');
