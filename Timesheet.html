@@ -772,6 +772,19 @@
       </div>
       <div class="saved-materials-body">
         <input type="text" id="savedMaterialsSearch" class="saved-materials-search" placeholder="Search saved materials">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:.4rem;margin:0;font-size:.88rem;white-space:nowrap;">
+            Sort by:
+            <select id="savedMaterialsSort" style="background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;padding:.35rem .5rem;font-size:.88rem;min-height:36px;margin:0;">
+              <option value="name-asc">Name A → Z</option>
+              <option value="name-desc">Name Z → A</option>
+              <option value="cost-asc">Cost: Low → High</option>
+              <option value="cost-desc">Cost: High → Low</option>
+              <option value="updated-newest">Last Updated (Newest)</option>
+              <option value="updated-oldest">Last Updated (Oldest)</option>
+            </select>
+          </label>
+        </div>
         <div id="savedMaterialsList" class="saved-materials-list"></div>
       </div>
     </div>
@@ -785,9 +798,31 @@
       </div>
       <div class="saved-materials-body">
         <input type="text" id="clientProfilesSearch" class="saved-materials-search" placeholder="Search clients, phone, email, or address">
-        <h4 class="profile-section-title">Saved Clients</h4>
+        <h4 class="profile-section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+          Saved Clients
+          <label style="display:flex;align-items:center;gap:.4rem;margin:0;font-size:.82rem;font-weight:400;white-space:nowrap;">
+            Sort:
+            <select id="clientProfilesSort" style="background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;padding:.25rem .45rem;font-size:.82rem;min-height:32px;margin:0;">
+              <option value="name-asc">Name A → Z</option>
+              <option value="name-desc">Name Z → A</option>
+              <option value="phone-asc">Phone A → Z</option>
+              <option value="email-asc">Email A → Z</option>
+            </select>
+          </label>
+        </h4>
         <div id="clientProfilesList" class="profile-list"></div>
-        <h4 class="profile-section-title" style="margin-top:1rem;">Saved Addresses</h4>
+        <h4 class="profile-section-title" style="margin-top:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+          Saved Addresses
+          <label style="display:flex;align-items:center;gap:.4rem;margin:0;font-size:.82rem;font-weight:400;white-space:nowrap;">
+            Sort:
+            <select id="locationProfilesSort" style="background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;padding:.25rem .45rem;font-size:.82rem;min-height:32px;margin:0;">
+              <option value="address-asc">Address A → Z</option>
+              <option value="address-desc">Address Z → A</option>
+              <option value="name-asc">Client Name A → Z</option>
+              <option value="name-desc">Client Name Z → A</option>
+            </select>
+          </label>
+        </h4>
         <div id="locationProfilesList" class="profile-list"></div>
       </div>
     </div>
@@ -1247,9 +1282,17 @@
       const wrap = document.getElementById('savedMaterialsList');
       if (!wrap) return;
       const filter = normalizeMaterialKey(filterText);
+      const sortMode = document.getElementById('savedMaterialsSort')?.value || 'name-asc';
       const items = Object.values(materialCatalog)
         .filter(item => !filter || normalizeMaterialKey(item.desc).includes(filter))
-        .sort((a, b) => a.desc.localeCompare(b.desc));
+        .sort((a, b) => {
+          if (sortMode === 'name-desc') return b.desc.localeCompare(a.desc);
+          if (sortMode === 'cost-asc') return (a.distributorCost || 0) - (b.distributorCost || 0);
+          if (sortMode === 'cost-desc') return (b.distributorCost || 0) - (a.distributorCost || 0);
+          if (sortMode === 'updated-newest') return (b.priceLastUpdated || '') > (a.priceLastUpdated || '') ? 1 : -1;
+          if (sortMode === 'updated-oldest') return (a.priceLastUpdated || '') > (b.priceLastUpdated || '') ? 1 : -1;
+          return a.desc.localeCompare(b.desc); // name-asc default
+        });
       wrap.innerHTML = '';
       if (!items.length) {
         wrap.innerHTML = `<div class="saved-material-empty">No saved materials found.</div>`;
@@ -3346,6 +3389,7 @@
     })();
     document.getElementById('closeSavedMaterials').onclick = () => closeSavedMaterialsModal();
     document.getElementById('savedMaterialsSearch').addEventListener('input', (e) => renderSavedMaterialsList(e.target.value));
+    document.getElementById('savedMaterialsSort')?.addEventListener('change', () => renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || ''));
     document.getElementById('savedMaterialsModal').addEventListener('click', (e) => { if (e.target.id === 'savedMaterialsModal') closeSavedMaterialsModal(); });
     document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
     document.getElementById('clearInvoice').onclick = () => clearInvoice();
@@ -4024,9 +4068,16 @@
       if (!clientWrap || !locationWrap) return;
       const filter = String(filterText || '').trim().toLowerCase();
 
+      const clientSortMode = document.getElementById('clientProfilesSort')?.value || 'name-asc';
       const clientProfiles = Object.entries(getClientProfiles())
         .filter(([key, p]) => !filter || [p?.name, p?.phone, p?.email, p?.address].join(' ').toLowerCase().includes(filter))
-        .sort((a,b) => String(a[1]?.name || '').localeCompare(String(b[1]?.name || '')));
+        .sort((a,b) => {
+          const [,pa] = a, [,pb] = b;
+          if (clientSortMode === 'name-desc') return String(pb?.name||'').localeCompare(String(pa?.name||''));
+          if (clientSortMode === 'phone-asc') return String(pa?.phone||'').localeCompare(String(pb?.phone||''));
+          if (clientSortMode === 'email-asc') return String(pa?.email||'').localeCompare(String(pb?.email||''));
+          return String(pa?.name||'').localeCompare(String(pb?.name||'')); // name-asc default
+        });
       clientWrap.innerHTML = '';
       if (!clientProfiles.length) {
         clientWrap.innerHTML = '<div class="profile-empty">No saved clients found.</div>';
@@ -4058,9 +4109,16 @@
         });
       }
 
+      const locationSortMode = document.getElementById('locationProfilesSort')?.value || 'address-asc';
       const locationProfiles = Object.entries(getLocationProfiles())
         .filter(([key, p]) => !filter || [p?.address, p?.name, p?.phone, p?.email, p?.billingAddress].join(' ').toLowerCase().includes(filter))
-        .sort((a,b) => String(a[1]?.address || '').localeCompare(String(b[1]?.address || '')));
+        .sort((a,b) => {
+          const [,pa] = a, [,pb] = b;
+          if (locationSortMode === 'address-desc') return String(pb?.address||'').localeCompare(String(pa?.address||''));
+          if (locationSortMode === 'name-asc') return String(pa?.name||'').localeCompare(String(pb?.name||''));
+          if (locationSortMode === 'name-desc') return String(pb?.name||'').localeCompare(String(pa?.name||''));
+          return String(pa?.address||'').localeCompare(String(pb?.address||'')); // address-asc default
+        });
       locationWrap.innerHTML = '';
       if (!locationProfiles.length) {
         locationWrap.innerHTML = '<div class="profile-empty">No saved addresses found.</div>';
@@ -4235,6 +4293,8 @@
     document.getElementById('manageClientProfiles')?.addEventListener('click', openClientProfilesModal);
     document.getElementById('closeClientProfiles')?.addEventListener('click', closeClientProfilesModal);
     document.getElementById('clientProfilesSearch')?.addEventListener('input', e => renderClientProfilesLists(e.target.value));
+    document.getElementById('clientProfilesSort')?.addEventListener('change', () => renderClientProfilesLists(document.getElementById('clientProfilesSearch')?.value || ''));
+    document.getElementById('locationProfilesSort')?.addEventListener('change', () => renderClientProfilesLists(document.getElementById('clientProfilesSearch')?.value || ''));
     document.getElementById('clientProfilesModal')?.addEventListener('click', e => { if (e.target.id === 'clientProfilesModal') closeClientProfilesModal(); });
     setInvoiceToolsVisibility(false);
     renderMaterialSuggestions();
