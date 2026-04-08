@@ -3141,62 +3141,6 @@
           </td>`;
         tbody.appendChild(tr);
 
-        let pressTimer = null;
-        let longPressTriggered = false;
-        let startX = 0;
-        let startY = 0;
-
-        const startPress = (clientX, clientY) => {
-          longPressTriggered = false;
-          startX = clientX;
-          startY = clientY;
-          tr.classList.add('longpressing');
-
-          pressTimer = setTimeout(() => {
-            longPressTriggered = true;
-            tr.classList.remove('longpressing');
-            editEntry(i);
-          }, 600);
-        };
-
-        const cancelPress = () => {
-          tr.classList.remove('longpressing');
-          if (pressTimer) {
-            clearTimeout(pressTimer);
-            pressTimer = null;
-          }
-        };
-
-        tr.addEventListener('mousedown', (ev) => {
-          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
-          startPress(ev.clientX, ev.clientY);
-        });
-
-        tr.addEventListener('mouseup', cancelPress);
-        tr.addEventListener('mouseleave', cancelPress);
-
-        tr.addEventListener('touchstart', (ev) => {
-          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
-          const t = ev.touches[0];
-          startPress(t.clientX, t.clientY);
-        }, { passive: true });
-
-        tr.addEventListener('touchmove', (ev) => {
-          if (!pressTimer) return;
-          const t = ev.touches[0];
-          const dx = Math.abs(t.clientX - startX);
-          const dy = Math.abs(t.clientY - startY);
-          if (dx > 10 || dy > 10) cancelPress();
-        }, { passive: true });
-
-        tr.addEventListener('touchend', cancelPress);
-        tr.addEventListener('touchcancel', cancelPress);
-
-        tr.addEventListener('dblclick', (ev) => {
-          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
-          editEntry(i);
-        });
-
         tr.addEventListener('dragstart', e => {
           tr.classList.add('dragging');
           e.dataTransfer.setData('text', tr.dataset.index);
@@ -3214,6 +3158,77 @@
         });
         tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
       });
+
+      // ── Delegated long-press & double-click ─────────────────────────────
+      // Using a single listener on tbody guarantees the index is read from
+      // the actual row the touch landed on, not a stale closure from render time.
+      {
+        let pressTimer = null;
+        let pressedTr   = null;
+        let longPressTriggered = false;
+        let startX = 0, startY = 0;
+
+        const cancelPress = () => {
+          if (pressedTr) { pressedTr.classList.remove('longpressing'); pressedTr = null; }
+          if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+          longPressTriggered = false;
+        };
+
+        tbody.addEventListener('mousedown', (ev) => {
+          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
+          const tr = ev.target.closest('tr.entry-row');
+          if (!tr) return;
+          cancelPress();
+          pressedTr = tr;
+          longPressTriggered = false;
+          startX = ev.clientX; startY = ev.clientY;
+          tr.classList.add('longpressing');
+          pressTimer = setTimeout(() => {
+            longPressTriggered = true;
+            tr.classList.remove('longpressing');
+            pressedTr = null;
+            editEntry(parseInt(tr.dataset.index, 10));
+          }, 600);
+        });
+
+        tbody.addEventListener('mouseup',    cancelPress);
+        tbody.addEventListener('mouseleave', cancelPress);
+
+        tbody.addEventListener('touchstart', (ev) => {
+          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
+          const tr = ev.target.closest('tr.entry-row');
+          if (!tr) return;
+          cancelPress();
+          pressedTr = tr;
+          longPressTriggered = false;
+          const t = ev.touches[0];
+          startX = t.clientX; startY = t.clientY;
+          tr.classList.add('longpressing');
+          pressTimer = setTimeout(() => {
+            longPressTriggered = true;
+            tr.classList.remove('longpressing');
+            pressedTr = null;
+            editEntry(parseInt(tr.dataset.index, 10));
+          }, 600);
+        }, { passive: true });
+
+        tbody.addEventListener('touchmove', (ev) => {
+          if (!pressTimer) return;
+          const t = ev.touches[0];
+          if (Math.abs(t.clientX - startX) > 8 || Math.abs(t.clientY - startY) > 8) cancelPress();
+        }, { passive: true });
+
+        tbody.addEventListener('touchend',    cancelPress);
+        tbody.addEventListener('touchcancel', cancelPress);
+
+        tbody.addEventListener('dblclick', (ev) => {
+          if (ev.target.closest('.action-select') || ev.target.closest('.drag-handle')) return;
+          const tr = ev.target.closest('tr.entry-row');
+          if (!tr) return;
+          editEntry(parseInt(tr.dataset.index, 10));
+        });
+      }
+      // ────────────────────────────────────────────────────────────────────
 
       const { h, m } = decimalToHM(totalDec);
       document.getElementById('totalTime').textContent = `Total Time: ${h} hrs ${m} min`;
