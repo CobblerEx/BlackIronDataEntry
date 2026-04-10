@@ -41,7 +41,7 @@
     .history-btn {position:absolute;right:8px;top:50%;transform:translateY(-50%);background:#ff4500;color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;min-height:auto;margin:0;}
     .history-btn:active {transform:translateY(-50%) scale(0.95);}
     .history-btn:hover {transform:translateY(-50%) scale(1.1);}
-    #addressHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
+    #addressHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:400px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
     .history-item {padding:12px 16px;cursor:pointer;border-bottom:1px solid #444;}
     .history-item:hover {background:#ff4500;color:white;padding-left:24px;}
     table {width:100%;border-collapse:collapse;background:rgba(30,30,30,.95);border-radius:10px;overflow:hidden;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1rem 0;}
@@ -115,7 +115,45 @@
       font-size:.9rem;
     }
 
-    @keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    #undoToast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #2a2a2a;
+      border: 1px solid #ff4500;
+      color: #e0e0e0;
+      padding: .65rem 1.1rem;
+      border-radius: 10px;
+      font-size: .92rem;
+      box-shadow: 0 4px 18px rgba(0,0,0,.45);
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease, transform .25s ease;
+      z-index: 900;
+      white-space: nowrap;
+    }
+    #undoToast.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+    #undoToast button {
+      background: #ff4500;
+      color: #fff;
+      border: none;
+      padding: .3rem .75rem;
+      border-radius: 6px;
+      font-size: .88rem;
+      cursor: pointer;
+      min-height: auto;
+      margin: 0;
+    }
+
+
 
     /* ── Sticky floating action bars ── */
     .sticky-action-bar {
@@ -478,7 +516,7 @@
 
   <div id="timesheetTab" class="tab-panel active">
     <div id="form">
-      <label>Employee Name: <input type="text" id="employee" value="Lucas"></label>
+      <label>Employee Name: <input type="text" id="employee" value="" placeholder="Enter your name"></label>
       <label>Date: <input type="date" id="sessionDate"></label>
       <h2>Add / Edit Job Entry</h2>
 
@@ -558,7 +596,7 @@
       <button id="generateExcel">Generate Excel</button>
       <button id="goToInvoice" type="button">Go To Invoice</button>
       <button id="newDayButton" type="button">New Day</button>
-      <button id="toggleArchiveButton" type="button">Archive ▼</button>
+      <button id="toggleArchiveButton" type="button">Archived Timesheets ▼</button>
       <button id="backupDataButton" type="button">Backup Data</button>
       <button id="restoreDataButton" type="button">Restore Data</button>
       <button id="clearAllButton">Clear All</button>
@@ -1137,6 +1175,52 @@
       return 'entry-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
     }
 
+    // ── Undo buffer for deleted entries ──────────────────────────────────
+    let _deletedEntryBuffer = null; // { entry, index, invoiceSnapshot }
+    let _undoTimer = null;
+
+    function showUndoToast(msg) {
+      const toast = document.getElementById('undoToast');
+      const label = document.getElementById('undoToastMsg');
+      if (!toast) return;
+      label.textContent = msg;
+      clearTimeout(_undoTimer);
+      toast.classList.add('show');
+      _undoTimer = setTimeout(() => {
+        toast.classList.remove('show');
+        _deletedEntryBuffer = null;
+      }, 6000);
+    }
+
+    function hideUndoToast() {
+      const toast = document.getElementById('undoToast');
+      if (toast) toast.classList.remove('show');
+      clearTimeout(_undoTimer);
+      _undoTimer = null;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('undoDeleteBtn')?.addEventListener('click', () => {
+        if (!_deletedEntryBuffer) return;
+        const { entry, index, invoiceSnapshot } = _deletedEntryBuffer;
+        entries.splice(index, 0, entry);
+        // Restore invoice links if they were removed
+        if (invoiceSnapshot) {
+          Object.entries(invoiceSnapshot).forEach(([invId, ids]) => {
+            if (invoices[invId] && !invoices[invId].linkedEntryIds.includes(entry.id)) {
+              invoices[invId].linkedEntryIds = ids;
+              invoices[invId].updatedAt = new Date().toISOString();
+            }
+          });
+          saveInvoicesToStorage();
+        }
+        _deletedEntryBuffer = null;
+        hideUndoToast();
+        renderTable();
+      });
+    });
+    // ─────────────────────────────────────────────────────────────────────
+
     function to12hr(time24) {
       const opt = timeOptions.find(o => o.mil === time24);
       return opt ? opt.display : time24;
@@ -1527,7 +1611,7 @@
       const saved = localStorage.getItem('timesheetData');
       if (saved) {
         const d = JSON.parse(saved);
-        document.getElementById('employee').value = d.employee || 'Lucas';
+        document.getElementById('employee').value = d.employee || localStorage.getItem('savedEmployeeName') || '';
         document.getElementById('sessionDate').value = d.date || new Date().toISOString().split('T')[0];
         entries = (d.entries || []).map(e => ({
           id: e.id || generateEntryId(),
@@ -1535,12 +1619,31 @@
           invoiceId: e.invoiceId || '',
           ...e
         }));
+      } else {
+        // First run — no saved data at all
+        const savedName = localStorage.getItem('savedEmployeeName');
+        if (savedName) {
+          document.getElementById('employee').value = savedName;
+        } else {
+          // Prompt on first use
+          const name = prompt('Welcome! Please enter your name to get started:');
+          if (name && name.trim()) {
+            document.getElementById('employee').value = name.trim();
+            localStorage.setItem('savedEmployeeName', name.trim());
+          }
+        }
       }
 
       renderTable();
       refreshArchiveList();
       loadInvoiceSession();
     }
+
+    // Save employee name to localStorage whenever it changes
+    document.getElementById('employee').addEventListener('change', function() {
+      const name = this.value.trim();
+      if (name) localStorage.setItem('savedEmployeeName', name);
+    });
 
     function getTodayDateString() {
       return new Date().toISOString().split('T')[0];
@@ -1683,7 +1786,7 @@
       }
 
       entries = JSON.parse(JSON.stringify(selected.day.entries || []));
-      document.getElementById('employee').value = selected.day.employee || document.getElementById('employee').value || 'Lucas';
+      document.getElementById('employee').value = selected.day.employee || document.getElementById('employee').value || localStorage.getItem('savedEmployeeName') || '';
       document.getElementById('sessionDate').value = selected.day.date || getTodayDateString();
       saveData();
       renderTable();
@@ -1694,7 +1797,7 @@
     }
 
     function archiveCurrentTimesheetDay() {
-      const employee = document.getElementById('employee').value || 'Lucas';
+      const employee = document.getElementById('employee').value || localStorage.getItem('savedEmployeeName') || '';
       const sessionDate = document.getElementById('sessionDate').value || getTodayDateString();
       if (!entries.length) return false;
 
@@ -1761,8 +1864,14 @@
       dropdown.style.display = 'block';
     }
 
-    addrInput.addEventListener('input', () => showHistory(addrInput.value));
-    addrInput.addEventListener('focus', () => showHistory());
+    addrInput.addEventListener('input', () => {
+      if (addrInput.value.trim().length >= 1) {
+        showHistory(addrInput.value);
+      } else {
+        dropdown.style.display = 'none';
+      }
+    });
+    // Focus no longer auto-opens — use the history button to browse all addresses
     document.getElementById('historyBtn').onclick = () => showHistory();
     document.addEventListener('click', e => {
       if (!addrInput.contains(e.target) && !document.getElementById('historyBtn').contains(e.target) && !dropdown.contains(e.target)) {
@@ -3011,13 +3120,13 @@
         panel.style.maxHeight = panel.scrollHeight + 40 + 'px';
         panel.style.opacity = '1';
         panel.style.transform = 'translateY(0)';
-        button.textContent = 'Archive ▲';
+        button.textContent = 'Archived Timesheets ▲';
       } else {
         panel.dataset.open = 'false';
         panel.style.maxHeight = '0';
         panel.style.opacity = '0';
         panel.style.transform = 'translateY(-6px)';
-        button.textContent = 'Archive ▼';
+        button.textContent = 'Archived Timesheets ▼';
       }
     }
 
@@ -3133,10 +3242,11 @@
             <i class="fas fa-grip-lines drag-handle"></i>
             <select class="action-select">
               <option value="" disabled selected>Actions</option>
+              <option value="edit">✏️ Edit</option>
               <option value="up">Up</option>
               <option value="down">Down</option>
               <option value="mark-unbilled">Mark Unbilled</option>
-              <option value="delete">Delete</option>
+              <option value="delete">🗑 Delete</option>
             </select>
           </td>`;
         tbody.appendChild(tr);
@@ -3277,17 +3387,28 @@
         saveData();
         renderTable();
       }
-      else if (act === 'delete' && confirm('Delete this entry?')) {
-        const entryId = entries[i].id;
+      else if (act === 'delete') {
+        const entry = entries[i];
+        // Snapshot which invoices had this entry linked
+        const invoiceSnapshot = {};
+        Object.entries(invoices).forEach(([invId, inv]) => {
+          if ((inv.linkedEntryIds || []).includes(entry.id)) {
+            invoiceSnapshot[invId] = [...inv.linkedEntryIds];
+          }
+        });
 
+        // Remove from invoice links
         Object.values(invoices).forEach(inv => {
-          inv.linkedEntryIds = (inv.linkedEntryIds || []).filter(id => id !== entryId);
+          inv.linkedEntryIds = (inv.linkedEntryIds || []).filter(id => id !== entry.id);
           inv.updatedAt = new Date().toISOString();
         });
         saveInvoicesToStorage();
 
+        // Store buffer so undo can restore it
+        _deletedEntryBuffer = { entry, index: i, invoiceSnapshot };
         entries.splice(i, 1);
         renderTable();
+        showUndoToast(`"${entry.jobName}" deleted — tap Undo to restore`);
       }
     }
 
@@ -3323,7 +3444,7 @@
 
       if (addr && !addressHistory.includes(addr)) {
         addressHistory.unshift(addr);
-        if (addressHistory.length > 200) addressHistory.pop();
+        if (addressHistory.length > 500) addressHistory.pop();
       }
 
       renderTable();
@@ -5581,6 +5702,12 @@ document.addEventListener("DOMContentLoaded",function(){
     <span id="priceAlertMsg"></span>
     <button type="button" id="priceAlertGoTo" class="mini-btn" style="background:#ff4500;">Go To Saved Materials</button>
     <button type="button" id="priceAlertDismiss" class="mini-btn" style="background:#555;">Dismiss</button>
+  </div>
+
+  <!-- Undo toast -->
+  <div id="undoToast">
+    <span id="undoToastMsg">Entry deleted</span>
+    <button type="button" id="undoDeleteBtn">↩ Undo</button>
   </div>
 
 </body>
