@@ -3323,7 +3323,7 @@
 
       if (addr && !addressHistory.includes(addr)) {
         addressHistory.unshift(addr);
-        if (addressHistory.length > 50) addressHistory.pop();
+        if (addressHistory.length > 200) addressHistory.pop();
       }
 
       renderTable();
