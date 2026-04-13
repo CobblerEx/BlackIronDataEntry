@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>How To Use — Timesheet Creator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    :root {
+      --orange: #ff4500;
+      --orange-dim: rgba(255,69,0,0.18);
+      --orange-glow: rgba(255,69,0,0.45);
+      --bg: #111;
+      --surface: #1c1c1c;
+      --surface2: #242424;
+      --border: rgba(255,69,0,0.3);
+      --text: #e8e8e8;
+      --muted: #888;
+      --green: #28a745;
+      --blue: #17a2b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ── Progress bar ── */
+    #progressBar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 3px;
+      background: var(--orange);
+      transition: width .4s ease;
+      z-index: 100;
+      box-shadow: 0 0 10px var(--orange-glow);
+    }
+
+    /* ── Slide container ── */
+    #slides {
+      width: 100%;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 3rem 2rem 5rem;
+      opacity: 0;
+      transform: translateX(60px);
+      pointer-events: none;
+      transition: opacity .4s ease, transform .4s ease;
+      overflow-y: auto;
+    }
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+    .slide.exit {
+      opacity: 0;
+      transform: translateX(-60px);
+    }
+
+    /* ── Slide header ── */
+    .slide-section {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--orange);
+      margin-bottom: .4rem;
+    }
+    .slide-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2rem, 8vw, 3.2rem);
+      line-height: 1;
+      color: #fff;
+      margin-bottom: .75rem;
+      text-shadow: 0 0 30px var(--orange-glow);
+    }
+    .slide-desc {
+      font-size: clamp(.88rem, 2.5vw, 1rem);
+      line-height: 1.65;
+      color: #ccc;
+      max-width: 560px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Tips box ── */
+    .tip-box {
+      background: var(--orange-dim);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--orange);
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      font-size: .88rem;
+      color: #ffb08a;
+      margin-top: auto;
+      display: flex;
+      gap: .5rem;
+      align-items: flex-start;
+      max-width: 560px;
+    }
+    .tip-box i { color: var(--orange); margin-top: .1rem; flex-shrink: 0; }
+
+    /* ── Step list ── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: .7rem;
+      max-width: 540px;
+      margin-bottom: 1rem;
+    }
+    .step {
+      display: flex;
+      gap: .75rem;
+      align-items: flex-start;
+      animation: stepIn .35s ease both;
+    }
+    .step:nth-child(1) { animation-delay: .1s }
+    .step:nth-child(2) { animation-delay: .2s }
+    .step:nth-child(3) { animation-delay: .3s }
+    .step:nth-child(4) { animation-delay: .4s }
+    .step:nth-child(5) { animation-delay: .5s }
+    @keyframes stepIn {
+      from { opacity:0; transform:translateY(10px) }
+      to   { opacity:1; transform:translateY(0) }
+    }
+    .step-num {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--orange);
+      color: #fff;
+      font-size: .78rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: .1rem;
+    }
+    .step-text { font-size: .92rem; line-height: 1.5; color: #d0d0d0; }
+    .step-text strong { color: #fff; }
+    .step-text code {
+      background: #2a2a2a;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .1rem .35rem;
+      font-size: .82rem;
+      color: var(--orange);
+      font-family: monospace;
+    }
+
+    /* ── Mock phone frame ── */
+    .phone-wrap {
+      flex-shrink: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .phone {
+      width: 200px;
+      background: #0e0e0e;
+      border: 2px solid #333;
+      border-radius: 28px;
+      padding: 12px 8px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 0 1px #222;
+      position: relative;
+      overflow: hidden;
+    }
+    .phone::before {
+      content: '';
+      display: block;
+      width: 50px; height: 6px;
+      background: #333;
+      border-radius: 3px;
+      margin: 0 auto 10px;
+    }
+    .phone-screen {
+      background: #1a1a1a;
+      border-radius: 14px;
+      overflow: hidden;
+      min-height: 320px;
+      font-size: 8px;
+      position: relative;
+    }
+
+    /* ── Two-column layout ── */
+    .two-col {
+      display: flex;
+      gap: 2rem;
+      align-items: flex-start;
+      flex: 1;
+    }
+    .two-col .col-left { flex: 1; min-width: 0; }
+    .two-col .col-right { flex-shrink: 0; }
+
+    /* ── Mini UI mockups inside phone ── */
+    .mock-header {
+      background: #111;
+      padding: 6px 8px;
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .mock-circle {
+      width: 18px; height: 18px;
+      border: 1.5px solid var(--orange);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--orange);
+      font-size: 7px;
+    }
+    .mock-title {
+      text-align: center;
+      color: var(--orange);
+      font-weight: 700;
+      font-size: 9px;
+      padding: 5px;
+      letter-spacing: .04em;
+    }
+    .mock-tabs {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding: 4px;
+    }
+    .mock-tab {
+      padding: 3px 7px;
+      border: 1.5px solid var(--orange);
+      border-radius: 999px;
+      color: var(--orange);
+      font-size: 7px;
+    }
+    .mock-tab.active {
+      background: var(--orange);
+      color: #fff;
+    }
+    .mock-form {
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .mock-label { font-size: 7px; color: #bbb; margin-bottom: 1px; }
+    .mock-input {
+      background: #2a2a2a;
+      border: 1px solid var(--orange);
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-size: 7px;
+      color: #e0e0e0;
+      width: 100%;
+    }
+    .mock-input.placeholder { color: #666; }
+    .mock-btn {
+      background: var(--orange);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 7px;
+      font-weight: 700;
+      text-align: center;
+      margin-top: 2px;
+    }
+    .mock-btn.green { background: #28a745; }
+    .mock-btn.blue { background: #17a2b8; }
+    .mock-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 6.5px;
+    }
+    .mock-table th {
+      background: var(--orange);
+      color: #fff;
+      padding: 2px 3px;
+      text-align: left;
+    }
+    .mock-table td {
+      border: 0.5px solid rgba(255,69,0,.25);
+      padding: 2px 3px;
+      color: #ccc;
+    }
+    .mock-table tr:nth-child(even) td { background: rgba(255,255,255,.03); }
+    .mock-row-highlight td { background: rgba(255,69,0,.18) !important; border-color: var(--orange) !important; }
+    .mock-pill {
+      display: inline-block;
+      padding: 1px 4px;
+      border-radius: 999px;
+      font-size: 6px;
+      font-weight: 700;
+    }
+    .mock-pill.green { background: rgba(40,167,69,.2); color: #7CFF9B; border: 0.5px solid rgba(40,167,69,.4); }
+    .mock-pill.blue  { background: rgba(13,110,253,.2); color: #87b7ff; border: 0.5px solid rgba(13,110,253,.4); }
+    .mock-pill.yellow{ background: rgba(255,193,7,.15); color: #ffd86a; border: 0.5px solid rgba(255,193,7,.35); }
+    .mock-drawer {
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      width: 65%;
+      background: #1a1a1a;
+      border-left: 1.5px solid var(--orange);
+      padding: 8px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .mock-drawer-title { font-size: 8px; font-weight: 700; color: var(--orange); }
+    .mock-drawer-section { font-size: 6px; text-transform: uppercase; color: #ff6a30; letter-spacing: .06em; margin-top: 4px; }
+    .mock-drawer-btn {
+      background: #2a2a2a;
+      border: 0.75px solid rgba(255,69,0,.35);
+      border-radius: 5px;
+      padding: 4px 5px;
+      font-size: 7px;
+      color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .mock-drawer-btn i { color: var(--orange); font-size: 7px; }
+    .mock-invoice-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 3px;
+      align-items: center;
+      border-bottom: 0.5px solid rgba(255,69,0,.2);
+      padding: 2px 0;
+    }
+    .mock-address-dropdown {
+      background: #2a2a2a;
+      border: 1px solid var(--orange);
+      border-radius: 4px;
+      margin-top: 2px;
+    }
+    .mock-address-item {
+      padding: 3px 6px;
+      font-size: 6.5px;
+      color: #ccc;
+      border-bottom: 0.5px solid #333;
+    }
+    .mock-address-item.active { background: var(--orange); color: #fff; }
+    .highlight-ring {
+      position: absolute;
+      border: 2px solid var(--orange);
+      border-radius: 6px;
+      pointer-events: none;
+      animation: pulse 1.5s ease-in-out infinite;
+      box-shadow: 0 0 8px var(--orange-glow);
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 6px var(--orange-glow); }
+      50%      { box-shadow: 0 0 16px var(--orange-glow); }
+    }
+
+    /* ── Navigation ── */
+    #nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(17,17,17,.95);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border);
+      padding: .75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      color: var(--text);
+      font-size: .9rem;
+      padding: .55rem 1.1rem;
+      cursor: pointer;
+      transition: all .18s;
+      font-family: 'Inter', sans-serif;
+      min-height: 44px;
+    }
+    .nav-btn:active, .nav-btn:hover { background: var(--orange-dim); border-color: var(--orange); color: #fff; }
+    .nav-btn:disabled { opacity: .3; pointer-events: none; }
+    .nav-btn.primary { background: var(--orange); border-color: var(--orange); color: #fff; }
+    .nav-btn.primary:hover { box-shadow: 0 0 16px var(--orange-glow); }
+
+    #slideCounter {
+      font-size: .8rem;
+      color: var(--muted);
+      text-align: center;
+      min-width: 60px;
+    }
+    #slideCounter span { color: var(--orange); font-weight: 700; }
+
+    /* ── Dot navigation ── */
+    #dots {
+      position: fixed;
+      bottom: 4.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: .4rem;
+      z-index: 100;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #444;
+      transition: all .25s;
+      cursor: pointer;
+    }
+    .dot.active { background: var(--orange); width: 18px; border-radius: 3px; box-shadow: 0 0 6px var(--orange-glow); }
+
+    /* ── Welcome slide ── */
+    .hero-glow {
+      position: absolute;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,69,0,.18) 0%, transparent 70%);
+      top: -80px; right: -80px;
+      pointer-events: none;
+    }
+
+    /* ── Swipe indicator ── */
+    .swipe-hint {
+      position: fixed;
+      bottom: 4rem;
+      right: 1rem;
+      font-size: .72rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+      opacity: 1;
+      transition: opacity .5s;
+    }
+    .swipe-hint.hidden { opacity: 0; }
+
+    @media (max-width: 480px) {
+      .slide { padding: 2rem 1.25rem 5rem; }
+      .two-col { flex-direction: column; }
+      .phone-wrap { width: 100%; }
+      .phone { width: 170px; margin: 0 auto; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="progressBar"></div>
+
+<div id="slides">
+
+  <!-- ── SLIDE 0: Welcome ── -->
+  <div class="slide active" data-index="0">
+    <div class="hero-glow"></div>
+    <div style="margin-top:2rem;">
+      <div class="slide-section">Getting Started</div>
+      <div class="slide-title">Timesheet<br>Creator</div>
+      <div class="slide-title" style="color:var(--orange);font-size:clamp(1.4rem,5vw,2rem);font-family:'Inter',sans-serif;font-weight:700;margin-top:-.3rem;">How-To Guide</div>
+      <div class="slide-desc" style="margin-top:1rem;">
+        This guide walks you through the two most important parts of the app — logging your work day on the <strong style="color:#fff;">Timesheet</strong> and turning it into a professional <strong style="color:#fff;">Invoice</strong>.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.65rem;margin-top:1.5rem;max-width:400px;">
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+          <i class="fas fa-clock" style="color:var(--orange);font-size:1.1rem;width:20px;text-align:center;"></i>
+          <span style="font-size:.92rem;"><strong>Part 1 — Timesheet</strong><br><span style="color:var(--muted);font-size:.8rem;">7 steps · Logging jobs, time & address</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+          <i class="fas fa-file-invoice-dollar" style="color:var(--orange);font-size:1.1rem;width:20px;text-align:center;"></i>
+          <span style="font-size:.92rem;"><strong>Part 2 — Invoice</strong><br><span style="color:var(--muted);font-size:.8rem;">6 steps · Building & generating a PDF</span></span>
+        </div>
+      </div>
+      <div style="margin-top:2rem;display:flex;align-items:center;gap:.5rem;color:var(--muted);font-size:.82rem;">
+        <i class="fas fa-arrow-right" style="color:var(--orange);"></i>
+        Tap <strong style="color:#fff;">Next</strong> to begin
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 1: Settings / Name ── -->
+  <div class="slide" data-index="1">
+    <div class="slide-section">Part 1 · Timesheet — Step 1 of 7</div>
+    <div class="slide-title">Set Your Name</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">Before logging your first job, set your name so it appears on every timesheet and invoice you generate.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">Tap the <strong>☰ menu button</strong> (top-right circle in the nav row)</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">The settings drawer slides in from the right</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">Type your name in the <strong>Your Name</strong> field — it saves automatically as you type</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">Tap anywhere outside the drawer to close it</div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> Your name is remembered permanently. You only need to set this once — even after refreshing the page.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen" style="position:relative;">
+            <div class="mock-header">
+              <div class="mock-circle"><i class="fas fa-edit" style="font-size:6px;"></i></div>
+              <div class="mock-circle"><i class="fas fa-file-alt" style="font-size:6px;"></i></div>
+              <div class="mock-circle"><i class="fas fa-calculator" style="font-size:6px;"></i></div>
+              <div class="mock-circle"><i class="fas fa-upload" style="font-size:6px;"></i></div>
+              <div class="mock-circle" style="background:var(--orange);color:#fff;"><i class="fas fa-bars" style="font-size:6px;"></i></div>
+            </div>
+            <div class="mock-drawer">
+              <div class="mock-drawer-title"><i class="fas fa-cog"></i> Settings</div>
+              <div class="mock-drawer-section">Your Name</div>
+              <div class="mock-input" style="background:#2a2a2a;border-color:var(--orange);color:#fff;font-size:8px;padding:4px 6px;">Lucas</div>
+              <div style="font-size:6px;color:#888;margin-top:2px;">Saved automatically.</div>
+              <div class="mock-drawer-section">Data</div>
+              <div class="mock-drawer-btn"><i class="fas fa-download"></i> Backup Data</div>
+              <div class="mock-drawer-btn"><i class="fas fa-upload"></i> Restore Data</div>
+              <div class="mock-drawer-section">Manage</div>
+              <div class="mock-drawer-btn"><i class="fas fa-box"></i> Saved Materials</div>
+              <div class="mock-drawer-btn"><i class="fas fa-address-book"></i> Clients / Addresses</div>
+            </div>
+            <div class="highlight-ring" style="top:30px;right:62px;width:20px;height:20px;border-radius:50%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 2: Date & Job Name ── -->
+  <div class="slide" data-index="2">
+    <div class="slide-section">Part 1 · Timesheet — Step 2 of 7</div>
+    <div class="slide-title">Pick a Date &amp;<br>Job Name</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">Every entry needs a date and a job name. Today's date is filled in automatically — you only need to change it if you're entering an older job.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">The <strong>Date</strong> field defaults to today — tap it to change if needed</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Type in <strong>Job Name</strong> — e.g. <code>Smith Furnace</code> or <code>McDonald's Fryer</code></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">Optionally pick a <strong>Job Type</strong> from the dropdown — it auto-fills a professional description for you</div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> The Job Name is what appears on your invoice as the work order label — make it something the customer will recognise.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="mock-form">
+              <div>
+                <div class="mock-label">Date:</div>
+                <div class="mock-input">Apr 10, 2026</div>
+              </div>
+              <div style="text-align:center;color:var(--orange);font-weight:700;font-size:9px;padding:2px 0;">Add / Edit Job Entry</div>
+              <div>
+                <div class="mock-label">Job Name:</div>
+                <div class="mock-input" style="color:#fff;">Smith Furnace Repair</div>
+              </div>
+              <div>
+                <div class="mock-label">Job Type (optional auto-description):</div>
+                <div class="mock-input" style="color:#aaa;">Furnace Tune-Up</div>
+              </div>
+            </div>
+            <div class="highlight-ring" style="top:58px;left:4px;right:4px;height:16px;border-radius:4px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 3: Address ── -->
+  <div class="slide" data-index="3">
+    <div class="slide-section">Part 1 · Timesheet — Step 3 of 7</div>
+    <div class="slide-title">Enter the<br>Address</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">The address field has a built-in history so you can quickly re-use addresses from previous jobs without typing them again.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">Start typing in the <strong>Address</strong> field — matching saved addresses appear below</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Tap any suggestion to instantly fill it in</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">Or tap the <strong>🕐 history button</strong> on the right to browse all saved addresses</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">New addresses are saved automatically when you add the entry</div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> The app remembers up to 200 addresses. The more jobs you log, the faster future entries become.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="mock-form">
+              <div style="position:relative;">
+                <div class="mock-label">Address:</div>
+                <div style="position:relative;">
+                  <div class="mock-input" style="color:#fff;padding-right:24px;">123 Main</div>
+                  <div style="position:absolute;right:3px;top:2px;width:16px;height:16px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-history" style="font-size:7px;color:#fff;"></i>
+                  </div>
+                </div>
+                <div class="mock-address-dropdown">
+                  <div class="mock-address-item active">123 Main St, Burlington</div>
+                  <div class="mock-address-item">1230 Main St W, Hamilton</div>
+                  <div class="mock-address-item">123 Mainway Dr, Burlington</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 4: Time In / Out ── -->
+  <div class="slide" data-index="4">
+    <div class="slide-section">Part 1 · Timesheet — Step 4 of 7</div>
+    <div class="slide-title">Set Your<br>Times</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">Log the exact hours worked for each job. The app automatically calculates duration and overtime.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">Tap <strong>Time In</strong> and scroll to your start time</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Tap <strong>Time Out</strong> and set your finish time</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">The <strong>Total Time</strong> banner updates automatically at the top of the table</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">When you add the next job, <strong>Time In is pre-set to your last Time Out</strong> — no gaps</div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> Times are in 30-minute steps. For example: 7:00 AM, 7:30 AM, 8:00 AM etc.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="mock-form">
+              <div>
+                <div class="mock-label">Time In:</div>
+                <div class="mock-input" style="color:#fff;">8:00 AM</div>
+              </div>
+              <div>
+                <div class="mock-label">Time Out:</div>
+                <div class="mock-input" style="color:#fff;border-color:#7CFF9B;">11:30 AM</div>
+              </div>
+              <div>
+                <div class="mock-label">Description:</div>
+                <div class="mock-input" style="color:#bbb;height:36px;font-size:6.5px;line-height:1.4;">Inspected and cleaned furnace components including burner, heat exchanger...</div>
+              </div>
+              <div style="display:flex;gap:4px;margin-top:2px;">
+                <div class="mock-btn" style="flex:1;">Add Entry</div>
+                <div class="mock-btn green" style="flex:1;">Copy Last Job</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 5: Entries Table ── -->
+  <div class="slide" data-index="5">
+    <div class="slide-section">Part 1 · Timesheet — Step 5 of 7</div>
+    <div class="slide-title">Your Entries<br>Table</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">Every job you add appears in the table below. You can edit, reorder, or delete any entry at any time.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Press &amp; hold</strong> a row on mobile to edit it (or <strong>double-click</strong> on desktop)</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Use the <strong>Actions</strong> dropdown on the right of each row to <strong>Edit, Move Up/Down</strong>, or <strong>Delete</strong></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">The <strong>Status</strong> column shows <strong style="color:#7CFF9B;">Unbilled</strong>, <strong style="color:#ffd86a;">Draft</strong>, or <strong style="color:#87b7ff;">Invoiced</strong></div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">If you delete an entry by mistake, tap <strong>↩ Undo</strong> in the toast that appears at the bottom</div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> Drag the <strong>≡ handle</strong> on the right of a row to reorder jobs within the day.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div style="background:#1a1a1a;padding:4px;text-align:center;font-size:8px;font-weight:700;color:#e0e0e0;">Total Time: 3 hrs 30 min</div>
+            <table class="mock-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Job</th>
+                  <th>Hours</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="mock-row-highlight">
+                  <td>04/10</td>
+                  <td>Smith Furnace</td>
+                  <td>3:30</td>
+                  <td><span class="mock-pill green">Unbilled</span></td>
+                </tr>
+                <tr>
+                  <td>04/10</td>
+                  <td>McDonald's Fryer</td>
+                  <td>2:00</td>
+                  <td><span class="mock-pill green">Unbilled</span></td>
+                </tr>
+                <tr>
+                  <td>04/09</td>
+                  <td>Jones AC</td>
+                  <td>4:00</td>
+                  <td><span class="mock-pill blue">Invoiced</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="padding:4px;font-size:6.5px;color:#888;text-align:center;">Press &amp; hold to edit · Actions ▾ to delete</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 6: New Day / Archive ── -->
+  <div class="slide" data-index="6">
+    <div class="slide-section">Part 1 · Timesheet — Step 6 of 7</div>
+    <div class="slide-title">End of Day &amp;<br>Archive</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">When your work day is done, use <strong>New Day</strong> to archive today and prepare a fresh sheet for tomorrow.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">Tap <strong>New Day</strong> — you'll be asked to confirm</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Today's entries are saved to the <strong>Archive</strong> automatically</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">The sheet clears and the date advances to tomorrow</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">Tap <strong>Archived Timesheets ▼</strong> any time to browse, view, or restore past days</div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> Use <strong>☰ → Backup Data</strong> regularly to save everything to a file on your phone. That way you never lose data if you clear your browser.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div style="padding:8px 6px;display:flex;flex-direction:column;gap:5px;">
+              <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                <div class="mock-btn" style="font-size:6.5px;padding:3px 6px;flex:1;">Generate Excel</div>
+                <div class="mock-btn blue" style="font-size:6.5px;padding:3px 6px;flex:1;">Go To Invoice</div>
+              </div>
+              <div style="display:flex;gap:4px;">
+                <div class="mock-btn green" style="font-size:6.5px;padding:3px 6px;flex:1;">New Day</div>
+                <div style="flex:1;background:#2a2a2a;border:1px solid var(--border);border-radius:4px;font-size:6.5px;color:#e0e0e0;padding:3px 6px;text-align:center;">Archived Timesheets ▼</div>
+              </div>
+              <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,69,0,.2);border-radius:6px;padding:6px;">
+                <div style="font-size:8px;font-weight:700;color:var(--orange);margin-bottom:4px;">Archived Timesheets</div>
+                <div style="font-size:7px;color:#bbb;background:#2a2a2a;border:1px solid var(--border);border-radius:3px;padding:3px 5px;">Apr 09, 2026 (3 entries)</div>
+                <div style="font-size:7px;color:#bbb;background:#2a2a2a;border:1px solid var(--border);border-radius:3px;padding:3px 5px;margin-top:3px;">Apr 08, 2026 (5 entries)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 7: Excel Export ── -->
+  <div class="slide" data-index="7">
+    <div class="slide-section">Part 1 · Timesheet — Step 7 of 7</div>
+    <div class="slide-title">Export to Excel</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">You can export your timesheet to a formatted Excel file at any time — useful for payroll, records, or sharing with your boss.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">Make sure your entries are complete for the day</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Tap <strong>Generate Excel</strong> at the bottom of the Timesheet tab</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">A <code>.xlsx</code> file downloads automatically with your name and date in the filename</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">The file includes all entries, total hours, regular vs. overtime breakdown</div></div>
+        </div>
+        <div class="tip-box" style="margin-top:1rem;"><i class="fas fa-arrow-right"></i> <strong style="color:#fff;">Next up: Invoice →</strong> Turn your timesheet entries into a professional PDF invoice for the customer.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div style="padding:8px 6px;">
+              <div style="text-align:center;font-size:8px;font-weight:700;color:var(--orange);margin-bottom:6px;">Timesheet — Lucas</div>
+              <table class="mock-table" style="margin-bottom:5px;">
+                <thead><tr><th>Job</th><th>Date</th><th>Hrs</th></tr></thead>
+                <tbody>
+                  <tr><td>Smith Furnace</td><td>04/10</td><td>3.5</td></tr>
+                  <tr><td>McDonald's</td><td>04/10</td><td>2.0</td></tr>
+                  <tr><td style="font-weight:700;color:#fff;" colspan="2">Total Regular</td><td style="color:#7CFF9B;font-weight:700;">5.5h</td></tr>
+                </tbody>
+              </table>
+              <div class="mock-btn" style="text-align:center;">⬇ Generate Excel</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 8: Invoice Intro ── -->
+  <div class="slide" data-index="8">
+    <div style="margin-top:1rem;">
+      <div class="slide-section">Part 2 · Invoice</div>
+      <div class="slide-title">Building<br>Your Invoice</div>
+      <div class="slide-desc">The Invoice tab lets you build a full customer invoice — pulling in the hours from your timesheet plus any materials you used.</div>
+      <div style="display:flex;flex-direction:column;gap:.65rem;margin-top:1.25rem;max-width:440px;">
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+          <i class="fas fa-check-circle" style="color:#28a745;"></i>
+          <span style="font-size:.88rem;">Links directly to your timesheet entries</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+          <i class="fas fa-check-circle" style="color:#28a745;"></i>
+          <span style="font-size:.88rem;">Remembers saved materials &amp; their prices</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+          <i class="fas fa-check-circle" style="color:#28a745;"></i>
+          <span style="font-size:.88rem;">Auto-calculates markup, HST, and totals</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+          <i class="fas fa-check-circle" style="color:#28a745;"></i>
+          <span style="font-size:.88rem;">Generates a PDF — customer copy &amp; boss copy</span>
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;display:flex;align-items:center;gap:.5rem;color:var(--muted);font-size:.82rem;">
+        <i class="fas fa-arrow-right" style="color:var(--orange);"></i>
+        Tap <strong style="color:#fff;">Next</strong> for the step-by-step
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 9: Select Entries ── -->
+  <div class="slide" data-index="9">
+    <div class="slide-section">Part 2 · Invoice — Step 1 of 6</div>
+    <div class="slide-title">Name the Invoice &amp;<br>Pick Your Entries</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">Every invoice needs a name and the timesheet entries you want to bill for.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">Tap the <strong>Invoice</strong> tab at the top</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Type a name in <strong>Invoice / Work Order</strong> — e.g. <code>INV-1001</code> or <code>Smith-Furnace</code></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">Tap <strong>New Draft</strong> to start fresh</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">Check the boxes next to the timesheet entries you want included in this invoice</div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> You can include multiple jobs from multiple days in one invoice — just check all the relevant entries.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="mock-form" style="gap:4px;">
+              <div>
+                <div class="mock-label">Invoice / Work Order:</div>
+                <div style="display:flex;gap:3px;">
+                  <div class="mock-input" style="color:#fff;flex:1;">Smith-Furnace</div>
+                  <div class="mock-btn" style="font-size:6px;padding:3px 5px;">New Draft</div>
+                </div>
+              </div>
+              <div class="mock-label" style="margin-top:3px;">Include Entries In This Invoice:</div>
+              <div style="background:#2a2a2a;border:1px solid var(--border);border-radius:5px;overflow:hidden;">
+                <div style="display:flex;align-items:center;gap:5px;padding:4px 6px;border-bottom:0.5px solid #333;">
+                  <div style="width:10px;height:10px;border:1.5px solid var(--orange);border-radius:3px;background:var(--orange);display:flex;align-items:center;justify-content:center;"><i class="fas fa-check" style="font-size:6px;color:#fff;"></i></div>
+                  <span style="font-size:7px;color:#e0e0e0;">Apr 10 · Smith Furnace · 3:30</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:5px;padding:4px 6px;">
+                  <div style="width:10px;height:10px;border:1.5px solid #555;border-radius:3px;"></div>
+                  <span style="font-size:7px;color:#888;">Apr 10 · McDonald's Fryer · 2:00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 10: Client Info ── -->
+  <div class="slide" data-index="10">
+    <div class="slide-section">Part 2 · Invoice — Step 2 of 6</div>
+    <div class="slide-title">Add Client<br>Details</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">Fill in who the invoice is for. Saved clients are remembered for next time — you only need to type the name once.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">Tap <strong>Auto Fill From Selected Entries</strong> — it tries to pre-fill client info from saved records</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Enter <strong>Client Name</strong>, Phone, Email, and Address</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">Set your <strong>Regular Rate</strong> and <strong>Overtime Rate</strong> (defaults: $110 / $175)</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">Leave <strong>Lock saved client/address links</strong> checked — it keeps name and address paired automatically</div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> Client info is saved after the first invoice. Next time you type their name it auto-fills their phone, email and address.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="mock-form" style="gap:4px;">
+              <div>
+                <div class="mock-label">Client Name:</div>
+                <div class="mock-input" style="color:#fff;">John Smith</div>
+              </div>
+              <div>
+                <div class="mock-label">Client Phone:</div>
+                <div class="mock-input" style="color:#fff;">905-555-0123</div>
+              </div>
+              <div>
+                <div class="mock-label">Client Address:</div>
+                <div class="mock-input" style="color:#fff;">123 Main St, Burlington</div>
+              </div>
+              <div style="display:flex;gap:4px;">
+                <div style="flex:1;">
+                  <div class="mock-label">Regular ($):</div>
+                  <div class="mock-input" style="color:#7CFF9B;">110.00</div>
+                </div>
+                <div style="flex:1;">
+                  <div class="mock-label">Overtime ($):</div>
+                  <div class="mock-input" style="color:#ffd86a;">175.00</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 11: Materials ── -->
+  <div class="slide" data-index="11">
+    <div class="slide-section">Part 2 · Invoice — Step 3 of 6</div>
+    <div class="slide-title">Add Materials<br>&amp; Parts</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">List every material or part used on the job. The app applies your markup automatically and calculates the customer price.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">Tap <strong>Add Item</strong> to create a new material row</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Type the <strong>Description</strong> — saved materials appear as suggestions so you can tap to auto-fill the price</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">Enter <strong>Qty</strong>, <strong>Distributor Cost</strong>, and <strong>Markup %</strong> — the customer price calculates automatically</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">Or type the <strong>Customer Price</strong> directly and the markup calculates backwards</div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> Material prices are saved after every invoice. The next time you use the same part, the last cost is pre-filled for you.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div style="padding:5px 5px 0;">
+              <div style="font-size:7.5px;font-weight:700;color:#e0e0e0;margin-bottom:4px;">Invoice Items</div>
+              <div class="mock-invoice-row" style="font-size:6.5px;font-weight:700;color:var(--orange);">
+                <span>Description</span><span>Qty</span><span>Amount</span>
+              </div>
+              <div class="mock-invoice-row">
+                <span style="font-size:7px;color:#e0e0e0;">Labour (3.5 hrs)</span>
+                <span style="font-size:7px;color:#ccc;">1</span>
+                <span style="font-size:7px;color:#7CFF9B;">$385</span>
+              </div>
+              <div class="mock-invoice-row" style="background:rgba(255,69,0,.06);">
+                <span style="font-size:7px;color:#e0e0e0;">Furnace Filter 16x25</span>
+                <span style="font-size:7px;color:#ccc;">2</span>
+                <span style="font-size:7px;color:#7CFF9B;">$48</span>
+              </div>
+              <div class="mock-invoice-row">
+                <span style="font-size:7px;color:#e0e0e0;">Service Charge</span>
+                <span style="font-size:7px;color:#ccc;">1</span>
+                <span style="font-size:7px;color:#7CFF9B;">$110</span>
+              </div>
+              <div style="margin-top:5px;padding:5px;background:rgba(255,69,0,.06);border:0.5px solid rgba(255,69,0,.25);border-radius:5px;text-align:right;">
+                <div style="font-size:7px;color:#ccc;">Subtotal: <b style="color:#fff;">$543.00</b></div>
+                <div style="font-size:7px;color:#ccc;">HST 13%: <b style="color:#fff;">$70.59</b></div>
+                <div style="font-size:8.5px;color:var(--orange);font-weight:700;">Total: $613.59</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 12: Generate PDF ── -->
+  <div class="slide" data-index="12">
+    <div class="slide-section">Part 2 · Invoice — Step 4 of 6</div>
+    <div class="slide-title">Generate<br>the PDF</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">When everything looks right, generate a PDF you can send to the customer — and a separate boss copy for your records.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">Review the running total at the bottom of the items table</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Tap <strong>Generate Invoice PDF</strong> — a formatted invoice downloads to your device</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">Tap <strong>Boss Copy PDF</strong> to get a version with distributor costs and markup visible</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">The entries on your timesheet are automatically marked as <strong style="color:#87b7ff;">Invoiced</strong></div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> The customer PDF shows clean prices only. The boss copy shows your cost, markup, and profit on every line — keep that one private.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div style="padding:6px;">
+              <div style="font-size:7.5px;font-weight:700;color:var(--orange);text-align:center;margin-bottom:5px;">Ready to Generate</div>
+              <div style="background:#2a2a2a;border:1px solid rgba(255,69,0,.2);border-radius:5px;padding:5px;margin-bottom:4px;font-size:6.5px;color:#ccc;line-height:1.6;">
+                <div><b style="color:#fff;">Client:</b> John Smith</div>
+                <div><b style="color:#fff;">Invoice:</b> Smith-Furnace</div>
+                <div><b style="color:#fff;">Entries:</b> 1 job · 3.5 hrs</div>
+                <div><b style="color:#fff;">Items:</b> 3 lines</div>
+                <div><b style="color:var(--orange);">Total: $613.59 (incl. HST)</b></div>
+              </div>
+              <div class="mock-btn" style="margin-bottom:3px;text-align:center;font-size:7px;">📄 Generate Invoice PDF</div>
+              <div class="mock-btn" style="background:#555;text-align:center;font-size:7px;">📋 Generate Boss Copy PDF</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 13: Save Draft ── -->
+  <div class="slide" data-index="13">
+    <div class="slide-section">Part 2 · Invoice — Step 5 of 6</div>
+    <div class="slide-title">Saving &amp;<br>Loading Drafts</div>
+    <div class="two-col">
+      <div class="col-left">
+        <div class="slide-desc">Not ready to generate yet? Save a draft and come back to finish it later — or add more work from a different day.</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text">Tap <strong>Save Draft</strong> to save your current invoice progress</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">To continue later: select the draft from <strong>Saved Drafts</strong> and tap <strong>Load Draft</strong></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">To add more work days: load the draft, check new entries, then tap <strong>Append Work To Draft</strong></div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">Toggle <strong>Show archived/invoiced</strong> to view past completed invoices</div></div>
+        </div>
+        <div class="tip-box"><i class="fas fa-lightbulb"></i> Use <strong>Append Work To Draft</strong> when a job spans multiple days — it adds the new hours without losing what you already had.</div>
+      </div>
+      <div class="col-right phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="mock-form" style="gap:4px;">
+              <div style="display:flex;gap:3px;">
+                <div class="mock-input" style="color:#fff;flex:1;">Smith-Furnace</div>
+                <div class="mock-btn" style="font-size:6px;padding:3px 4px;">Save Draft</div>
+              </div>
+              <div>
+                <div class="mock-label">Saved Drafts:</div>
+                <div class="mock-input" style="color:#fff;">Smith-Furnace ●</div>
+              </div>
+              <div style="display:flex;gap:3px;">
+                <div class="mock-btn" style="font-size:6px;flex:1;padding:3px 4px;">Load Draft</div>
+                <div class="mock-btn blue" style="font-size:6px;flex:1;padding:3px 4px;">Append Work</div>
+                <div class="mock-btn" style="font-size:6px;background:#dc3545;flex:1;padding:3px 4px;">Delete</div>
+              </div>
+              <div style="font-size:6px;color:#888;line-height:1.4;">To add work from another day: load the draft, check new timesheet entries, then tap Append Work To Draft.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 14: Wrap-up ── -->
+  <div class="slide" data-index="14">
+    <div class="slide-section">Part 2 · Invoice — Step 6 of 6</div>
+    <div class="slide-title">You're All Set!</div>
+    <div class="slide-desc">Here's the daily workflow in a nutshell:</div>
+    <div style="display:flex;flex-direction:column;gap:.55rem;max-width:520px;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;gap:.8rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--orange);color:#fff;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+        <span style="font-size:.88rem;"><strong>Log each job</strong> — name, address, times, description</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:.8rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--orange);color:#fff;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+        <span style="font-size:.88rem;"><strong>Tap New Day</strong> when you're done — archives the day</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:.8rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--orange);color:#fff;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+        <span style="font-size:.88rem;"><strong>Go To Invoice</strong> — select entries, fill client info</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:.8rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--orange);color:#fff;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+        <span style="font-size:.88rem;"><strong>Add materials</strong>, check the total, generate PDF</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:.8rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:#28a745;color:#fff;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✓</div>
+        <span style="font-size:.88rem;"><strong>Backup Data regularly</strong> — keeps everything safe</span>
+      </div>
+    </div>
+    <div class="tip-box"><i class="fas fa-star"></i> <strong style="color:#fff;">Pro tip:</strong> Use the ☰ menu for Saved Materials and Clients / Addresses to keep your prices and contact info organised and up to date.</div>
+  </div>
+
+</div><!-- /slides -->
+
+<!-- Dots -->
+<div id="dots"></div>
+
+<!-- Nav -->
+<div id="nav">
+  <button class="nav-btn" id="prevBtn" disabled><i class="fas fa-chevron-left"></i> Prev</button>
+  <div id="slideCounter"><span id="curSlide">1</span> / <span id="totalSlides">15</span></div>
+  <button class="nav-btn primary" id="nextBtn">Next <i class="fas fa-chevron-right"></i></button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total  = slides.length;
+  let current  = 0;
+  let isAnimating = false;
+
+  document.getElementById('totalSlides').textContent = total;
+
+  // Build dots
+  const dotsWrap = document.getElementById('dots');
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(d);
+  });
+
+  function updateUI() {
+    document.getElementById('curSlide').textContent = current + 1;
+    document.getElementById('prevBtn').disabled = current === 0;
+    document.getElementById('nextBtn').textContent = current === total - 1 ? 'Restart' : 'Next';
+    document.getElementById('nextBtn').innerHTML = current === total - 1
+      ? '<i class="fas fa-redo"></i> Restart'
+      : 'Next <i class="fas fa-chevron-right"></i>';
+
+    document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
+    document.getElementById('progressBar').style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  function goTo(idx) {
+    if (isAnimating || idx === current) return;
+    isAnimating = true;
+    const prev = current;
+    current = ((idx % total) + total) % total;
+
+    slides[prev].classList.add('exit');
+    slides[prev].classList.remove('active');
+    slides[current].classList.remove('exit');
+
+    setTimeout(() => {
+      slides[prev].classList.remove('exit');
+      slides[current].classList.add('active');
+      updateUI();
+      isAnimating = false;
+    }, 30);
+
+    setTimeout(() => { isAnimating = false; }, 450);
+  }
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    if (current === total - 1) goTo(0);
+    else goTo(current + 1);
+  });
+  document.getElementById('prevBtn').addEventListener('click', () => goTo(current - 1));
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+  });
+
+  // Swipe
+  let touchStartX = 0, touchStartY = 0;
+  document.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) goTo(current + 1);
+      else         goTo(current - 1);
+    }
+  }, { passive: true });
+
+  updateUI();
+</script>
+</body>
+</html>
