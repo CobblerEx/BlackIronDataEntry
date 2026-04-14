@@ -3188,7 +3188,7 @@
         items: collectInvoiceItems(),
         serviceDate,
         serviceDateLabel,
-        status: 'draft',
+        status: existingDraft?.status === 'invoiced' ? 'invoiced' : 'draft',
         createdAt: invoices[invoiceId]?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -4183,6 +4183,9 @@
         if (copyType !== 'boss') {
           markSelectedEntriesAsInvoiced(invoiceId);
           renderTable();
+          renderInvoiceEntrySelector();
+          refreshInvoiceDraftList(invoiceId);
+          updateInvoiceSummary();
         }
       } catch (err) {
         alert((copyType === 'boss' ? 'Boss copy' : 'Invoice') + ' generation failed. Please refresh and try again.');
