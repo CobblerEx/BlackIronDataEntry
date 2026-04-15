@@ -2025,7 +2025,11 @@
         archive.unshift(snapshot);
       }
 
-      saveArchivedDays(archive.slice(0, 60));
+      // Keep all entries archived within the last 30 days; fall back to 30 most recent
+      const MS_30_DAYS = 30 * 24 * 60 * 60 * 1000;
+      const cutoff = Date.now() - MS_30_DAYS;
+      const pruned = archive.filter(d => new Date(d.archivedAt || d.date || 0).getTime() >= cutoff);
+      saveArchivedDays(pruned.length ? pruned : archive.slice(0, 30));
       refreshArchiveList();
       return true;
     }
