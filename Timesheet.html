@@ -475,6 +475,15 @@
 
     /* Black Iron tab */
     #blackIronTab .bi-wrap {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin:0 0 1.5rem 0;}
+
+    /* Collapsible bi-wrap sections */
+    .bi-section-header {display:flex;align-items:center;justify-content:space-between;gap:.5rem;cursor:pointer;user-select:none;-webkit-user-select:none;}
+    .bi-section-header h2,.bi-section-header h3 {margin:0;flex:1;}
+    .bi-collapse-btn {background:none;border:1px solid rgba(255,69,0,.45);color:#ff4500;width:32px;height:32px;border-radius:6px;font-size:.85rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;transition:all .2s;min-height:auto;margin:0;padding:0;line-height:1;}
+    .bi-collapse-btn:hover {background:#ff4500;color:#fff;box-shadow:0 0 8px rgba(255,69,0,.6);}
+    .bi-collapse-btn.collapsed {transform:rotate(180deg);}
+    .bi-section-body {overflow:hidden;transition:max-height .35s ease, opacity .25s ease;max-height:9999px;opacity:1;}
+    .bi-section-body.collapsed {max-height:0 !important;opacity:0;pointer-events:none;}
     .bi-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;}
     .bi-fit-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin:.75rem 0 1rem 0;}
     .bi-fit-btn {background:#2a2a2a;border:1px solid #ff4500;color:#e0e0e0;padding:.8rem;border-radius:8px;cursor:pointer;font-size:.95rem;}
@@ -1089,7 +1098,11 @@
     
 
 <div class="bi-wrap">
-      <h2>Black Iron Parts Builder</h2>
+      <div class="bi-section-header" onclick="biToggleSection('biPartsBody',this)">
+        <h2>Black Iron Parts Builder</h2>
+        <button type="button" class="bi-collapse-btn" aria-label="Toggle section">&#8963;</button>
+      </div>
+      <div id="biPartsBody" class="bi-section-body">
       <div class="bi-grid">
         <label>Job / Parts List Name:
           <input type="text" id="biJobName" list="biJobHistory" placeholder="e.g. Smith Pool Heater Gas Line">
@@ -1201,7 +1214,11 @@
       <div id="biVoiceBox" class="bi-voice-box"></div>
 
       <div class="bi-wrap" style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,.03);">
-        <h3 style="margin-top:0;">Pipe Cut Length Helper</h3>
+        <div class="bi-section-header" onclick="biToggleSection('biCutHelperBody',this)" style="margin-bottom:0;">
+          <h3 style="margin-top:0;">Pipe Cut Length Helper</h3>
+          <button type="button" class="bi-collapse-btn collapsed" aria-label="Toggle section">&#8963;</button>
+        </div>
+        <div id="biCutHelperBody" class="bi-section-body collapsed">
         <div class="bi-grid">
           <label>Pipe Size:
             <select id="biCutPipeSize">
@@ -1222,6 +1239,7 @@
           <button type="button" id="biCalcCut">Add Cut Pipe</button>
         </div>
         <small class="bi-muted">Cut length = face-to-face length minus both fitting takeouts. Adjust the takeout value to match the fittings you are using.</small>
+        </div><!-- /biCutHelperBody -->
       </div>
 
       <div class="bi-chip-row">
@@ -1230,18 +1248,29 @@
         <span class="bi-chip">Last Size Saved: <b id="biLastSize">—</b></span>
       </div>
       <small class="bi-muted">Quality-of-life upgrades added here: saved parts list, job-name memory, duplicate/edit/delete, last pipe size memory, and direct transfer into the invoice materials table.</small>
+      </div><!-- /biPartsBody -->
     </div>
 
     <div class="bi-wrap">
-      <h2>Grouped Summary</h2>
+      <div class="bi-section-header" onclick="biToggleSection('biGroupedBody',this)">
+        <h2>Grouped Summary</h2>
+        <button type="button" class="bi-collapse-btn" aria-label="Toggle section">&#8963;</button>
+      </div>
+      <div id="biGroupedBody" class="bi-section-body">
       <div id="biGroupedList" class="bi-list"></div>
+      </div><!-- /biGroupedBody -->
     </div>
 
     <div class="bi-wrap">
-      <h2>Parts List</h2>
+      <div class="bi-section-header" onclick="biToggleSection('biPartsListBody',this)">
+        <h2>Parts List</h2>
+        <button type="button" class="bi-collapse-btn" aria-label="Toggle section">&#8963;</button>
+      </div>
+      <div id="biPartsListBody" class="bi-section-body">
       <div id="biList" class="bi-list"></div>
+      </div><!-- /biPartsListBody -->
     </div>
-  </div>
+  </div><!-- /blackIronTab -->
 
 
   <div id="loading"><div class="spinner"></div><br>Generating...</div>
@@ -5883,6 +5912,37 @@ document.addEventListener("DOMContentLoaded",function(){
         alert("Calculated items sent. Review them in the Black Iron tab.");
       });
     }
+  });
+
+  // ── Black Iron collapsible sections ────────────────────────────────────────
+  const BI_COLLAPSE_KEY = 'biSectionCollapsed';
+  function biLoadCollapsed() {
+    try { return JSON.parse(localStorage.getItem(BI_COLLAPSE_KEY) || '{}'); } catch(e) { return {}; }
+  }
+  function biSaveCollapsed(state) {
+    try { localStorage.setItem(BI_COLLAPSE_KEY, JSON.stringify(state)); } catch(e) {}
+  }
+  function biToggleSection(bodyId, headerEl) {
+    const body = document.getElementById(bodyId);
+    const btn = headerEl ? headerEl.querySelector('.bi-collapse-btn') : null;
+    if (!body) return;
+    const isCollapsed = body.classList.toggle('collapsed');
+    if (btn) btn.classList.toggle('collapsed', isCollapsed);
+    const state = biLoadCollapsed();
+    state[bodyId] = isCollapsed;
+    biSaveCollapsed(state);
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    const state = biLoadCollapsed();
+    ['biPartsBody','biGroupedBody','biPartsListBody','biCutHelperBody'].forEach(function(id) {
+      const body = document.getElementById(id);
+      if (!body) return;
+      const header = body.previousElementSibling;
+      const btn = header ? header.querySelector('.bi-collapse-btn') : null;
+      const collapsed = id === 'biCutHelperBody' ? (state[id] !== false) : !!state[id];
+      body.classList.toggle('collapsed', collapsed);
+      if (btn) btn.classList.toggle('collapsed', collapsed);
+    });
   });
 
 </script>
