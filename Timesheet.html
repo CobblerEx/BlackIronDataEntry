@@ -2069,6 +2069,7 @@
         drawer.classList.add('show');
         overlay.classList.add('show');
         setTimeout(() => nameInput.focus(), 80);
+        setTimeout(() => { if (typeof updateStorageHealth === 'function') updateStorageHealth(); }, 120);
       }
       function closeDrawer() {
         drawer.classList.remove('show');
@@ -2173,15 +2174,9 @@
       const oldestDate = oldest.date || 'unknown date';
 
       if (!confirm(
-        old.length + ' archived timesheet' + (old.length === 1 ? '' : 's') + ' older than 1 year will be permanently deleted.
-
-' +
-        'Oldest: ' + oldestDate + '
-
-' +
-        'This cannot be undone. Back up your data first if you want to keep them.
-
-Continue?'
+        old.length + ' archived timesheet' + (old.length === 1 ? '' : 's') + ' older than 1 year will be permanently deleted.\n\n' +
+        'Oldest: ' + oldestDate + '\n\n' +
+        'This cannot be undone. Back up your data first if you want to keep them.\n\nContinue?'
       )) return;
 
       const kept = archive.filter(d => new Date(d.archivedAt || d.date || 0) >= cutoff);
@@ -2191,10 +2186,6 @@ Continue?'
       alert('Done — ' + old.length + ' old archive' + (old.length === 1 ? '' : 's') + ' removed. ' + kept.length + ' timesheet' + (kept.length === 1 ? '' : 's') + ' remaining.');
     }
 
-    // Refresh storage stats whenever the settings drawer opens
-    document.getElementById('hamburgerBtn').addEventListener('click', () => {
-      setTimeout(updateStorageHealth, 80);
-    });
     // ─────────────────────────────────────────────────────────────────────
 
     function getTodayDateString() {
