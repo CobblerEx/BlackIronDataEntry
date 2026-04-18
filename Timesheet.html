@@ -37,7 +37,7 @@
     #cancelButton,#clearAllButton {background:#dc3545;}
     #newDayButton {background:#17a2b8;}
     #copyLast {background:#28a745;}
-    #address {padding-right:50px !important;}
+    #address {padding-right:80px !important;}
     .history-btn {position:absolute;right:8px;top:50%;transform:translateY(-50%);background:#ff4500;color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;min-height:auto;margin:0;}
     .history-btn:active {transform:translateY(-50%) scale(0.95);}
     .history-btn:hover {transform:translateY(-50%) scale(1.1);}
@@ -621,6 +621,35 @@
     .settings-btn.danger { border-color: rgba(220,53,69,.4); }
     .settings-btn.danger i { color: #dc3545; }
     .settings-btn.danger:hover { background: rgba(220,53,69,.14); border-color: #dc3545; }
+
+    /* ── Input clear (×) buttons ── */
+    .input-clr-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(90,90,90,0.85);
+      color: #ccc;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      z-index: 6;
+      min-height: auto !important;
+      margin: 0 !important;
+      flex-shrink: 0;
+      transition: background .15s;
+    }
+    .input-clr-btn:hover { background: #ff4500; color: #fff; }
+    .input-clr-btn.clr-addr  { right: 56px; }
+    .input-clr-btn.clr-ta    { top: 10px; transform: none; }
 
   </style>
 </head>
@@ -6009,5 +6038,76 @@ document.addEventListener("DOMContentLoaded",function(){
     <button type="button" id="undoDeleteBtn">↩ Undo</button>
   </div>
 
+  <script>
+  /* ── Clear (×) buttons on text inputs & textareas ── */
+  (function() {
+    function addClearBtn(input) {
+      const parent = input.parentElement;
+      if (!parent) return;
+      // Skip if already initialised on this input
+      if (input._clrBtnAdded) return;
+      input._clrBtnAdded = true;
+
+      const isTextarea  = input.tagName === 'TEXTAREA';
+      const isAddress   = input.id === 'address';
+
+      // Ensure parent is positioned so absolute children work
+      if (getComputedStyle(parent).position === 'static') {
+        parent.style.position = 'relative';
+      }
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'input-clr-btn' +
+        (isAddress  ? ' clr-addr' : '') +
+        (isTextarea ? ' clr-ta'   : '');
+      btn.setAttribute('aria-label', 'Clear');
+      btn.innerHTML = '&times;';
+
+      function update() {
+        btn.style.display = input.value.length ? 'flex' : 'none';
+      }
+
+      // mousedown preventDefault keeps focus on input when × is tapped
+      btn.addEventListener('mousedown', e => e.preventDefault());
+      btn.addEventListener('click', () => {
+        input.value = '';
+        input.dispatchEvent(new Event('input',  { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.focus();
+        btn.style.display = 'none';
+      });
+
+      input.addEventListener('input',  update);
+      input.addEventListener('change', update);
+
+      // Add right-side padding so text doesn't slide under the × button
+      if (!isTextarea && !isAddress) {
+        const pr = parseFloat(getComputedStyle(input).paddingRight) || 8;
+        if (pr < 30) input.style.paddingRight = '30px';
+      }
+
+      parent.appendChild(btn);
+      update();
+    }
+
+    function initAll() {
+      document.querySelectorAll('input[type="text"], input[type="email"], textarea').forEach(function(input) {
+        // Skip inputs that don't need a clear button
+        if (input.closest('#itemsTable'))        return; // invoice line items
+        if (input.closest('.profile-grid'))      return; // clients/addresses modal
+        if (input.closest('.bi-calc-toolbar'))   return; // pipe calc fields
+        if (input.closest('.saved-materials-body')) return; // search modal
+        addClearBtn(input);
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+      initAll();
+    }
+  })();
+  </script>
 </body>
 </html>
