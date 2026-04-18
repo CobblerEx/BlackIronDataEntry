@@ -672,6 +672,21 @@
       border-color: #dc3545;
       color: #e05260;
     }
+    .settings-storage-bar-wrap {
+      background: rgba(255,255,255,.06);
+      border-radius: 999px;
+      height: 6px;
+      margin: .5rem 0 .35rem;
+      overflow: hidden;
+    }
+    .settings-storage-bar {
+      height: 100%;
+      border-radius: 999px;
+      background: #ff4500;
+      transition: width .4s ease;
+    }
+    .settings-storage-meta { font-size: .74rem; color: #777; display: flex; justify-content: space-between; }
+    .settings-archive-info { font-size: .78rem; color: #aaa; margin: .4rem 0 .6rem; line-height: 1.4; }
 
     /* ── Input clear (×) buttons ── */
     .input-clr-btn {
@@ -769,6 +784,29 @@
         </span>
         <span class="settings-btn-arrow">›</span>
       </button>
+
+      <div class="settings-divider"></div>
+
+      <!-- Storage Health -->
+      <div class="settings-group-label">Storage</div>
+      <div style="padding:.4rem 1rem .6rem;">
+        <div class="settings-storage-bar-wrap">
+          <div class="settings-storage-bar" id="storageBar" style="width:0%"></div>
+        </div>
+        <div class="settings-storage-meta">
+          <span id="storageUsedLabel">Calculating…</span>
+          <span style="color:#555;">~5 MB limit</span>
+        </div>
+        <div class="settings-archive-info" id="archiveHealthInfo">Loading archive info…</div>
+        <button type="button" class="settings-btn" id="settingsCleanArchiveBtn" style="padding:.6rem 0;min-height:auto;">
+          <span class="settings-btn-icon" style="background:rgba(255,193,7,.12);color:#ffd86a;"><i class="fas fa-broom"></i></span>
+          <span class="settings-btn-text">
+            <span class="settings-btn-title">Clean Old Archives</span>
+            <span class="settings-btn-desc">Remove archived timesheets older than 1 year</span>
+          </span>
+          <span class="settings-btn-arrow">›</span>
+        </button>
+      </div>
 
       <!-- Clear (subtle, no scary label) -->
       <div class="settings-clear-wrap">
@@ -2069,7 +2107,94 @@
         closeDrawer();
         setTimeout(() => document.getElementById('clearAllButton').click(), 80);
       });
+      document.getElementById('settingsCleanArchiveBtn').addEventListener('click', () => {
+        cleanOldArchives();
+      });
     })();
+    // ─────────────────────────────────────────────────────────────────────
+
+    // ── Storage health ────────────────────────────────────────────────────
+    function getLocalStorageUsedBytes() {
+      let total = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        total += (key.length + (localStorage.getItem(key) || '').length) * 2; // UTF-16
+      }
+      return total;
+    }
+
+    function updateStorageHealth() {
+      const used = getLocalStorageUsedBytes();
+      const limit = 5 * 1024 * 1024; // 5 MB
+      const pct = Math.min(100, (used / limit) * 100);
+      const usedKB = (used / 1024).toFixed(1);
+
+      const bar = document.getElementById('storageBar');
+      const label = document.getElementById('storageUsedLabel');
+      if (bar) {
+        bar.style.width = pct.toFixed(1) + '%';
+        bar.style.background = pct > 80 ? '#dc3545' : pct > 55 ? '#ffd86a' : '#ff4500';
+      }
+      if (label) label.textContent = usedKB + ' KB used (' + pct.toFixed(1) + '%)';
+
+      const archiveInfo = document.getElementById('archiveHealthInfo');
+      if (archiveInfo) {
+        const archive = getArchivedDays();
+        const cutoff = new Date();
+        cutoff.setFullYear(cutoff.getFullYear() - 1);
+        const old = archive.filter(d => {
+          const dt = new Date(d.archivedAt || d.date || 0);
+          return dt < cutoff;
+        });
+        if (!archive.length) {
+          archiveInfo.textContent = 'No archived timesheets stored.';
+        } else if (!old.length) {
+          archiveInfo.textContent = archive.length + ' archived timesheet' + (archive.length === 1 ? '' : 's') + ' — all within the last year. Nothing to clean up.';
+        } else {
+          archiveInfo.innerHTML = archive.length + ' archived timesheets total &nbsp;·&nbsp; <span style="color:#ffd86a;">' + old.length + ' older than 1 year</span>';
+        }
+      }
+    }
+
+    function cleanOldArchives() {
+      const archive = getArchivedDays();
+      const cutoff = new Date();
+      cutoff.setFullYear(cutoff.getFullYear() - 1);
+      const old = archive.filter(d => new Date(d.archivedAt || d.date || 0) < cutoff);
+
+      if (!old.length) {
+        alert('Nothing to clean up — all archived timesheets are within the last year.');
+        return;
+      }
+
+      const oldest = old.reduce((a, b) => {
+        return new Date(a.archivedAt || a.date || 0) < new Date(b.archivedAt || b.date || 0) ? a : b;
+      });
+      const oldestDate = oldest.date || 'unknown date';
+
+      if (!confirm(
+        old.length + ' archived timesheet' + (old.length === 1 ? '' : 's') + ' older than 1 year will be permanently deleted.
+
+' +
+        'Oldest: ' + oldestDate + '
+
+' +
+        'This cannot be undone. Back up your data first if you want to keep them.
+
+Continue?'
+      )) return;
+
+      const kept = archive.filter(d => new Date(d.archivedAt || d.date || 0) >= cutoff);
+      saveArchivedDays(kept);
+      refreshArchiveList();
+      updateStorageHealth();
+      alert('Done — ' + old.length + ' old archive' + (old.length === 1 ? '' : 's') + ' removed. ' + kept.length + ' timesheet' + (kept.length === 1 ? '' : 's') + ' remaining.');
+    }
+
+    // Refresh storage stats whenever the settings drawer opens
+    document.getElementById('hamburgerBtn').addEventListener('click', () => {
+      setTimeout(updateStorageHealth, 80);
+    });
     // ─────────────────────────────────────────────────────────────────────
 
     function getTodayDateString() {
