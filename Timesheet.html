@@ -4695,14 +4695,21 @@
   (function(){
     const FITTING_GROUPS = [
       { label: 'Black Iron — Fittings', fittings: ['Nipple','Close Nipple','90° Elbow','Street 90° Elbow','45° Elbow','Street 45° Elbow','Tee','Wye','Union','Reducer','Coupling','Bushing','Cap','Plug'] },
-      { label: 'Black Iron — Valves & Hardware', fittings: ['Shut-off Indoor','Shut-off Outdoor','Drip Leg / Sediment Trap','Stand Off (Long)','Stand Off (Short)','Paint'] },
-      { label: 'Gastite / CSST', fittings: ['Gastite Pipe','Gastite Straight','Gastite Flange','Gastite Wall','Gastite Bonding Clamp'] },
-      { label: 'Flex Connectors (one tap)', fittings: ['Flex Connector 12"','Flex Connector 24"','Flex Connector 36"','Flex Connector 48"','Commercial Flex 3/4 48"'] },
+      { label: 'Black Iron — Valves & Hardware', collapsible: true, fittings: ['Shut-off Indoor','Shut-off Outdoor','Drip Leg / Sediment Trap','Stand Off (Long)','Stand Off (Short)','Paint'] },
+      { label: 'Gastite / CSST', collapsible: true, fittings: ['Gastite Pipe','Gastite Straight','Gastite Flange','Gastite Wall','Gastite Bonding Clamp'] },
+      { label: 'Flex Connectors (one tap)', collapsible: true, fittings: ['Flex Connector 12"','Flex Connector 24"','Flex Connector 36"','Flex Connector 48"','Commercial Flex 3/4 48"'] },
       { label: 'Gas Copper', fittings: ['Gas Copper'] },
     ];
     const FITTINGS = FITTING_GROUPS.flatMap(g => g.fittings);
     const STORAGE_KEY = 'blackIronMergedState';
     const HISTORY_KEY = 'blackIronMergedJobHistory';
+    const FIT_COLLAPSE_KEY = 'biFitGroupCollapsed';
+    function getFitGroupCollapsed() {
+      try { return JSON.parse(localStorage.getItem(FIT_COLLAPSE_KEY) || '{}'); } catch(e) { return {}; }
+    }
+    function saveFitGroupCollapsed(st) {
+      try { localStorage.setItem(FIT_COLLAPSE_KEY, JSON.stringify(st)); } catch(e) {}
+    }
     const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', 'lastBackupDate', STORAGE_KEY, HISTORY_KEY];
     const els = {
       tab: document.getElementById('blackIronTab'),
@@ -4912,10 +4919,19 @@
     window.checkBackupReminder = checkBackupReminder;
 
     function renderFitButtons(){
+      const collapsed = getFitGroupCollapsed();
       els.fitGrid.innerHTML = FITTING_GROUPS.map(group => {
-        const header = `<div style="grid-column:1/-1;font-size:.72rem;font-weight:700;color:#ff6a30;text-transform:uppercase;letter-spacing:.06em;margin-top:.6rem;padding-bottom:.25rem;border-bottom:1px solid rgba(255,69,0,.2);">${esc(group.label)}</div>`;
+        const isCollapsible = !!group.collapsible;
+        const isCollapsed = isCollapsible && !!collapsed[group.label];
+        const arrowStyle = isCollapsed ? 'display:inline-block;transform:rotate(180deg);transition:transform .2s;' : 'display:inline-block;transition:transform .2s;';
+        const header = isCollapsible
+          ? `<div class="bi-fit-group-header" data-group="${esc(group.label)}" style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;-webkit-user-select:none;font-size:.72rem;font-weight:700;color:#ff6a30;text-transform:uppercase;letter-spacing:.06em;margin-top:.6rem;padding:.3rem 0 .25rem;border-bottom:1px solid rgba(255,69,0,.2);">
+              <span>${esc(group.label)}</span>
+              <span style="${arrowStyle}">▲</span>
+            </div>`
+          : `<div style="grid-column:1/-1;font-size:.72rem;font-weight:700;color:#ff6a30;text-transform:uppercase;letter-spacing:.06em;margin-top:.6rem;padding-bottom:.25rem;border-bottom:1px solid rgba(255,69,0,.2);">${esc(group.label)}</div>`;
         const buttons = group.fittings.map(name =>
-          `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}" data-fit="${esc(name)}">${esc(name)}</button>`
+          `<button type="button" class="bi-fit-btn ${state.selectedFitting===name?'active':''}${isCollapsible && isCollapsed?' bi-hidden':''}" data-fit="${esc(name)}" data-fit-group="${esc(group.label)}">${esc(name)}</button>`
         ).join('\n');
         return header + buttons;
       }).join('\n');
@@ -5741,7 +5757,15 @@
 
     els.fitGrid.addEventListener('click', e => {
       const btn = e.target.closest('.bi-fit-btn');
-      if (btn) selectFitting(btn.dataset.fit);
+      if (btn) { selectFitting(btn.dataset.fit); return; }
+      const header = e.target.closest('.bi-fit-group-header');
+      if (header) {
+        const label = header.dataset.group;
+        const st = getFitGroupCollapsed();
+        st[label] = !st[label];
+        saveFitGroupCollapsed(st);
+        renderFitButtons();
+      }
     });
     els.add.addEventListener('click', () => addItem());
     els.quickAddBtn.addEventListener('click', () => {
