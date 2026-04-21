@@ -3372,12 +3372,49 @@
     }
 
     function populateInvoiceFromEntries() {
-      const filtered = getFilteredEntries();
+      const filtered = getFilteredEntries(); // live, currently-checked entries
+
+      // ── Preserve archived-day hours from the loaded draft ──────────────────
+      // When a draft links entries from previous (archived) sessions, those IDs
+      // won't be found in the live `entries` array.  Without this block, the
+      // checkbox-change event would overwrite the items table with only the
+      // current day's hours, silently losing all prior days' work.
+      const currentInvoiceId = document.getElementById('invoiceId').value.trim();
+      const existingDraft = currentInvoiceId ? (invoices[currentInvoiceId] || null) : null;
+      let archivedRegular  = 0;
+      let archivedOvertime = 0;
+      let archivedDescText = '';
+
+      if (existingDraft) {
+        const draftIds  = (existingDraft.linkedEntryIds || []).map(String);
+        const liveIds   = entries.map(e => String(e.id));
+        const hasArchivedEntries = draftIds.some(id => !liveIds.includes(id));
+
+        if (hasArchivedEntries) {
+          // Hours still visible in the live entries array that belong to this draft
+          const liveDraftEntries = entries.filter(e => draftIds.includes(String(e.id)));
+          let liveDraftRegular = 0, liveDraftOvertime = 0;
+          liveDraftEntries.forEach(e => {
+            const s = getHoursBreakdown(e);
+            liveDraftRegular  += s.regular;
+            liveDraftOvertime += s.overtime;
+          });
+          // Archived portion = what was saved in the draft minus what is still live
+          archivedRegular  = Math.max(0, (+existingDraft.regularHours  || 0) - liveDraftRegular);
+          archivedOvertime = Math.max(0, (+existingDraft.overtimeHours || 0) - liveDraftOvertime);
+          archivedDescText = existingDraft.laborDescriptionDated || existingDraft.laborDescription || '';
+        }
+      }
+      // ──────────────────────────────────────────────────────────────────────
 
       clearLaborRows();
 
+      // Merge archived description with live entries description
+      const liveDescText = getLaborDescriptionFromTimesheet(filtered);
       const laborDescriptionField = document.getElementById('laborDescription');
-      laborDescriptionField.value = getLaborDescriptionFromTimesheet(filtered);
+      laborDescriptionField.value = archivedDescText
+        ? mergeLaborDescriptions(archivedDescText, liveDescText)
+        : liveDescText;
 
       // Only fill client fields from the address-matched profile — never from lastClient,
       // which was causing old customer data to reappear after a page refresh
@@ -3387,10 +3424,36 @@
         clientAddressInput.value = matchedClientFromAddress;
       }
 
-      populateLaborRowsFromEntries(filtered);
+      // Sum live-checked entries, then add the archived-day portion on top
+      let liveRegular = 0, liveOvertime = 0;
+      filtered.forEach(e => {
+        const s = getHoursBreakdown(e);
+        liveRegular  += s.regular;
+        liveOvertime += s.overtime;
+      });
+      const totalRegular  = liveRegular  + archivedRegular;
+      const totalOvertime = liveOvertime + archivedOvertime;
+
+      if (totalRegular > 0) {
+        const row = ensureRegularLaborRow();
+        row.querySelector('.item-qty').value = totalRegular.toFixed(2);
+        row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      }
+      if (totalOvertime > 0) {
+        const row = ensureOvertimeLaborRow();
+        row.querySelector('.item-qty').value = totalOvertime.toFixed(2);
+        row.querySelector('.item-qty').dispatchEvent(new Event('input'));
+      }
+
+      // Auto-switch service charge based on whether there is any overtime
+      const scRow = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
+      if (scRow) {
+        const scRate = totalOvertime > 0 ? 175 : getDefaultServiceCharge();
+        scRow.querySelector('.item-customer-price').value = formatMoney(scRate);
+        scRow.querySelector('.item-customer-price').dispatchEvent(new Event('input'));
+      }
 
       updateInvoiceSummary();
-      const currentInvoiceId = document.getElementById('invoiceId').value.trim();
       refreshInvoiceDraftList(currentInvoiceId);
     }
 
@@ -4885,8 +4948,10 @@
       const byName = findClientProfileByName(clientNameEl.value);
       if (byName) {
         clientNameEl.value = byName.name || clientNameEl.value;
-        clientPhoneEl.value = byName.phone || '';
-        clientEmailEl.value = byName.email || '';
+        // Only overwrite phone/email if the saved profile actually has a value —
+        // prevents the lock from clearing fields the user just typed for a new contact
+        if (byName.phone) clientPhoneEl.value = byName.phone;
+        if (byName.email) clientEmailEl.value = byName.email;
         clientAddressEl.value = byName.address || clientAddressEl.value;
         const location = findLocationProfileByAddress(clientAddressEl.value);
         if (location) {
