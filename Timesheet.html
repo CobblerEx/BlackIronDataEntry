@@ -3130,16 +3130,18 @@
       let existingRegular  = 0;
       let existingOvertime = 0;
 
-      if (existingEntries.length > 0) {
+      // Always prefer the saved regularHours total — it includes ALL days (even
+      // archived ones no longer in the live entries array).  Only fall back to
+      // re-summing live entries for old drafts that pre-date the regularHours field.
+      if (existingDraft.regularHours != null) {
+        existingRegular  = +existingDraft.regularHours  || 0;
+        existingOvertime = +existingDraft.overtimeHours || 0;
+      } else if (existingEntries.length > 0) {
         existingEntries.forEach(e => {
           const s = getHoursBreakdown(e);
           existingRegular  += s.regular;
           existingOvertime += s.overtime;
         });
-      } else if (existingDraft.regularHours != null) {
-        // Reliably saved field (new drafts)
-        existingRegular  = +existingDraft.regularHours  || 0;
-        existingOvertime = +existingDraft.overtimeHours || 0;
       } else {
         // Fallback for old drafts that pre-date the regularHours field
         (existingDraft.items || []).forEach(item => {
@@ -3182,9 +3184,11 @@
 
       // ── Description ────────────────────────────────────────────────────────
       // Priority: live entries (with dates forced) → saved laborDescriptionDated → plain laborDescription
-      const existingDescText = existingEntries.length > 0
-        ? getLaborDescriptionFromTimesheet(existingEntries, true)
-        : (existingDraft.laborDescriptionDated || existingDraft.laborDescription || '');
+      // Always use the saved description as the base so archived days' lines are
+      // preserved.  Only regenerate from live entries if the draft has no saved text.
+      const existingDescText = (existingDraft.laborDescriptionDated || existingDraft.laborDescription)
+        ? (existingDraft.laborDescriptionDated || existingDraft.laborDescription)
+        : (existingEntries.length > 0 ? getLaborDescriptionFromTimesheet(existingEntries, true) : '');
 
       const addedDescText = getLaborDescriptionFromTimesheet(addedEntries, true);
 
@@ -3375,10 +3379,10 @@
       const filtered = getFilteredEntries(); // live, currently-checked entries
 
       // ── Preserve archived-day hours from the loaded draft ──────────────────
-      // When a draft links entries from previous (archived) sessions, those IDs
-      // won't be found in the live `entries` array.  Without this block, the
-      // checkbox-change event would overwrite the items table with only the
-      // current day's hours, silently losing all prior days' work.
+      // When a draft links entries from previous archived sessions, those IDs
+      // won't be in the live `entries` array.  Without this, checking a new
+      // checkbox fires this function and overwrites the table with only the
+      // current day's hours, silently wiping all prior days' work.
       const currentInvoiceId = document.getElementById('invoiceId').value.trim();
       const existingDraft = currentInvoiceId ? (invoices[currentInvoiceId] || null) : null;
       let archivedRegular  = 0;
@@ -3386,12 +3390,12 @@
       let archivedDescText = '';
 
       if (existingDraft) {
-        const draftIds  = (existingDraft.linkedEntryIds || []).map(String);
-        const liveIds   = entries.map(e => String(e.id));
+        const draftIds = (existingDraft.linkedEntryIds || []).map(String);
+        const liveIds  = entries.map(e => String(e.id));
         const hasArchivedEntries = draftIds.some(id => !liveIds.includes(id));
 
         if (hasArchivedEntries) {
-          // Hours still visible in the live entries array that belong to this draft
+          // Hours of draft entries that are still in the live array
           const liveDraftEntries = entries.filter(e => draftIds.includes(String(e.id)));
           let liveDraftRegular = 0, liveDraftOvertime = 0;
           liveDraftEntries.forEach(e => {
@@ -3399,7 +3403,7 @@
             liveDraftRegular  += s.regular;
             liveDraftOvertime += s.overtime;
           });
-          // Archived portion = what was saved in the draft minus what is still live
+          // Archived portion = total saved in draft minus what is still live
           archivedRegular  = Math.max(0, (+existingDraft.regularHours  || 0) - liveDraftRegular);
           archivedOvertime = Math.max(0, (+existingDraft.overtimeHours || 0) - liveDraftOvertime);
           archivedDescText = existingDraft.laborDescriptionDated || existingDraft.laborDescription || '';
@@ -3409,22 +3413,22 @@
 
       clearLaborRows();
 
-      // Merge archived description with live entries description
+      // Merge archived description lines with the current live selection
       const liveDescText = getLaborDescriptionFromTimesheet(filtered);
       const laborDescriptionField = document.getElementById('laborDescription');
       laborDescriptionField.value = archivedDescText
         ? mergeLaborDescriptions(archivedDescText, liveDescText)
         : liveDescText;
 
-      // Only fill client fields from the address-matched profile — never from lastClient,
-      // which was causing old customer data to reappear after a page refresh
+      // Only fill client fields from the address-matched profile — never from
+      // lastClient, which was causing old customer data to reappear after refresh
       const matchedClientFromAddress = fillClientProfileFromFilteredEntries(filtered, false);
       const clientAddressInput = document.getElementById('clientAddress');
       if (!clientAddressInput.value.trim() && matchedClientFromAddress) {
         clientAddressInput.value = matchedClientFromAddress;
       }
 
-      // Sum live-checked entries, then add the archived-day portion on top
+      // Sum live-checked entries then add the archived portion on top
       let liveRegular = 0, liveOvertime = 0;
       filtered.forEach(e => {
         const s = getHoursBreakdown(e);
@@ -3445,7 +3449,7 @@
         row.querySelector('.item-qty').dispatchEvent(new Event('input'));
       }
 
-      // Auto-switch service charge based on whether there is any overtime
+      // Auto-switch service charge
       const scRow = document.querySelector('#itemsTable tbody tr[data-type="service-charge"]');
       if (scRow) {
         const scRate = totalOvertime > 0 ? 175 : getDefaultServiceCharge();
@@ -4948,8 +4952,8 @@
       const byName = findClientProfileByName(clientNameEl.value);
       if (byName) {
         clientNameEl.value = byName.name || clientNameEl.value;
-        // Only overwrite phone/email if the saved profile actually has a value —
-        // prevents the lock from clearing fields the user just typed for a new contact
+        // Only overwrite if the saved profile has a value — prevents lock from
+        // clearing phone/email the user just typed for a new contact
         if (byName.phone) clientPhoneEl.value = byName.phone;
         if (byName.email) clientEmailEl.value = byName.email;
         clientAddressEl.value = byName.address || clientAddressEl.value;
