@@ -42,6 +42,7 @@
     .history-btn:active {transform:translateY(-50%) scale(0.95);}
     .history-btn:hover {transform:translateY(-50%) scale(1.1);}
     #addressHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:400px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
+    #customerNameHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:300px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
     .history-item {padding:12px 16px;cursor:pointer;border-bottom:1px solid #444;}
     .history-item:hover {background:#ff4500;color:white;padding-left:24px;}
     table {width:100%;border-collapse:collapse;background:rgba(30,30,30,.95);border-radius:10px;overflow:hidden;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1rem 0;}
@@ -868,6 +869,13 @@
         <input type="text" id="address" placeholder="Type to search history..." autocomplete="off">
         <button type="button" class="history-btn" id="historyBtn"><i class="fas fa-history"></i></button>
         <div id="addressHistory"></div>
+      </label>
+
+      <label style="position:relative;">
+        Customer Name:
+        <input type="text" id="customerNameInput" placeholder="e.g. John Smith" autocomplete="off" style="padding-right:80px !important;">
+        <button type="button" class="history-btn" id="customerNameHistoryBtn" title="Saved customers"><i class="fas fa-history"></i></button>
+        <div id="customerNameHistory"></div>
       </label>
 
       <label>Time In: <select id="timeIn"></select></label>
@@ -2426,6 +2434,70 @@
       }
     });
 
+    // ── Customer Name History ─────────────────────────────────────────────
+    let customerNameHistory = JSON.parse(localStorage.getItem('customerNameHistory') || '[]');
+
+    const custNameInput  = document.getElementById('customerNameInput');
+    const custDropdown   = document.getElementById('customerNameHistory');
+
+    function saveCustomerNameHistory() {
+      localStorage.setItem('customerNameHistory', JSON.stringify(customerNameHistory));
+    }
+
+    function addCustomerNameToHistory(name) {
+      name = name.trim();
+      if (!name) return;
+      customerNameHistory = customerNameHistory.filter(n => n.toLowerCase() !== name.toLowerCase());
+      customerNameHistory.unshift(name);
+      if (customerNameHistory.length > 200) customerNameHistory.pop();
+      saveCustomerNameHistory();
+    }
+
+    function showCustomerNameHistory(filter) {
+      custDropdown.innerHTML = '';
+      const list = (filter && filter.trim())
+        ? customerNameHistory.filter(n => n.toLowerCase().includes(filter.toLowerCase()))
+        : customerNameHistory;
+
+      if (list.length === 0) {
+        custDropdown.innerHTML = '<div class="history-item">No saved customers</div>';
+      } else {
+        list.forEach(name => {
+          const div = document.createElement('div');
+          div.className = 'history-item';
+          div.textContent = name;
+          div.onclick = () => {
+            custNameInput.value = name;
+            custDropdown.style.display = 'none';
+          };
+          custDropdown.appendChild(div);
+        });
+      }
+      custDropdown.style.display = 'block';
+    }
+
+    custNameInput.addEventListener('input', () => {
+      const val = custNameInput.value.trim();
+      if (val.length >= 1) {
+        showCustomerNameHistory(val);
+      } else {
+        custDropdown.style.display = 'none';
+      }
+    });
+
+    document.getElementById('customerNameHistoryBtn').onclick = () => showCustomerNameHistory('');
+
+    document.addEventListener('click', e => {
+      if (!custNameInput.contains(e.target) &&
+          !document.getElementById('customerNameHistoryBtn').contains(e.target) &&
+          !custDropdown.contains(e.target)) {
+        custDropdown.style.display = 'none';
+        // Save name when clicking away
+        if (custNameInput.value.trim()) addCustomerNameToHistory(custNameInput.value);
+      }
+    });
+    // ─────────────────────────────────────────────────────────────────────
+
     function parseDateFromMdy(mdy) {
       const m = String(mdy || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
       if (!m) return '';
@@ -3818,6 +3890,7 @@
       const e = entries[i];
       document.getElementById('jobName').value = e.jobName;
       document.getElementById('address').value = e.address || '';
+      document.getElementById('customerNameInput').value = e.customerName || '';
       document.getElementById('timeIn').value = e.timeIn;
       document.getElementById('timeOut').value = e.timeOut;
       document.getElementById('description').value = e.description || '';
@@ -4031,6 +4104,7 @@
       const date = document.getElementById('sessionDate').value;
       const job = document.getElementById('jobName').value.trim();
       const addr = document.getElementById('address').value.trim();
+      const custName = document.getElementById('customerNameInput').value.trim();
       const tIn = document.getElementById('timeIn').value;
       const tOut = document.getElementById('timeOut').value;
       const desc = document.getElementById('description').value.trim();
@@ -4046,6 +4120,7 @@
         dateStr: date,
         jobName: job,
         address: addr,
+        customerName: custName,
         timeIn: tIn,
         timeOut: tOut,
         description: desc,
@@ -4061,6 +4136,8 @@
         if (addressHistory.length > 500) addressHistory.pop();
       }
 
+      if (custName) addCustomerNameToHistory(custName);
+
       renderTable();
       clearForm();
     };
@@ -4069,6 +4146,7 @@
       document.getElementById('jobName').value = '';
       document.getElementById('jobType').value = '';
       document.getElementById('address').value = '';
+      document.getElementById('customerNameInput').value = '';
       document.getElementById('description').value = '';
       document.getElementById('editIndex').value = -1;
       document.getElementById('actionButton').textContent = 'Add Entry';
@@ -4088,6 +4166,7 @@
       const l = entries[entries.length - 1];
       document.getElementById('jobName').value = l.jobName;
       document.getElementById('address').value = l.address || '';
+      document.getElementById('customerNameInput').value = l.customerName || '';
       document.getElementById('description').value = l.description || '';
       document.getElementById('timeIn').value = l.timeOut;
       document.getElementById('timeOut').value = getNextTime(l.timeOut);
@@ -5086,7 +5165,7 @@
     function saveFitGroupCollapsed(st) {
       try { localStorage.setItem(FIT_COLLAPSE_KEY, JSON.stringify(st)); } catch(e) {}
     }
-    const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', 'lastBackupDate', STORAGE_KEY, HISTORY_KEY];
+    const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'customerNameHistory', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', 'lastBackupDate', STORAGE_KEY, HISTORY_KEY];
     const els = {
       tab: document.getElementById('blackIronTab'),
       fitGrid: document.getElementById('biFitGrid'),
