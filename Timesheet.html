@@ -834,17 +834,23 @@
     .tasks-custom-row {
       display: flex;
       gap: .5rem;
-      margin-top: .6rem;
-      align-items: center;
+      margin-top: .5rem;
+      align-items: flex-start;
     }
-    .tasks-custom-row input {
+    .tasks-custom-row textarea {
       flex: 1;
       margin-bottom: 0;
       font-size: .9rem;
       padding: .5rem .7rem;
-      min-height: 40px;
+      height: 70px;
+      resize: vertical;
     }
-    .tasks-empty {
+    .tasks-custom-row-actions {
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+      flex-shrink: 0;
+    }    .tasks-empty {
       color: #666;
       font-size: .88rem;
       padding: .4rem 0;
@@ -1100,10 +1106,13 @@
             <span class="tasks-empty">Select equipment type above</span>
           </div>
 
-          <div class="tasks-section-label">Custom Task (type &amp; press Enter to add, or Save for reuse)</div>
+          <div class="tasks-section-label">Custom Task</div>
           <div class="tasks-custom-row">
-            <input type="text" id="tasksCustomInput" placeholder="Other task not listed…">
-            <button type="button" class="tasks-save-btn" id="tasksSaveCustomBtn">💾 Save</button>
+            <textarea id="tasksCustomInput" placeholder="Full description to add to notes…"></textarea>
+            <div class="tasks-custom-row-actions">
+              <button type="button" class="tasks-save-btn" id="tasksSaveCustomBtn">💾 Save</button>
+              <button type="button" class="tasks-save-btn" id="tasksAddOnlyBtn" style="background:rgba(255,69,0,.1);border-color:rgba(255,69,0,.5);color:#ffb08a;">➕ Add</button>
+            </div>
           </div>
         </div>
       </div>
@@ -3052,13 +3061,13 @@
       if (!jobEl.value.trim()) jobEl.value = equip + ' — ' + work;
     });
 
-    // Custom task input — Enter to append to description
+    // Custom task — Ctrl+Enter on description textarea appends without saving
     tasksCustomInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        const val = tasksCustomInput.value.trim();
-        if (val) {
-          appendTask(val, null);
+        const desc = tasksCustomInput.value.trim();
+        if (desc) {
+          appendTask(desc, null);
           tasksCustomInput.value = '';
         }
       }
@@ -3079,13 +3088,13 @@
     function getTasksForCurrentKey() {
       return getSavedCustomTasks()[savedTaskKey()] || [];
     }
-    function saveCustomTaskForKey(label) {
-      if (!label) return;
+    function saveCustomTaskForKey(label, desc) {
+      if (!label || !desc) return;
       const data = getSavedCustomTasks();
       const key  = savedTaskKey();
       const list = data[key] || [];
       if (!list.some(t => t.label.toLowerCase() === label.toLowerCase())) {
-        list.push({ label, desc: label });
+        list.push({ label, desc });
         data[key] = list;
         setSavedCustomTasks(data);
       }
@@ -3151,15 +3160,26 @@
       }
     }
 
-    // Wire Save button
+    // Wire Save button — prompts for a title then saves
     document.getElementById('tasksSaveCustomBtn').addEventListener('click', () => {
-      const val = tasksCustomInput.value.trim();
-      if (!val) { alert('Type a task description first.'); return; }
+      const desc = tasksCustomInput.value.trim();
+      if (!desc)  { alert('Enter a description first.'); tasksCustomInput.focus(); return; }
       if (!tasksEquipSel.value) { alert('Select an equipment type to associate this task with.'); return; }
-      saveCustomTaskForKey(val);
-      appendTask(val, null);
+      const title = prompt('Enter a short title for this task button:', '');
+      if (title === null) return; // cancelled
+      if (!title.trim()) { alert('Title cannot be empty.'); return; }
+      saveCustomTaskForKey(title.trim(), desc);
+      appendTask(desc, null);
       tasksCustomInput.value = '';
       renderSavedCustomChips();
+    });
+
+    // Wire Add Only button — appends desc without saving
+    document.getElementById('tasksAddOnlyBtn').addEventListener('click', () => {
+      const desc = tasksCustomInput.value.trim();
+      if (!desc) { alert('Enter a description first.'); tasksCustomInput.focus(); return; }
+      appendTask(desc, null);
+      tasksCustomInput.value = '';
     });
 
     // Re-render saved chips whenever category, equipment or work type changes
