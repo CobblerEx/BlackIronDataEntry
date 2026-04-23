@@ -718,6 +718,138 @@
     .input-clr-btn.clr-addr  { right: 56px; }
     .input-clr-btn.clr-ta    { top: 10px; transform: none; }
 
+    /* ── Tasks Performed Panel ── */
+    .tasks-panel {
+      background: rgba(30,30,30,.95);
+      border: 1px solid rgba(255,69,0,.4);
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .tasks-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .75rem 1rem;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      gap: .5rem;
+    }
+    .tasks-panel-header:active { background: rgba(255,69,0,.08); }
+    .tasks-panel-title {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-weight: 700;
+      color: #ff4500;
+      font-size: .95rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .tasks-panel-arrow {
+      color: #ff4500;
+      font-size: .85rem;
+      transition: transform .25s ease;
+      flex-shrink: 0;
+    }
+    .tasks-panel-arrow.open { transform: rotate(180deg); }
+    .tasks-panel-body {
+      padding: 0 1rem 1rem;
+      border-top: 1px solid rgba(255,69,0,.2);
+    }
+    .tasks-section-label {
+      font-size: .7rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #888;
+      margin: .85rem 0 .4rem;
+    }
+    .tasks-cat-row {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+    .tasks-cat-btn {
+      padding: .45rem 1rem;
+      border-radius: 6px;
+      border: 1px solid rgba(255,69,0,.5);
+      background: transparent;
+      color: #ccc;
+      font-size: .88rem;
+      cursor: pointer;
+      min-height: 38px;
+      transition: all .15s;
+      margin: 0;
+    }
+    .tasks-cat-btn.active {
+      background: rgba(255,69,0,.18);
+      border-color: #ff4500;
+      color: #fff;
+      box-shadow: 0 0 8px rgba(255,69,0,.3);
+    }
+    .tasks-select-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .6rem;
+      margin-top: .1rem;
+    }
+    @media (max-width: 480px) { .tasks-select-row { grid-template-columns: 1fr; } }
+    .tasks-select-row select {
+      margin-bottom: 0;
+      font-size: .9rem;
+      padding: .5rem .7rem;
+      min-height: 40px;
+    }
+    .tasks-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .45rem;
+      margin-top: .1rem;
+    }
+    .tasks-chip {
+      padding: .38rem .8rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,69,0,.45);
+      background: rgba(255,69,0,.08);
+      color: #ddd;
+      font-size: .85rem;
+      cursor: pointer;
+      transition: all .15s;
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      margin: 0;
+      touch-action: manipulation;
+    }
+    .tasks-chip:active, .tasks-chip:hover {
+      background: rgba(255,69,0,.28);
+      border-color: #ff4500;
+      color: #fff;
+    }
+    .tasks-chip.flash {
+      background: #ff4500;
+      color: #fff;
+    }
+    .tasks-custom-row {
+      display: flex;
+      gap: .5rem;
+      margin-top: .6rem;
+      align-items: center;
+    }
+    .tasks-custom-row input {
+      flex: 1;
+      margin-bottom: 0;
+      font-size: .9rem;
+      padding: .5rem .7rem;
+      min-height: 40px;
+    }
+    .tasks-empty {
+      color: #666;
+      font-size: .88rem;
+      padding: .4rem 0;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -834,6 +966,13 @@
       <label>Date: <input type="date" id="sessionDate"></label>
       <h2>Add / Edit Job Entry</h2>
 
+      <label style="position:relative;">
+        Customer Name:
+        <input type="text" id="customerNameInput" placeholder="e.g. John Smith" autocomplete="off" style="padding-right:80px !important;">
+        <button type="button" class="history-btn" id="customerNameHistoryBtn" title="Saved customers"><i class="fas fa-history"></i></button>
+        <div id="customerNameHistory"></div>
+      </label>
+
       <label>Job Name: <input type="text" id="jobName" placeholder="e.g. Furnace Tune-Up"></label>
 
       <label>Job Type (optional auto-description):
@@ -871,15 +1010,47 @@
         <div id="addressHistory"></div>
       </label>
 
-      <label style="position:relative;">
-        Customer Name:
-        <input type="text" id="customerNameInput" placeholder="e.g. John Smith" autocomplete="off" style="padding-right:80px !important;">
-        <button type="button" class="history-btn" id="customerNameHistoryBtn" title="Saved customers"><i class="fas fa-history"></i></button>
-        <div id="customerNameHistory"></div>
-      </label>
-
       <label>Time In: <select id="timeIn"></select></label>
       <label>Time Out: <select id="timeOut"></select></label>
+
+      <!-- ── Tasks Performed ── -->
+      <div class="tasks-panel" id="tasksPanel">
+        <div class="tasks-panel-header" id="tasksPanelHeader">
+          <span class="tasks-panel-title">✅ Tasks Performed</span>
+          <span class="tasks-panel-arrow" id="tasksPanelArrow">▼</span>
+        </div>
+        <div class="tasks-panel-body" id="tasksPanelBody" style="display:none;">
+          <div class="tasks-section-label">Category</div>
+          <div class="tasks-cat-row">
+            <button type="button" class="tasks-cat-btn active" data-cat="hvac">❄️ HVAC</button>
+            <button type="button" class="tasks-cat-btn" data-cat="restaurant">🔥 Restaurant Equipment</button>
+          </div>
+
+          <div class="tasks-section-label">Equipment Type</div>
+          <div class="tasks-select-row">
+            <select id="tasksEquipType"></select>
+            <select id="tasksWorkType">
+              <option value="">Work Type...</option>
+              <option>Maintenance / PM</option>
+              <option>Repair / Breakdown</option>
+              <option>Installation</option>
+              <option>Inspection / Quote</option>
+              <option>Emergency Call</option>
+              <option>Warranty Service</option>
+            </select>
+          </div>
+
+          <div class="tasks-section-label" id="tasksChipLabel">Tasks — select all that apply:</div>
+          <div class="tasks-chip-row" id="tasksChipRow">
+            <span class="tasks-empty">Select equipment type above</span>
+          </div>
+
+          <div class="tasks-section-label">Custom Task (type &amp; press Enter)</div>
+          <div class="tasks-custom-row">
+            <input type="text" id="tasksCustomInput" placeholder="Other task not listed…">
+          </div>
+        </div>
+      </div>
 
       <label>Description: <textarea id="description" placeholder="Auto-filled if Job Type selected. You can edit."></textarea></label>
 
@@ -2498,6 +2669,338 @@
     });
     // ─────────────────────────────────────────────────────────────────────
 
+    // ── Tasks Performed Panel ─────────────────────────────────────────────
+    const TASK_DATA = {
+      hvac: {
+        label: 'HVAC',
+        equipment: {
+          'Furnace / Boiler': [
+            { label: 'Burner inspection',       desc: 'Inspected burners for proper flame pattern, carbon buildup, and wear.' },
+            { label: 'Heat exchanger check',    desc: 'Inspected heat exchanger for cracks, corrosion, and proper heat transfer.' },
+            { label: 'Filter replacement',      desc: 'Replaced air filter to restore proper airflow.' },
+            { label: 'Flue / vent inspection',  desc: 'Inspected flue and vent piping for blockages, corrosion, and proper draft.' },
+            { label: 'Thermostat calibration',  desc: 'Calibrated thermostat and verified accurate temperature control.' },
+            { label: 'Ignitor test',            desc: 'Tested ignitor and verified proper ignition sequence.' },
+            { label: 'Gas valve test',          desc: 'Tested gas valve operation and verified proper inlet and outlet pressure.' },
+            { label: 'Blower motor service',    desc: 'Serviced blower motor, inspected belt, and lubricated bearings.' },
+            { label: 'Combustion analysis',     desc: 'Performed combustion analysis to verify safe and efficient burner operation.' },
+            { label: 'Inducer motor check',     desc: 'Inspected and tested inducer motor for proper operation and airflow.' },
+          ],
+          'Air Conditioner': [
+            { label: 'Filter cleaning',             desc: 'Cleaned air filter to restore proper airflow.' },
+            { label: 'Refrigerant leak check',      desc: 'Inspected system for refrigerant leaks using electronic leak detector.' },
+            { label: 'Evaporator coil cleaning',    desc: 'Cleaned evaporator coil to restore heat transfer efficiency.' },
+            { label: 'Condenser coil cleaning',     desc: 'Cleaned condenser coil to improve system efficiency and heat rejection.' },
+            { label: 'Drain line clearing',         desc: 'Cleared condensate drain line and verified proper drainage.' },
+            { label: 'Fan motor service',           desc: 'Inspected and serviced fan motor and lubricated bearings.' },
+            { label: 'Refrigerant recharge',        desc: 'Recharged system with refrigerant to manufacturer-specified operating pressures.' },
+            { label: 'Capacitor check',             desc: 'Tested run and start capacitors and verified within rated specifications.' },
+            { label: 'Contactor inspection',        desc: 'Inspected contactor for pitting, burning, and proper operation.' },
+            { label: 'TXV / metering device check', desc: 'Inspected TXV / metering device and verified proper superheat and subcooling.' },
+            { label: 'Thermostat calibration',      desc: 'Calibrated thermostat and verified accurate temperature control.' },
+          ],
+          'Mini-Split System': [
+            { label: 'Filter cleaning',          desc: 'Removed and cleaned indoor unit filters to restore proper airflow.' },
+            { label: 'Refrigerant leak check',   desc: 'Inspected refrigerant line set connections and service valves for leaks.' },
+            { label: 'Coil cleaning',            desc: 'Cleaned indoor and outdoor coils to restore system efficiency.' },
+            { label: 'Drain cleaning',           desc: 'Cleaned condensate drain pan and drain line to prevent overflow.' },
+            { label: 'Remote / thermostat pairing', desc: 'Paired remote controller to indoor unit and verified all operating modes.' },
+            { label: 'Fan motor service',        desc: 'Inspected indoor and outdoor fan motors and verified proper operation.' },
+            { label: 'Refrigerant recharge',     desc: 'Recharged system with refrigerant to manufacturer-specified operating pressures.' },
+            { label: 'Condensate pump service',  desc: 'Inspected and serviced condensate pump and tested float switch operation.' },
+          ],
+          'Rooftop Unit': [
+            { label: 'Filter replacement',    desc: 'Replaced air filters to restore proper airflow and system efficiency.' },
+            { label: 'Coil cleaning',         desc: 'Cleaned evaporator and condenser coils to restore heat transfer.' },
+            { label: 'Refrigerant check',     desc: 'Checked refrigerant pressures and verified system operating within specifications.' },
+            { label: 'Belt inspection',       desc: 'Inspected and tensioned blower belt; replaced due to wear.' },
+            { label: 'Economizer check',      desc: 'Inspected and tested economizer damper for proper operation.' },
+            { label: 'Drain pan cleaning',    desc: 'Cleaned condensate drain pan and verified proper drainage.' },
+            { label: 'Electrical inspection', desc: 'Inspected all electrical connections and components for wear and corrosion.' },
+            { label: 'Damper inspection',     desc: 'Inspected all dampers for proper operation and sealing.' },
+            { label: 'Bearing lubrication',   desc: 'Lubricated all motor and blower shaft bearings.' },
+          ],
+          'Heat Pump': [
+            { label: 'Defrost cycle check',    desc: 'Tested defrost control and verified proper defrost cycle operation.' },
+            { label: 'Refrigerant leak check', desc: 'Inspected system for refrigerant leaks using electronic leak detector.' },
+            { label: 'Filter cleaning',        desc: 'Cleaned air filter to restore proper airflow.' },
+            { label: 'Coil cleaning',          desc: 'Cleaned indoor and outdoor coils to restore system efficiency.' },
+            { label: 'Reversing valve test',   desc: 'Tested reversing valve operation and verified proper heating and cooling modes.' },
+            { label: 'Capacitor check',        desc: 'Tested run and start capacitors and verified within rated specifications.' },
+            { label: 'Thermostat calibration', desc: 'Calibrated thermostat and verified accurate temperature control.' },
+            { label: 'Auxiliary heat check',   desc: 'Tested auxiliary heat strips and verified proper operation.' },
+          ],
+          'Gas Line': [
+            { label: 'Pressure test',               desc: 'Performed pressure test on gas piping according to gas code.' },
+            { label: 'Leak detection',              desc: 'Inspected all gas connections and fittings for leaks using approved leak detection solution.' },
+            { label: 'Shutoff valve inspection',    desc: 'Inspected and tested all gas shutoff valves for proper operation.' },
+            { label: 'Line purge',                  desc: 'Purged gas line of air to ensure proper gas flow.' },
+            { label: 'Regulator check',             desc: 'Inspected and tested gas pressure regulator for proper operation and output pressure.' },
+            { label: 'Bonding / grounding check',   desc: 'Verified bonding and grounding of gas piping as per code requirements.' },
+          ],
+          'Water Heater': [
+            { label: 'Anode rod check',        desc: 'Inspected sacrificial anode rod and replaced due to depletion.' },
+            { label: 'Burner inspection',      desc: 'Inspected burner for proper flame pattern and carbon buildup.' },
+            { label: 'T&P valve test',         desc: 'Tested temperature and pressure relief valve for proper operation.' },
+            { label: 'Thermostat test',        desc: 'Tested thermostat operation and verified accurate temperature control.' },
+            { label: 'Flush / drain',          desc: 'Flushed and drained water heater tank to remove sediment buildup.' },
+            { label: 'Pilot assembly service', desc: 'Cleaned and serviced pilot assembly, thermocouple, and gas valve.' },
+            { label: 'Flue inspection',        desc: 'Inspected flue pipe for proper draft, blockages, and corrosion.' },
+            { label: 'Dip tube check',         desc: 'Inspected dip tube for cracks or breakage.' },
+          ],
+          'Exhaust / Ventilation Fan': [
+            { label: 'Motor service',        desc: 'Inspected and serviced exhaust fan motor.' },
+            { label: 'Belt inspection',      desc: 'Inspected and tensioned drive belt; replaced due to wear.' },
+            { label: 'Blade cleaning',       desc: 'Cleaned fan blades to restore proper airflow and reduce motor load.' },
+            { label: 'Duct inspection',      desc: 'Inspected ductwork for blockages, leaks, and proper insulation.' },
+            { label: 'CFM / airflow test',   desc: 'Measured airflow output and verified proper CFM per design specifications.' },
+            { label: 'Bearing lubrication',  desc: 'Lubricated fan shaft bearings to reduce wear.' },
+          ],
+          'Ductwork': [
+            { label: 'Leak testing',            desc: 'Pressure tested ductwork and sealed identified air leaks.' },
+            { label: 'Insulation check',        desc: 'Inspected duct insulation for damage, moisture, and proper installation.' },
+            { label: 'Damper inspection',       desc: 'Inspected all zone dampers for proper operation and sealing.' },
+            { label: 'Duct cleaning',           desc: 'Cleaned ductwork to remove dust, debris, and buildup.' },
+            { label: 'Air balancing',           desc: 'Adjusted registers and dampers to balance airflow throughout the system.' },
+            { label: 'Register / grille cleaning', desc: 'Cleaned all supply and return registers and grilles.' },
+          ],
+          'Pool Heater': [
+            { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern and carbon buildup.' },
+            { label: 'Heat exchanger check',   desc: 'Inspected heat exchanger for scale buildup, corrosion, and proper heat transfer.' },
+            { label: 'Thermostat calibration', desc: 'Calibrated pool heater thermostat and verified accurate temperature control.' },
+            { label: 'Pressure test',          desc: 'Performed pressure test on gas supply piping according to gas code.' },
+            { label: 'Gas valve test',         desc: 'Tested gas valve operation and verified proper inlet and outlet pressure.' },
+            { label: 'Pilot assembly service', desc: 'Cleaned and serviced pilot assembly, thermocouple, and gas valve.' },
+          ],
+        }
+      },
+      restaurant: {
+        label: 'Restaurant Equipment',
+        equipment: {
+          'Walk-in Cooler': [
+            { label: 'Door gasket check',        desc: 'Inspected door gaskets for tears, gaps, and proper sealing.' },
+            { label: 'Evaporator coil cleaning', desc: 'Cleaned evaporator coil to restore heat transfer efficiency.' },
+            { label: 'Condenser coil cleaning',  desc: 'Cleaned condenser coil to improve unit efficiency and heat rejection.' },
+            { label: 'Refrigerant check',        desc: 'Checked refrigerant pressures and verified system operating within specifications.' },
+            { label: 'Defrost timer check',      desc: 'Inspected and tested defrost timer / control for proper defrost cycles.' },
+            { label: 'Temperature calibration',  desc: 'Calibrated thermostat and verified unit holding proper temperature.' },
+            { label: 'Fan motor service',        desc: 'Inspected evaporator fan motors and verified proper operation.' },
+            { label: 'Drain line clearing',      desc: 'Cleared condensate drain line and verified proper drainage.' },
+            { label: 'Door heater check',        desc: 'Tested door frame heater to prevent ice buildup and ensure proper sealing.' },
+            { label: 'Thermostat replacement',   desc: 'Replaced faulty thermostat and calibrated to specified temperature setpoint.' },
+          ],
+          'Walk-in Freezer': [
+            { label: 'Door gasket check',        desc: 'Inspected door gaskets for tears, gaps, and proper sealing.' },
+            { label: 'Evaporator coil cleaning', desc: 'Cleaned evaporator coil to restore heat transfer efficiency.' },
+            { label: 'Condenser coil cleaning',  desc: 'Cleaned condenser coil to improve unit efficiency and heat rejection.' },
+            { label: 'Refrigerant check',        desc: 'Checked refrigerant pressures and verified system operating within specifications.' },
+            { label: 'Defrost timer check',      desc: 'Inspected and tested defrost timer / control for proper defrost cycles.' },
+            { label: 'Temperature calibration',  desc: 'Calibrated thermostat and verified unit holding proper temperature.' },
+            { label: 'Fan motor service',        desc: 'Inspected evaporator fan motors and verified proper operation.' },
+            { label: 'Drain line clearing',      desc: 'Cleared condensate drain line and verified proper drainage.' },
+            { label: 'Door heater check',        desc: 'Tested door frame heater to prevent ice buildup and ensure proper sealing.' },
+            { label: 'Thermostat replacement',   desc: 'Replaced faulty thermostat and calibrated to specified temperature setpoint.' },
+          ],
+          'Reach-in Cooler': [
+            { label: 'Door gasket check',       desc: 'Inspected door gaskets for tears, gaps, and proper sealing.' },
+            { label: 'Coil cleaning',           desc: 'Cleaned evaporator coil to restore unit efficiency.' },
+            { label: 'Refrigerant check',       desc: 'Checked refrigerant pressures and verified system operating within specifications.' },
+            { label: 'Thermostat calibration',  desc: 'Calibrated thermostat and verified unit holding proper temperature.' },
+            { label: 'Fan motor service',       desc: 'Inspected evaporator fan motor and verified proper operation.' },
+            { label: 'Condenser cleaning',      desc: 'Cleaned condenser coil and verified proper airflow.' },
+            { label: 'Door closer adjustment',  desc: 'Adjusted door closer and hinges for proper alignment and sealing.' },
+          ],
+          'Reach-in Freezer': [
+            { label: 'Door gasket check',       desc: 'Inspected door gaskets for tears, gaps, and proper sealing.' },
+            { label: 'Coil cleaning',           desc: 'Cleaned evaporator coil to restore unit efficiency.' },
+            { label: 'Refrigerant check',       desc: 'Checked refrigerant pressures and verified system operating within specifications.' },
+            { label: 'Thermostat calibration',  desc: 'Calibrated thermostat and verified unit holding proper temperature.' },
+            { label: 'Fan motor service',       desc: 'Inspected evaporator fan motor and verified proper operation.' },
+            { label: 'Condenser cleaning',      desc: 'Cleaned condenser coil and verified proper airflow.' },
+            { label: 'Door closer adjustment',  desc: 'Adjusted door closer and hinges for proper alignment and sealing.' },
+          ],
+          'Ice Machine': [
+            { label: 'Cleaning & sanitizing',       desc: 'Performed full cleaning and sanitizing cycle per manufacturer procedure.' },
+            { label: 'Scale removal',               desc: 'Descaled ice machine water circuit and reservoir to restore proper ice production.' },
+            { label: 'Water filter replacement',    desc: 'Replaced water inlet filter to improve ice quality and protect components.' },
+            { label: 'Refrigerant check',           desc: 'Checked refrigerant pressures and verified system operating within specifications.' },
+            { label: 'Harvest cycle test',          desc: 'Tested ice harvest cycle and verified proper ice formation and release.' },
+            { label: 'Bin thermostat check',        desc: 'Tested bin thermostat and verified proper shutoff when bin is full.' },
+            { label: 'Water inlet valve check',     desc: 'Inspected and tested water inlet valve for proper operation and flow.' },
+            { label: 'Float valve check',           desc: 'Inspected float valve and verified proper water level control.' },
+          ],
+          'Commercial Fryer': [
+            { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern and carbon buildup.' },
+            { label: 'Thermostat calibration', desc: 'Calibrated fryer thermostat and verified accurate oil temperature.' },
+            { label: 'High limit test',        desc: 'Tested high limit safety switch and verified proper cutoff temperature.' },
+            { label: 'Filter change',          desc: 'Changed oil filter and cleaned filter housing.' },
+            { label: 'Gas valve test',         desc: 'Tested gas valve operation and verified proper inlet and outlet pressure.' },
+            { label: 'Pilot assembly service', desc: 'Cleaned and serviced pilot assembly, thermocouple, and gas valve.' },
+            { label: 'Oil drain service',      desc: 'Drained and cleaned fryer oil reservoir.' },
+            { label: 'Ignitor test',           desc: 'Tested ignitor and verified proper ignition sequence.' },
+          ],
+          'Deep Fryer': [
+            { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern and carbon buildup.' },
+            { label: 'Thermostat calibration', desc: 'Calibrated fryer thermostat and verified accurate oil temperature.' },
+            { label: 'High limit test',        desc: 'Tested high limit safety switch and verified proper cutoff temperature.' },
+            { label: 'Drain valve check',      desc: 'Inspected and tested oil drain valve for proper operation and sealing.' },
+            { label: 'Basket inspection',      desc: 'Inspected fry baskets for damage and proper operation.' },
+            { label: 'Gas valve test',         desc: 'Tested gas valve operation and verified proper inlet and outlet pressure.' },
+            { label: 'Ignitor test',           desc: 'Tested ignitor and verified proper ignition sequence.' },
+            { label: 'Oil drain service',      desc: 'Drained and cleaned fryer oil reservoir.' },
+          ],
+          'Commercial Dishwasher': [
+            { label: 'Spray arm cleaning',       desc: 'Removed and cleaned spray arms and cleared all nozzle openings.' },
+            { label: 'Door gasket check',        desc: 'Inspected door gasket for tears, gaps, and proper sealing.' },
+            { label: 'Chemical dispenser check', desc: 'Inspected detergent and rinse aid dispensers for proper dosing.' },
+            { label: 'Temperature verification', desc: 'Verified wash and rinse temperatures meet NSF health code requirements.' },
+            { label: 'Drain inspection',         desc: 'Inspected drain screen and pump for blockages and proper drainage.' },
+            { label: 'Heating element check',    desc: 'Tested heating elements and verified proper booster temperature.' },
+            { label: 'Wash pump service',        desc: 'Inspected and serviced wash pump motor and impeller.' },
+            { label: 'Rinse aid check',          desc: 'Checked rinse aid concentration and refilled dispenser.' },
+          ],
+          'Hood & Exhaust': [
+            { label: 'Grease filter cleaning', desc: 'Removed and cleaned grease filters to restore airflow and reduce fire hazard.' },
+            { label: 'Fan belt inspection',    desc: 'Inspected and tensioned exhaust fan belt; replaced due to wear.' },
+            { label: 'Exhaust fan service',    desc: 'Inspected and serviced exhaust fan motor and blades.' },
+            { label: 'Makeup air check',       desc: 'Inspected makeup air unit and verified proper supply airflow.' },
+            { label: 'Duct cleaning',          desc: 'Cleaned exhaust duct to remove grease buildup and reduce fire hazard.' },
+            { label: 'Fire suppression check', desc: 'Inspected fire suppression system nozzles and fusible links.' },
+            { label: 'Grease trap cleaning',   desc: 'Cleaned grease trap to restore proper flow and prevent overflow.' },
+          ],
+          'Panini Grill': [
+            { label: 'Element check',          desc: 'Inspected heating elements for proper function and even heat distribution.' },
+            { label: 'Thermostat test',        desc: 'Tested thermostat and verified accurate plate temperature.' },
+            { label: 'Plate cleaning',         desc: 'Cleaned and seasoned cooking plates.' },
+            { label: 'Hinge inspection',       desc: 'Inspected and adjusted upper plate hinge mechanism.' },
+            { label: 'Temperature calibration',desc: 'Calibrated thermostat to specified operating temperature.' },
+            { label: 'Power cord check',       desc: 'Inspected power cord and connections for wear and proper grounding.' },
+          ],
+          'Refrigerated Prep Table': [
+            { label: 'Coil cleaning',          desc: 'Cleaned evaporator coil to restore unit efficiency.' },
+            { label: 'Door gasket check',      desc: 'Inspected door and pan cover gaskets for proper sealing.' },
+            { label: 'Temperature calibration',desc: 'Calibrated thermostat and verified unit holding proper temperature.' },
+            { label: 'Fan motor service',      desc: 'Inspected evaporator fan motor and verified proper operation.' },
+            { label: 'Refrigerant check',      desc: 'Checked refrigerant pressures and verified system operating within specifications.' },
+            { label: 'Cutting board inspection',desc: 'Inspected cutting board surface for cracks and excessive wear.' },
+          ],
+          'Convection Oven': [
+            { label: 'Element inspection',     desc: 'Inspected heating elements for continuity and even heat distribution.' },
+            { label: 'Thermostat calibration', desc: 'Calibrated thermostat and verified accurate cooking temperature.' },
+            { label: 'Door seal check',        desc: 'Inspected door gasket and seal for proper heat retention.' },
+            { label: 'Fan motor service',      desc: 'Inspected and serviced convection fan motor.' },
+            { label: 'Interior cleaning',      desc: 'Cleaned oven interior, removing carbon buildup and grease.' },
+            { label: 'Temperature verification',desc: 'Verified oven temperature accuracy using calibrated thermometer.' },
+          ],
+          'Steam Table': [
+            { label: 'Heating element check', desc: 'Inspected heating elements for proper function and even heat distribution.' },
+            { label: 'Thermostat test',        desc: 'Tested thermostat and verified accurate water temperature.' },
+            { label: 'Water level check',      desc: 'Inspected water level control and float switch for proper operation.' },
+            { label: 'Pan seal inspection',    desc: 'Inspected pan wells for cracks and proper sealing.' },
+            { label: 'Temperature calibration',desc: 'Calibrated thermostat to specified operating temperature.' },
+          ],
+        }
+      }
+    };
+
+    let tasksPanelOpen = false;
+    let tasksActiveCat = 'hvac';
+
+    const tasksPanelHeader = document.getElementById('tasksPanelHeader');
+    const tasksPanelBody   = document.getElementById('tasksPanelBody');
+    const tasksPanelArrow  = document.getElementById('tasksPanelArrow');
+    const tasksEquipSel    = document.getElementById('tasksEquipType');
+    const tasksWorkSel     = document.getElementById('tasksWorkType');
+    const tasksChipRow     = document.getElementById('tasksChipRow');
+    const tasksCustomInput = document.getElementById('tasksCustomInput');
+
+    tasksPanelHeader.addEventListener('click', () => {
+      tasksPanelOpen = !tasksPanelOpen;
+      tasksPanelBody.style.display = tasksPanelOpen ? 'block' : 'none';
+      tasksPanelArrow.classList.toggle('open', tasksPanelOpen);
+      if (tasksPanelOpen) populateTaskEquipOptions();
+    });
+
+    function populateTaskEquipOptions() {
+      const cat = TASK_DATA[tasksActiveCat];
+      tasksEquipSel.innerHTML = '<option value="">Equipment type...</option>';
+      Object.keys(cat.equipment).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        tasksEquipSel.appendChild(opt);
+      });
+      renderTaskChips();
+    }
+
+    function renderTaskChips() {
+      const cat   = TASK_DATA[tasksActiveCat];
+      const equip = tasksEquipSel.value;
+      const tasks = equip && cat.equipment[equip] ? cat.equipment[equip] : [];
+      tasksChipRow.innerHTML = '';
+      if (!tasks.length) {
+        tasksChipRow.innerHTML = '<span class="tasks-empty">Select an equipment type above</span>';
+        return;
+      }
+      const lbl = document.getElementById('tasksChipLabel');
+      if (lbl) lbl.textContent = equip + ' — tap to add to description:';
+      tasks.forEach(task => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tasks-chip';
+        btn.textContent = task.label;
+        btn.title = task.desc;
+        btn.addEventListener('click', () => appendTask(task.desc, btn));
+        tasksChipRow.appendChild(btn);
+      });
+    }
+
+    function appendTask(text, btn) {
+      const descEl = document.getElementById('description');
+      const current = descEl.value.trim();
+      descEl.value = current ? current + ' ' + text : text;
+      // Brief flash
+      if (btn) {
+        btn.classList.add('flash');
+        setTimeout(() => btn.classList.remove('flash'), 350);
+      }
+      descEl.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // Category buttons
+    document.querySelectorAll('.tasks-cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tasks-cat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tasksActiveCat = btn.dataset.cat;
+        populateTaskEquipOptions();
+      });
+    });
+
+    tasksEquipSel.addEventListener('change', renderTaskChips);
+
+    // Work type → auto-fill job name if empty
+    tasksWorkSel.addEventListener('change', () => {
+      const equip = tasksEquipSel.value;
+      const work  = tasksWorkSel.value;
+      if (!equip || !work) return;
+      const jobEl = document.getElementById('jobName');
+      if (!jobEl.value.trim()) jobEl.value = equip + ' — ' + work;
+    });
+
+    // Custom task input — Enter to append
+    tasksCustomInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = tasksCustomInput.value.trim();
+        if (val) {
+          appendTask(val, null);
+          tasksCustomInput.value = '';
+        }
+      }
+    });
+    // ─────────────────────────────────────────────────────────────────────
+
     function parseDateFromMdy(mdy) {
       const m = String(mdy || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
       if (!m) return '';
@@ -3407,7 +3910,8 @@
           if (!invoiceIdField.value.trim() && cb.checked) {
             const entry = entries.find(e => e.id === cb.value);
             if (entry && entry.jobName) {
-              invoiceIdField.value = entry.jobName.trim();
+              const prefix = entry.customerName ? entry.customerName.trim() + ' - ' : '';
+              invoiceIdField.value = prefix + entry.jobName.trim();
             }
           }
           populateInvoiceFromEntries();
@@ -3849,11 +4353,13 @@
           const invoiceIdField = document.getElementById('invoiceId');
           if (!invoiceIdField.value.trim()) {
             const uniqueJobs = [...new Set(entries.map(e => (e.jobName || '').trim()).filter(Boolean))];
+            // Pick the first customer name found across entries
+            const firstCustomer = entries.map(e => (e.customerName || '').trim()).find(Boolean) || '';
             if (uniqueJobs.length === 1) {
-              invoiceIdField.value = uniqueJobs[0];
+              invoiceIdField.value = firstCustomer ? firstCustomer + ' - ' + uniqueJobs[0] : uniqueJobs[0];
             } else if (uniqueJobs.length > 1) {
               const firstDate = entries.map(e => e.dateStr).filter(Boolean).sort()[0];
-              const clientName = document.getElementById('clientName').value.trim();
+              const clientName = firstCustomer || document.getElementById('clientName').value.trim();
               if (clientName) invoiceIdField.value = clientName + (firstDate ? '-' + firstDate : '');
             }
             renderInvoiceEntrySelector();
@@ -4151,6 +4657,11 @@
       document.getElementById('editIndex').value = -1;
       document.getElementById('actionButton').textContent = 'Add Entry';
       document.getElementById('cancelButton').style.display = 'none';
+      // Reset tasks panel selections
+      if (document.getElementById('tasksEquipType')) document.getElementById('tasksEquipType').value = '';
+      if (document.getElementById('tasksWorkType'))  document.getElementById('tasksWorkType').value = '';
+      if (document.getElementById('tasksCustomInput')) document.getElementById('tasksCustomInput').value = '';
+      renderTaskChips && renderTaskChips();
       if (entries.length) {
         const last = entries[entries.length - 1];
         document.getElementById('timeIn').value = last.timeOut;
