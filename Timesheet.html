@@ -850,6 +850,61 @@
       padding: .4rem 0;
       font-style: italic;
     }
+    .tasks-chip.saved-custom {
+      background: rgba(40,167,69,.12);
+      border-color: rgba(40,167,69,.55);
+      color: #a0e8b0;
+      padding-right: .3rem;
+      gap: .35rem;
+      display: inline-flex;
+      align-items: center;
+    }
+    .tasks-chip.saved-custom:hover, .tasks-chip.saved-custom:active {
+      background: rgba(40,167,69,.28);
+      border-color: #28a745;
+      color: #fff;
+    }
+    .tasks-chip-del {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.15);
+      font-size: .75rem;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background .15s;
+    }
+    .tasks-chip-del:hover { background: rgba(220,53,69,.7); }
+    .tasks-save-btn {
+      padding: .38rem .8rem;
+      border-radius: 6px;
+      border: 1px solid rgba(40,167,69,.6);
+      background: rgba(40,167,69,.12);
+      color: #a0e8b0;
+      font-size: .85rem;
+      cursor: pointer;
+      min-height: 36px;
+      white-space: nowrap;
+      transition: all .15s;
+      margin: 0;
+    }
+    .tasks-save-btn:hover, .tasks-save-btn:active {
+      background: rgba(40,167,69,.28);
+      border-color: #28a745;
+      color: #fff;
+    }
+    .tasks-saved-section { margin-top: .6rem; }
+    .tasks-saved-label {
+      font-size: .7rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #28a745;
+      margin-bottom: .35rem;
+    }
   </style>
 </head>
 <body>
@@ -1045,9 +1100,10 @@
             <span class="tasks-empty">Select equipment type above</span>
           </div>
 
-          <div class="tasks-section-label">Custom Task (type &amp; press Enter)</div>
+          <div class="tasks-section-label">Custom Task (type &amp; press Enter to add, or Save for reuse)</div>
           <div class="tasks-custom-row">
             <input type="text" id="tasksCustomInput" placeholder="Other task not listed…">
+            <button type="button" class="tasks-save-btn" id="tasksSaveCustomBtn">💾 Save</button>
           </div>
         </div>
       </div>
@@ -1677,9 +1733,7 @@
       const descField = document.getElementById('description');
       if (selected && jobTemplates[selected]) {
         descField.value = jobTemplates[selected];
-        if (!document.getElementById('jobName').value.trim()) {
-          document.getElementById('jobName').value = selected;
-        }
+        document.getElementById('jobName').value = selected;
       }
     });
 
@@ -2626,9 +2680,17 @@
 
     function showCustomerNameHistory(filter) {
       custDropdown.innerHTML = '';
+      // Merge dedicated history with names saved in client profiles
+      const profileNames = Object.values(
+        (function(){ try { return JSON.parse(localStorage.getItem('clientProfiles') || '{}'); } catch(e){ return {}; } })()
+      ).map(p => p && p.name ? p.name.trim() : '').filter(Boolean);
+      const merged = [...customerNameHistory];
+      profileNames.forEach(n => { if (!merged.some(m => m.toLowerCase() === n.toLowerCase())) merged.push(n); });
+      merged.sort((a, b) => a.localeCompare(b));
+
       const list = (filter && filter.trim())
-        ? customerNameHistory.filter(n => n.toLowerCase().includes(filter.toLowerCase()))
-        : customerNameHistory;
+        ? merged.filter(n => n.toLowerCase().includes(filter.toLowerCase()))
+        : merged;
 
       if (list.length === 0) {
         custDropdown.innerHTML = '<div class="history-item">No saved customers</div>';
@@ -2940,6 +3002,7 @@
       tasksChipRow.innerHTML = '';
       if (!tasks.length) {
         tasksChipRow.innerHTML = '<span class="tasks-empty">Select an equipment type above</span>';
+        renderSavedCustomChips && renderSavedCustomChips();
         return;
       }
       const lbl = document.getElementById('tasksChipLabel');
@@ -2953,6 +3016,7 @@
         btn.addEventListener('click', () => appendTask(task.desc, btn));
         tasksChipRow.appendChild(btn);
       });
+      renderSavedCustomChips && renderSavedCustomChips();
     }
 
     function appendTask(text, btn) {
@@ -2988,7 +3052,7 @@
       if (!jobEl.value.trim()) jobEl.value = equip + ' — ' + work;
     });
 
-    // Custom task input — Enter to append
+    // Custom task input — Enter to append to description
     tasksCustomInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -2999,6 +3063,111 @@
         }
       }
     });
+
+    // ── Saved Custom Tasks ────────────────────────────────────────────────
+    const SAVED_TASKS_KEY = 'savedCustomTasks';
+
+    function getSavedCustomTasks() {
+      try { return JSON.parse(localStorage.getItem(SAVED_TASKS_KEY) || '{}'); } catch(e) { return {}; }
+    }
+    function setSavedCustomTasks(data) {
+      localStorage.setItem(SAVED_TASKS_KEY, JSON.stringify(data));
+    }
+    function savedTaskKey() {
+      return [tasksActiveCat, tasksEquipSel.value, tasksWorkSel.value].join('||');
+    }
+    function getTasksForCurrentKey() {
+      return getSavedCustomTasks()[savedTaskKey()] || [];
+    }
+    function saveCustomTaskForKey(label) {
+      if (!label) return;
+      const data = getSavedCustomTasks();
+      const key  = savedTaskKey();
+      const list = data[key] || [];
+      if (!list.some(t => t.label.toLowerCase() === label.toLowerCase())) {
+        list.push({ label, desc: label });
+        data[key] = list;
+        setSavedCustomTasks(data);
+      }
+    }
+    function deleteCustomTaskForKey(label) {
+      const data = getSavedCustomTasks();
+      const key  = savedTaskKey();
+      data[key] = (data[key] || []).filter(t => t.label.toLowerCase() !== label.toLowerCase());
+      if (!data[key].length) delete data[key];
+      setSavedCustomTasks(data);
+    }
+
+    function renderSavedCustomChips() {
+      const existing = document.getElementById('tasksSavedSection');
+      if (existing) existing.remove();
+
+      const tasks = getTasksForCurrentKey();
+      if (!tasks.length) return;
+
+      const section = document.createElement('div');
+      section.className = 'tasks-saved-section';
+      section.id = 'tasksSavedSection';
+
+      const lbl = document.createElement('div');
+      lbl.className = 'tasks-saved-label';
+      lbl.textContent = '⭐ Your saved tasks:';
+      section.appendChild(lbl);
+
+      const row = document.createElement('div');
+      row.className = 'tasks-chip-row';
+      tasks.forEach(task => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tasks-chip saved-custom';
+        btn.title = task.desc;
+
+        const span = document.createElement('span');
+        span.textContent = task.label;
+        btn.appendChild(span);
+
+        const del = document.createElement('span');
+        del.className = 'tasks-chip-del';
+        del.textContent = '×';
+        del.title = 'Remove saved task';
+        del.addEventListener('click', e => {
+          e.stopPropagation();
+          deleteCustomTaskForKey(task.label);
+          renderSavedCustomChips();
+        });
+        btn.appendChild(del);
+
+        btn.addEventListener('click', () => appendTask(task.desc, btn));
+        row.appendChild(btn);
+      });
+      section.appendChild(row);
+
+      // Insert above the custom-task section label
+      const customLabel = document.querySelector('#tasksPanelBody .tasks-section-label:last-of-type');
+      if (customLabel) {
+        customLabel.parentNode.insertBefore(section, customLabel);
+      } else {
+        document.getElementById('tasksPanelBody').appendChild(section);
+      }
+    }
+
+    // Wire Save button
+    document.getElementById('tasksSaveCustomBtn').addEventListener('click', () => {
+      const val = tasksCustomInput.value.trim();
+      if (!val) { alert('Type a task description first.'); return; }
+      if (!tasksEquipSel.value) { alert('Select an equipment type to associate this task with.'); return; }
+      saveCustomTaskForKey(val);
+      appendTask(val, null);
+      tasksCustomInput.value = '';
+      renderSavedCustomChips();
+    });
+
+    // Re-render saved chips whenever category, equipment or work type changes
+    document.querySelectorAll('.tasks-cat-btn').forEach(btn => {
+      btn.addEventListener('click', renderSavedCustomChips);
+    });
+    tasksEquipSel.addEventListener('change', renderSavedCustomChips);
+    tasksWorkSel.addEventListener('change', renderSavedCustomChips);
     // ─────────────────────────────────────────────────────────────────────
 
     function parseDateFromMdy(mdy) {
@@ -5676,7 +5845,7 @@
     function saveFitGroupCollapsed(st) {
       try { localStorage.setItem(FIT_COLLAPSE_KEY, JSON.stringify(st)); } catch(e) {}
     }
-    const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'customerNameHistory', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', 'lastBackupDate', STORAGE_KEY, HISTORY_KEY];
+    const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'customerNameHistory', 'savedCustomTasks', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', 'lastBackupDate', STORAGE_KEY, HISTORY_KEY];
     const els = {
       tab: document.getElementById('blackIronTab'),
       fitGrid: document.getElementById('biFitGrid'),
