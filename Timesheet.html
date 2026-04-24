@@ -455,6 +455,23 @@
     .saved-material-meta{font-size:.85rem;color:#bbb;margin-top:.2rem;word-break:break-word;}
     .saved-material-empty{color:#bbb;padding:.4rem 0;}
     .saved-material-row.editing { grid-template-columns: 1fr; border-color: rgba(255,69,0,.5); }
+
+    /* ── Quick Add modal ── */
+    .qa-material-row{display:flex;align-items:center;gap:.75rem;background:#2b2b2b;border:1px solid rgba(255,69,0,.15);border-radius:10px;padding:.6rem .8rem;cursor:pointer;transition:all .15s;}
+    .qa-material-row:active{background:#311a09;}
+    .qa-material-row.selected{border-color:#ff4500;background:#2a1a0a;}
+    .qa-material-row input[type="checkbox"]{width:auto;min-width:22px;min-height:22px;accent-color:#ff4500;cursor:pointer;flex:0 0 auto;margin:0;}
+    .qa-material-qty{width:60px;padding:.3rem .4rem;text-align:center;font-size:.95rem;min-height:38px;margin:0;flex:0 0 auto;}
+    .qa-material-info{flex:1;min-width:0;}
+    .qa-material-name{font-weight:700;word-break:break-word;}
+    .qa-material-meta{font-size:.82rem;color:#bbb;margin-top:.15rem;}
+    .qa-cat-badge{display:inline-block;padding:.1rem .45rem;border-radius:4px;font-size:.7rem;background:rgba(255,69,0,.1);color:#ffb08a;border:1px solid rgba(255,69,0,.2);margin-top:.2rem;}
+    #quickAddFooter{padding:.85rem 1rem;border-top:1px solid rgba(255,69,0,.25);display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;background:#1f1f1f;border-radius:0 0 14px 14px;}
+    #quickAddCount{color:#bbb;font-size:.9rem;flex:1;}
+    .qa-cat-tabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.85rem;}
+    .qa-cat-btn{background:#2a2a2a;border:1px solid rgba(255,69,0,.3);color:#e0e0e0;padding:.4rem .8rem;border-radius:999px;font-size:.82rem;cursor:pointer;min-height:36px;white-space:nowrap;transition:all .15s;line-height:1.2;}
+    .qa-cat-btn:hover{border-color:#ff4500;color:#ff4500;}
+    .qa-cat-btn.active{background:#ff4500;color:#fff;border-color:#ff4500;box-shadow:0 0 8px rgba(255,69,0,.35);}
     .sml-edit-form { display:none; margin-top:.65rem; border-top:1px solid rgba(255,69,0,.2); padding-top:.65rem; }
     .saved-material-row.editing .sml-edit-form { display:block; }
     .saved-material-row.editing .sml-view-actions { display:none; }
@@ -1054,6 +1071,8 @@
             <option value="Ice Machine Cleaning">Ice Machine Cleaning</option>
             <option value="Panini Grill Repair">Panini Grill Repair</option>
             <option value="Deep Fryer Service">Deep Fryer Service</option>
+            <option value="Range Oven Service">Range Oven Service</option>
+            <option value="Flat Top Griddle Service">Flat Top Griddle Service</option>
             <option value="Commercial Dishwasher Service">Commercial Dishwasher Service</option>
             <option value="Hood &amp; Exhaust Service">Hood &amp; Exhaust Service</option>
             <option value="Refrigeration Service">Refrigeration Service</option>
@@ -1291,6 +1310,7 @@
       <div class="inline-group" style="margin-top:1rem;">
         <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Selected Entries</button>
         <button type="button" id="addItem" class="mini-btn">Add Item</button>
+        <button type="button" id="quickAddMaterials" class="mini-btn" style="background:#17a2b8;">⚡ Quick Add</button>
         <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
         <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
         <button id="generateBossCopy" type="button" class="mini-btn">Generate Boss Copy PDF</button>
@@ -1382,6 +1402,30 @@
           </label>
         </div>
         <div id="savedMaterialsList" class="saved-materials-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Quick Add Materials modal ── -->
+  <div id="quickAddMaterialsModal" class="saved-materials-modal" aria-hidden="true">
+    <div class="saved-materials-panel">
+      <div class="saved-materials-header">
+        <h3>⚡ Quick Add Materials</h3>
+        <button type="button" id="closeQuickAdd" class="mini-btn" style="background:#dc3545;">Close</button>
+      </div>
+      <div class="saved-materials-body">
+        <input type="text" id="quickAddSearch" class="saved-materials-search" placeholder="Search materials…" autocomplete="off">
+        <div id="qaCatTabs" class="qa-cat-tabs"></div>
+        <div id="quickAddList" class="saved-materials-list"></div>
+        <div id="qaEmptyStarter" style="display:none;padding:.75rem 0;">
+          <p style="color:#bbb;font-size:.9rem;margin:0 0 .75rem 0;">No saved materials yet. Load the starter catalog to get going fast — you can edit prices any time in <b>Saved Materials</b>.</p>
+          <button type="button" id="loadStarterMatsBtn" style="background:#28a745;color:#fff;border:none;padding:.65rem 1.2rem;border-radius:6px;font-size:.95rem;cursor:pointer;min-height:44px;">📦 Load Starter Materials</button>
+        </div>
+      </div>
+      <div id="quickAddFooter">
+        <button type="button" id="quickAddConfirmBtn" style="background:#ff4500;color:#fff;border:none;padding:.7rem 1.4rem;border-radius:6px;font-size:1rem;cursor:pointer;min-height:44px;font-weight:700;">Add Selected to Invoice</button>
+        <button type="button" id="loadStarterMatsFooterBtn" style="background:#2a2a2a;color:#e0e0e0;border:1px solid rgba(255,69,0,.4);padding:.55rem 1rem;border-radius:6px;font-size:.85rem;cursor:pointer;min-height:38px;" title="Add missing starter materials without overwriting your existing prices">📦 Load Starters</button>
+        <span id="quickAddCount"></span>
       </div>
     </div>
   </div>
@@ -1711,7 +1755,9 @@
       "Refrigeration Service": "Inspected and serviced commercial refrigeration unit. Checked refrigerant pressures and temperatures, inspected evaporator and condenser coils, cleaned condenser, checked door gaskets and hinges, tested defrost cycle, verified thermostat calibration, and confirmed unit is maintaining proper temperature.",
       "Commercial Dishwasher Service": "Serviced commercial dishwasher. Inspected and cleaned wash and rinse arms, checked water temperature at wash and final rinse, inspected door gaskets and latches, cleaned strainer and sump, checked chemical dispenser operation, descaled unit as required, and verified proper sanitizing temperatures.",
       "Deep Fryer Service": "Serviced commercial deep fryer. Drained and cleaned fry tank, inspected burners and ignition system (gas) or heating elements (electric), checked thermostat calibration, inspected high-limit safety, cleaned pilot assembly, and verified proper oil temperature and recovery time.",
-      "Hood & Exhaust Service": "Inspected and cleaned commercial kitchen exhaust hood and makeup air system. Removed and cleaned filters, inspected fan and motor, checked belt tension, cleaned grease from plenum and exhaust duct access areas, and verified adequate exhaust and makeup air flow."
+      "Hood & Exhaust Service": "Inspected and cleaned commercial kitchen exhaust hood and makeup air system. Removed and cleaned filters, inspected fan and motor, checked belt tension, cleaned grease from plenum and exhaust duct access areas, and verified adequate exhaust and makeup air flow.",
+      "Range Oven Service": "Serviced commercial range oven. Inspected burners, ignition system, and gas valve operation. Cleaned burner ports, drip pans, and oven interior. Calibrated thermostat and verified accurate oven temperature. Checked door gasket, hinges, and broiler operation. Tested all burners for proper flame pattern.",
+      "Flat Top Griddle Service": "Serviced commercial flat top griddle. Inspected burners and ignition system (gas) or heating elements (electric). Cleaned griddle surface and grease troughs. Calibrated thermostat and verified even heat distribution across cooking surface. Checked gas valve operation, pilot assembly, and verified proper temperature control."
     };
 
     const timeOptions = [];
@@ -1857,6 +1903,7 @@
         distributorCost: +values.distributorCost || 0,
         markup: +values.markup || 0,
         customerPrice: +values.customerPrice || 0,
+        category: values.category || existing.category || '',
         priceAlertEnabled: existing.priceAlertEnabled !== false, // default true
         priceLastUpdated: markPriceUpdated ? new Date().toISOString() : (existing.priceLastUpdated || null)
       };
@@ -1993,6 +2040,17 @@
                 <label><span>Unit</span>
                   <input type="text" class="sml-in-unit" value="${(item.unit || 'ea').replace(/"/g,'&quot;')}">
                 </label>
+                <label><span>Category</span>
+                  <select class="sml-in-cat" style="background:#1e1e1e;border:1px solid rgba(255,69,0,.35);border-radius:6px;color:#e0e0e0;font-size:.9rem;padding:.45rem .55rem;min-height:auto;margin:0;width:100%;">
+                    <option value="">— None —</option>
+                    <option value="hvac" ${(item.category==='hvac')?'selected':''}>❄️ HVAC / Furnace</option>
+                    <option value="gasline" ${(item.category==='gasline')?'selected':''}>🔧 Gas Line</option>
+                    <option value="waterheater" ${(item.category==='waterheater')?'selected':''}>💧 Water Heater</option>
+                    <option value="poolheater" ${(item.category==='poolheater')?'selected':''}>🏊 Pool Heater</option>
+                    <option value="commercial" ${(item.category==='commercial')?'selected':''}>🍳 Commercial Kitchen</option>
+                    <option value="general" ${(item.category==='general')?'selected':''}>🔩 General / Hardware</option>
+                  </select>
+                </label>
                 <label><span>Dist. Cost ($)</span>
                   <input type="number" class="sml-in-cost" min="0" step="0.01" value="${formatMoney(item.distributorCost || 0)}">
                 </label>
@@ -2038,6 +2096,7 @@
         row.querySelector('.sml-save-btn').addEventListener('click', () => {
           const newDesc   = row.querySelector('.sml-in-desc').value.trim();
           const newUnit   = row.querySelector('.sml-in-unit').value.trim() || 'ea';
+          const newCat    = row.querySelector('.sml-in-cat').value || '';
           const newCost   = parseFloat(inCost.value)   || 0;
           const newMarkup = parseFloat(inMarkup.value) || 0;
           const newSell   = parseFloat(inSell.value)   || 0;
@@ -2052,6 +2111,7 @@
             ...(materialCatalog[newKey] || {}),
             desc: newDesc,
             unit: newUnit,
+            category: newCat,
             distributorCost: newCost,
             markup: newMarkup,
             customerPrice: newSell,
@@ -2969,6 +3029,26 @@
             { label: 'Water level check',      desc: 'Inspected water level control and float switch for proper operation.' },
             { label: 'Pan seal inspection',    desc: 'Inspected pan wells for cracks and proper sealing.' },
             { label: 'Temperature calibration',desc: 'Calibrated thermostat to specified operating temperature.' },
+          ],
+          'Range Oven': [
+            { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern and carbon buildup on all top burners and oven burner.' },
+            { label: 'Ignition system check',  desc: 'Tested ignitors and spark modules; verified reliable ignition on all burners.' },
+            { label: 'Thermostat calibration', desc: 'Calibrated oven thermostat and verified accurate temperature using calibrated thermometer.' },
+            { label: 'Gas valve test',         desc: 'Tested gas valve operation and verified proper inlet and outlet pressure.' },
+            { label: 'Door gasket & hinge',    desc: 'Inspected oven door gasket for wear and adjusted door hinges for proper seal.' },
+            { label: 'Pilot assembly service', desc: 'Cleaned and serviced pilot assembly and thermocouple.' },
+            { label: 'Interior cleaning',      desc: 'Cleaned oven interior, burner grates, drip pans, and removed carbon buildup.' },
+            { label: 'Broiler test',           desc: 'Tested broiler operation and verified proper flame pattern and temperature.' },
+          ],
+          'Flat Top Griddle': [
+            { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern, even heat distribution, and carbon buildup.' },
+            { label: 'Ignition system check',  desc: 'Tested ignitors and verified reliable ignition across all burner zones.' },
+            { label: 'Thermostat calibration', desc: 'Calibrated thermostat and verified even heat distribution across cooking surface.' },
+            { label: 'Gas valve test',         desc: 'Tested gas valve operation and verified proper inlet and outlet pressure.' },
+            { label: 'Pilot assembly service', desc: 'Cleaned and serviced pilot assembly and thermocouple.' },
+            { label: 'Grease trough service',  desc: 'Cleaned grease troughs, drain, and grease drawer.' },
+            { label: 'Surface re-seasoning',   desc: 'Cleaned and re-seasoned griddle cooking surface.' },
+            { label: 'Element check (electric)',desc: 'Inspected heating elements for continuity and even heat distribution (electric model).' },
           ],
         }
       }
@@ -5833,6 +5913,301 @@
     setInvoiceToolsVisibility(false);
     renderMaterialSuggestions();
     setupClientAutoFill();
+
+    // ── Quick Add Materials ──────────────────────────────────────────────────
+    const QA_CATEGORIES = [
+      { id: 'all',         label: '🔎 All' },
+      { id: 'hvac',        label: '❄️ HVAC' },
+      { id: 'gasline',     label: '🔧 Gas Line' },
+      { id: 'waterheater', label: '💧 Water Heater' },
+      { id: 'poolheater',  label: '🏊 Pool Heater' },
+      { id: 'commercial',  label: '🍳 Commercial' },
+      { id: 'general',     label: '🔩 General' },
+    ];
+    const QA_CAT_LABELS = {
+      hvac:'❄️ HVAC', gasline:'🔧 Gas Line', waterheater:'💧 Water Heater',
+      poolheater:'🏊 Pool Heater', commercial:'🍳 Commercial', general:'🔩 General',
+    };
+    const STARTER_MATERIALS = [
+      // HVAC / Furnace
+      { desc:'Furnace Filter 16x25x1',          unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,     category:'hvac' },
+      { desc:'Furnace Filter 20x25x1',          unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,  category:'hvac' },
+      { desc:'Furnace Filter 20x20x1',          unit:'ea',  distributorCost:9,    markup:25, customerPrice:11.25,  category:'hvac' },
+      { desc:'Hot Surface Igniter (Universal)', unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75,     category:'hvac' },
+      { desc:'Flame Sensor (Universal)',        unit:'ea',  distributorCost:18,   markup:25, customerPrice:22.5,  category:'hvac' },
+      { desc:'Furnace Limit Switch',            unit:'ea',  distributorCost:22,   markup:25, customerPrice:27.5,  category:'hvac' },
+      { desc:'Pressure Switch (Single Port)',   unit:'ea',  distributorCost:28,   markup:25, customerPrice:35.0,  category:'hvac' },
+      { desc:'Pressure Switch (Dual Port)',     unit:'ea',  distributorCost:32,   markup:25, customerPrice:40.0,  category:'hvac' },
+      { desc:'Draft Inducer Motor',             unit:'ea',  distributorCost:180,  markup:25, customerPrice:225.0,    category:'hvac' },
+      { desc:'Blower Motor (Universal)',        unit:'ea',  distributorCost:150,  markup:25, customerPrice:187.5, category:'hvac' },
+      { desc:'Blower Wheel',                    unit:'ea',  distributorCost:65,   markup:25, customerPrice:81.25,  category:'hvac' },
+      { desc:'Gas Valve (Universal)',           unit:'ea',  distributorCost:85,   markup:25, customerPrice:106.25, category:'hvac' },
+      { desc:'Furnace Control Board (Universal)',unit:'ea', distributorCost:120,  markup:25, customerPrice:150.0,    category:'hvac' },
+      { desc:'Run Capacitor 35/5 MFD 440V',    unit:'ea',  distributorCost:22,   markup:25, customerPrice:27.5,  category:'hvac' },
+      { desc:'Run Capacitor 45/5 MFD 440V',    unit:'ea',  distributorCost:24,   markup:25, customerPrice:30.0,  category:'hvac' },
+      { desc:'Start Capacitor (Universal)',     unit:'ea',  distributorCost:18,   markup:25, customerPrice:22.5,  category:'hvac' },
+      { desc:'Contactor 25A Single Pole',       unit:'ea',  distributorCost:28,   markup:25, customerPrice:35.0,  category:'hvac' },
+      { desc:'Contactor 40A Double Pole',       unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75,     category:'hvac' },
+      { desc:'Condenser Fan Motor (1/5 HP)',    unit:'ea',  distributorCost:95,   markup:25, customerPrice:118.75, category:'hvac' },
+      { desc:'Transformer 40VA 120/24V',        unit:'ea',  distributorCost:28,   markup:25, customerPrice:35.0,  category:'hvac' },
+      { desc:'Thermostat Wire (per ft)',         unit:'ft',  distributorCost:0.50, markup:25, customerPrice:0.62,   category:'hvac' },
+      // Gas Line
+      { desc:'Black Iron Pipe 1/2" (per ft)',   unit:'ft',  distributorCost:3,    markup:25, customerPrice:3.75,   category:'gasline' },
+      { desc:'Black Iron Pipe 3/4" (per ft)',   unit:'ft',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'gasline' },
+      { desc:'Black Iron Pipe 1" (per ft)',     unit:'ft',  distributorCost:6,    markup:25, customerPrice:7.5,   category:'gasline' },
+      { desc:'1/2" Black Iron 90 Elbow',        unit:'ea',  distributorCost:3.50, markup:25, customerPrice:4.38,   category:'gasline' },
+      { desc:'3/4" Black Iron 90 Elbow',        unit:'ea',  distributorCost:4.50, markup:25, customerPrice:5.62,   category:'gasline' },
+      { desc:'1/2" Black Iron Tee',             unit:'ea',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'gasline' },
+      { desc:'3/4" Black Iron Tee',             unit:'ea',  distributorCost:5,    markup:25, customerPrice:6.25,      category:'gasline' },
+      { desc:'1/2" Black Iron Union',           unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'gasline' },
+      { desc:'3/4" Black Iron Union',           unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,     category:'gasline' },
+      { desc:'1/2" Ball Valve (Indoor Gas)',    unit:'ea',  distributorCost:15,   markup:25, customerPrice:18.75,     category:'gasline' },
+      { desc:'3/4" Ball Valve (Indoor Gas)',    unit:'ea',  distributorCost:20,   markup:25, customerPrice:25.0,     category:'gasline' },
+      { desc:'Drip Leg / Sediment Trap',        unit:'ea',  distributorCost:25,   markup:25, customerPrice:31.25,     category:'gasline' },
+      { desc:'Gas Flex Connector 18"',          unit:'ea',  distributorCost:18,   markup:25, customerPrice:22.5,  category:'gasline' },
+      { desc:'Gas Flex Connector 24"',          unit:'ea',  distributorCost:22,   markup:25, customerPrice:27.5,  category:'gasline' },
+      { desc:'Gas Flex Connector 36"',          unit:'ea',  distributorCost:28,   markup:25, customerPrice:35.0,  category:'gasline' },
+      { desc:'Gastite CSST (per ft)',           unit:'ft',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'gasline' },
+      { desc:'Pipe Dope (Gas Rated)',           unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'gasline' },
+      { desc:'Teflon Tape Yellow (Gas)',        unit:'ea',  distributorCost:4,    markup:25, customerPrice:5.0,      category:'gasline' },
+      { desc:'Gas Leak Detection Spray',        unit:'ea',  distributorCost:6,    markup:25, customerPrice:7.5,      category:'gasline' },
+      // Water Heater
+      { desc:'Anode Rod Magnesium 3/4"',        unit:'ea',  distributorCost:25,   markup:25, customerPrice:31.25,     category:'waterheater' },
+      { desc:'T&P Relief Valve 3/4" 150 PSI',   unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75,     category:'waterheater' },
+      { desc:'Gas Control Valve / Thermostat',  unit:'ea',  distributorCost:95,   markup:25, customerPrice:118.75, category:'waterheater' },
+      { desc:'Thermocouple 24" Universal',      unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'waterheater' },
+      { desc:'Pilot Assembly Kit',              unit:'ea',  distributorCost:45,   markup:25, customerPrice:56.25,     category:'waterheater' },
+      { desc:'Dip Tube 3/4"',                   unit:'ea',  distributorCost:15,   markup:25, customerPrice:18.75,     category:'waterheater' },
+      { desc:'Water Heater Connector 3/4" 18"', unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'waterheater' },
+      { desc:'Heating Element 4500W 240V',      unit:'ea',  distributorCost:22,   markup:25, customerPrice:27.5,  category:'waterheater' },
+      { desc:'Element Gasket & O-Ring Kit',     unit:'ea',  distributorCost:6,    markup:25, customerPrice:7.5,      category:'waterheater' },
+      // Pool Heater
+      { desc:'Pool Heater Gas Valve (Millivolt)',unit:'ea',  distributorCost:95,   markup:25, customerPrice:118.75, category:'poolheater' },
+      { desc:'Pool Heater Gas Valve (Electronic)',unit:'ea', distributorCost:145,  markup:25, customerPrice:181.25, category:'poolheater' },
+      { desc:'Pool Heater Pressure Switch',     unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75,     category:'poolheater' },
+      { desc:'Pool Heater High Limit Switch',   unit:'ea',  distributorCost:28,   markup:25, customerPrice:35.0,  category:'poolheater' },
+      { desc:'Pool Heater Pilot Assembly',      unit:'ea',  distributorCost:55,   markup:25, customerPrice:68.75,  category:'poolheater' },
+      { desc:'Pool Heater Thermistor / Sensor', unit:'ea',  distributorCost:40,   markup:25, customerPrice:50.0,     category:'poolheater' },
+      { desc:'Pool Heater Bypass Valve Kit',    unit:'ea',  distributorCost:45,   markup:25, customerPrice:56.25,  category:'poolheater' },
+      { desc:'Pool Heater Heat Exchanger Tube', unit:'ea',  distributorCost:180,  markup:25, customerPrice:225.0,    category:'poolheater' },
+      // Commercial Kitchen
+      { desc:'Ice Machine Water Filter',        unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75,     category:'commercial' },
+      { desc:'Ice Machine Cleaner (Nikitabs)',  unit:'pkg', distributorCost:28,   markup:25, customerPrice:35.0,  category:'commercial' },
+      { desc:'Ice Machine Sanitizer',           unit:'ea',  distributorCost:22,   markup:25, customerPrice:27.5,  category:'commercial' },
+      { desc:'Ice Machine Float Valve',         unit:'ea',  distributorCost:38,   markup:25, customerPrice:47.5,  category:'commercial' },
+      { desc:'Commercial Water Inlet Valve',    unit:'ea',  distributorCost:45,   markup:25, customerPrice:56.25,  category:'commercial' },
+      { desc:'Evaporator Fan Motor (Fridge)',   unit:'ea',  distributorCost:85,   markup:25, customerPrice:106.25, category:'commercial' },
+      { desc:'Walk-in Door Gasket (per ft)',    unit:'ft',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'commercial' },
+      { desc:'Defrost Timer (Commercial)',      unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75,     category:'commercial' },
+      { desc:'Commercial Fridge Thermostat',    unit:'ea',  distributorCost:55,   markup:25, customerPrice:68.75,  category:'commercial' },
+      { desc:'High Pressure Switch',            unit:'ea',  distributorCost:40,   markup:25, customerPrice:50.0,     category:'commercial' },
+      { desc:'Low Pressure Switch',             unit:'ea',  distributorCost:40,   markup:25, customerPrice:50.0,     category:'commercial' },
+      { desc:'Range Oven Ignitor (Universal)',   unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75,  category:'commercial' },
+      { desc:'Range Oven Gas Valve',             unit:'ea',  distributorCost:95,   markup:25, customerPrice:118.75, category:'commercial' },
+      { desc:'Range Oven Thermostat',            unit:'ea',  distributorCost:65,   markup:25, customerPrice:81.25,  category:'commercial' },
+      { desc:'Range Oven Door Gasket',           unit:'ea',  distributorCost:28,   markup:25, customerPrice:35,     category:'commercial' },
+      { desc:'Griddle Thermostat',               unit:'ea',  distributorCost:70,   markup:25, customerPrice:87.50,  category:'commercial' },
+      { desc:'Griddle Heating Element',          unit:'ea',  distributorCost:80,   markup:25, customerPrice:100,    category:'commercial' },
+      { desc:'Griddle Gas Valve',                unit:'ea',  distributorCost:90,   markup:25, customerPrice:112.50, category:'commercial' },
+      { desc:'Griddle Pilot Assembly',           unit:'ea',  distributorCost:45,   markup:25, customerPrice:56.25,  category:'commercial' },
+      // General / Hardware
+      { desc:'Wire Nuts Assorted (Bag)',         unit:'bag', distributorCost:4,    markup:25, customerPrice:5.0,      category:'general' },
+      { desc:'Electrical Tape',                 unit:'roll',distributorCost:3,    markup:25, customerPrice:3.75,   category:'general' },
+      { desc:'Duct Tape',                       unit:'roll',distributorCost:5,    markup:25, customerPrice:6.25,      category:'general' },
+      { desc:'Pipe Strap 1/2" (pkg)',            unit:'pkg', distributorCost:4,    markup:25, customerPrice:5.0,   category:'general' },
+      { desc:'Pipe Strap 3/4" (pkg)',            unit:'pkg', distributorCost:4,    markup:25, customerPrice:5.0,   category:'general' },
+      { desc:'Sheet Metal Screws #8 (pkg)',     unit:'pkg', distributorCost:6,    markup:25, customerPrice:7.5,   category:'general' },
+      { desc:'Refrigerant R-410A (per lb)',     unit:'lb',  distributorCost:15,   markup:25, customerPrice:18.75,     category:'general' },
+      { desc:'Refrigerant R-22 (per lb)',       unit:'lb',  distributorCost:35,   markup:25, customerPrice:43.75,  category:'general' },
+      { desc:'PVC Primer & Cement Kit',         unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'general' },
+      { desc:'Silicone Sealant (Grey, HVAC)',   unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,     category:'general' },
+      { desc:'Spray Foam Insulation',           unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'general' },
+      { desc:'Loctite Blue Threadlocker',       unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'general' },
+    ];
+    const JOB_TYPE_TO_QA_CAT = {
+      'furnace':'hvac','ac ':'hvac','heat pump':'hvac','air conditi':'hvac','duct':'hvac','hvac':'hvac',
+      'gas line':'gasline','gas pipe':'gasline','black iron':'gasline','gas install':'gasline',
+      'water heater':'waterheater',
+      'pool heater':'poolheater','pool':'poolheater',
+      'walk-in':'commercial','ice mach':'commercial','fryer':'commercial',
+      'dishwasher':'commercial','refrig':'commercial','restaurant':'commercial','hood':'commercial','range':'commercial','griddle':'commercial','oven':'commercial',
+    };
+    let _qaActiveCat = 'all';
+
+    function guessCurrentCategory() {
+      const jobNameEl = document.getElementById('jobName');
+      const jobTypeEl = document.getElementById('jobType');
+      const text = ((jobTypeEl?.value || '') + ' ' + (jobNameEl?.value || '')).toLowerCase();
+      for (const [kw, cat] of Object.entries(JOB_TYPE_TO_QA_CAT)) {
+        if (text.includes(kw)) return cat;
+      }
+      if (typeof entries !== 'undefined' && entries.length) {
+        const last = entries[entries.length - 1];
+        const lastText = ((last.jobName || '') + ' ' + (last.description || '')).toLowerCase();
+        for (const [kw, cat] of Object.entries(JOB_TYPE_TO_QA_CAT)) {
+          if (lastText.includes(kw)) return cat;
+        }
+      }
+      return 'all';
+    }
+
+    function loadStarterMaterials(silent = false) {
+      let added = 0;
+      const now = new Date().toISOString();
+      STARTER_MATERIALS.forEach(mat => {
+        const key = normalizeMaterialKey(mat.desc);
+        if (!materialCatalog[key]) {
+          materialCatalog[key] = { ...mat, priceAlertEnabled: true, priceLastUpdated: now };
+          added++;
+        }
+      });
+      if (added > 0) {
+        saveMaterialCatalog();
+        if (!silent) alert('Added ' + added + ' starter material' + (added === 1 ? '' : 's') + '. Edit prices any time in Saved Materials.');
+      } else if (!silent) {
+        alert('All starter materials are already in your catalog.');
+      }
+      return added;
+    }
+
+    function buildCategoryTabs() {
+      const wrap = document.getElementById('qaCatTabs');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      QA_CATEGORIES.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'qa-cat-btn' + (cat.id === _qaActiveCat ? ' active' : '');
+        btn.textContent = cat.label;
+        btn.dataset.cat = cat.id;
+        btn.addEventListener('click', () => {
+          _qaActiveCat = cat.id;
+          wrap.querySelectorAll('.qa-cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat.id));
+          renderQuickAddList(document.getElementById('quickAddSearch').value || '');
+        });
+        wrap.appendChild(btn);
+      });
+    }
+
+    document.getElementById('quickAddMaterials').addEventListener('click', openQuickAddModal);
+    document.getElementById('closeQuickAdd').addEventListener('click', closeQuickAddModal);
+    document.getElementById('quickAddSearch').addEventListener('input', e => renderQuickAddList(e.target.value));
+    document.getElementById('quickAddMaterialsModal').addEventListener('click', e => { if (e.target.id === 'quickAddMaterialsModal') closeQuickAddModal(); });
+    document.getElementById('quickAddConfirmBtn').addEventListener('click', addSelectedQuickMaterials);
+    document.getElementById('loadStarterMatsBtn')?.addEventListener('click', () => { loadStarterMaterials(); renderQuickAddList(''); });
+    document.getElementById('loadStarterMatsFooterBtn')?.addEventListener('click', () => { loadStarterMaterials(); renderQuickAddList(document.getElementById('quickAddSearch').value || ''); });
+
+    function openQuickAddModal() {
+      const modal = document.getElementById('quickAddMaterialsModal');
+      const search = document.getElementById('quickAddSearch');
+      if (!modal) return;
+      search.value = '';
+      _qaActiveCat = guessCurrentCategory();
+      buildCategoryTabs();
+      renderQuickAddList('');
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => search.focus(), 60);
+    }
+
+    function closeQuickAddModal() {
+      const modal = document.getElementById('quickAddMaterialsModal');
+      if (modal) { modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true'); }
+    }
+
+    function renderQuickAddList(filterText) {
+      const wrap = document.getElementById('quickAddList');
+      const emptyStarter = document.getElementById('qaEmptyStarter');
+      if (!wrap) return;
+      const filter = normalizeMaterialKey(filterText);
+      const allItems = Object.values(materialCatalog);
+      if (allItems.length === 0) {
+        wrap.innerHTML = '';
+        if (emptyStarter) emptyStarter.style.display = 'block';
+        updateQuickAddCount();
+        return;
+      }
+      if (emptyStarter) emptyStarter.style.display = 'none';
+      const items = allItems
+        .filter(item => {
+          if (filter && !normalizeMaterialKey(item.desc).includes(filter)) return false;
+          if (_qaActiveCat !== 'all' && (item.category || '') !== _qaActiveCat) return false;
+          return true;
+        })
+        .sort((a, b) => a.desc.localeCompare(b.desc));
+      wrap.innerHTML = '';
+      if (!items.length) {
+        wrap.innerHTML = '<div class="saved-material-empty">No materials match this filter. Try \'All\' or a different search.</div>';
+        updateQuickAddCount();
+        return;
+      }
+      items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'qa-material-row';
+        const safeDesc = String(item.desc || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const catLabel = item.category ? (QA_CAT_LABELS[item.category] || '') : '';
+        const catBadge = catLabel ? '<span class="qa-cat-badge">' + catLabel + '</span>' : '';
+        row.innerHTML =
+          '<input type="checkbox" class="qa-check" aria-label="Select ' + safeDesc + '">' +
+          '<div class="qa-material-info">' +
+            '<div class="qa-material-name">' + safeDesc + '</div>' +
+            '<div class="qa-material-meta">Unit: ' + (item.unit || 'ea') + '&nbsp;&middot;&nbsp;Sell: $' + formatMoney(item.customerPrice || 0) + ' ' + catBadge + '</div>' +
+          '</div>' +
+          '<input type="number" class="qa-material-qty" value="1" min="0.01" step="1" title="Quantity" inputmode="decimal">';
+        row.dataset.desc = item.desc;
+        const cb = row.querySelector('.qa-check');
+        const qtyInput = row.querySelector('.qa-material-qty');
+        cb.addEventListener('change', () => {
+          row.classList.toggle('selected', cb.checked);
+          if (cb.checked) setTimeout(() => qtyInput.select(), 0);
+          updateQuickAddCount();
+        });
+        row.addEventListener('click', e => {
+          if (e.target === qtyInput) return;
+          cb.checked = !cb.checked;
+          row.classList.toggle('selected', cb.checked);
+          if (cb.checked) setTimeout(() => qtyInput.select(), 0);
+          updateQuickAddCount();
+        });
+        qtyInput.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            cb.checked = true; row.classList.add('selected'); updateQuickAddCount();
+            const rows = [...wrap.querySelectorAll('.qa-material-row')];
+            const nextRow = rows[rows.indexOf(row) + 1];
+            if (nextRow) nextRow.querySelector('.qa-material-qty').focus();
+          }
+        });
+        qtyInput.addEventListener('input', () => {
+          if (+qtyInput.value > 0 && !cb.checked) { cb.checked = true; row.classList.add('selected'); updateQuickAddCount(); }
+        });
+        wrap.appendChild(row);
+      });
+      updateQuickAddCount();
+    }
+
+    function updateQuickAddCount() {
+      const count = document.querySelectorAll('#quickAddList .qa-check:checked').length;
+      const el = document.getElementById('quickAddCount');
+      if (el) el.textContent = count > 0 ? count + ' item' + (count === 1 ? '' : 's') + ' selected' : '';
+    }
+
+    function addSelectedQuickMaterials() {
+      const rows = [...document.querySelectorAll('#quickAddList .qa-material-row')];
+      const toAdd = rows.filter(row => row.querySelector('.qa-check').checked);
+      if (!toAdd.length) { alert('Check at least one material to add.'); return; }
+      toAdd.forEach(row => {
+        const desc = row.dataset.desc;
+        const qty = parseFloat(row.querySelector('.qa-material-qty').value) || 1;
+        const saved = getSavedMaterial(desc);
+        createItemRow({ desc, qty, unit: saved?.unit || 'ea', distributorCost: saved?.distributorCost || 0,
+          markup: saved?.markup !== undefined ? saved.markup : getDefaultMarkupPercent(), customerPrice: saved?.customerPrice || 0 });
+      });
+      closeQuickAddModal();
+      saveInvoiceSession();
+      updateInvoiceRunningTotal();
+    }
+    // ────────────────────────────────────────────────────────────────────────
     loadData();
     clearForm();
     ensureServiceChargeRow();
