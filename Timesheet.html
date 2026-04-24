@@ -1316,6 +1316,11 @@
         <button id="generateBossCopy" type="button" class="mini-btn">Generate Boss Copy PDF</button>
       </div>
 
+      <label style="display:flex;align-items:center;gap:.55rem;margin:.6rem 0 0 0;cursor:pointer;font-size:.9rem;user-select:none;">
+        <input type="checkbox" id="groupMaterialsToggle" style="width:auto;min-height:auto;accent-color:#ff4500;transform:scale(1.2);">
+        <span>Group all parts as a single <b>"Materials"</b> line on the customer invoice (hides itemized breakdown)</span>
+      </label>
+
       <div class="invoice-tools-toggle">
         <div>
           <div class="tools-toggle-label">Invoice Tools</div>
@@ -2264,6 +2269,7 @@
         hstRate:          document.getElementById('hstRate').value,
         laborDescription: document.getElementById('laborDescription').value,
         selectedEntryIds: getSelectedInvoiceEntryIds(),
+        groupMaterials: !!document.getElementById('groupMaterialsToggle')?.checked,
         items
       };
       localStorage.setItem('invoiceSession', JSON.stringify(session));
@@ -2288,6 +2294,8 @@
         if (s.overtimeRate)     document.getElementById('overtimeRate').value     = s.overtimeRate;
         if (s.hstRate)          document.getElementById('hstRate').value          = s.hstRate;
         if (s.laborDescription) document.getElementById('laborDescription').value = s.laborDescription;
+        const gmt = document.getElementById('groupMaterialsToggle');
+        if (gmt && s.groupMaterials !== undefined) gmt.checked = !!s.groupMaterials;
 
         if (Array.isArray(s.items) && s.items.length) {
           const tbody = document.querySelector('#itemsTable tbody');
@@ -4436,6 +4444,7 @@
         regularHours: savedRegularHours,
         overtimeHours: savedOvertimeHours,
         linkedEntryIds: selectedIds,
+        groupMaterials: !!document.getElementById('groupMaterialsToggle')?.checked,
         items: collectInvoiceItems(),
         serviceDate,
         serviceDateLabel,
@@ -4498,6 +4507,8 @@
       document.getElementById('overtimeRate').value = inv.overtimeRate ?? 175;
       document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
       document.getElementById('laborDescription').value = inv.laborDescription || '';
+      const gmtLoad = document.getElementById('groupMaterialsToggle');
+      if (gmtLoad) gmtLoad.checked = !!inv.groupMaterials;
 
       renderInvoiceEntrySelector(inv.linkedEntryIds || []);
 
@@ -5160,6 +5171,7 @@
           const customerPrice = +row.querySelector('.item-customer-price').value || 0;
           const desc = row.querySelector('.item-desc').value.trim();
           const unit = row.querySelector('.item-unit').value.trim() || 'ea';
+          const rowType = row.dataset.type || '';
           return {
             quantity,
             desc,
@@ -5168,7 +5180,8 @@
             markup,
             customerPrice,
             price: customerPrice,
-            amount: quantity * customerPrice
+            amount: quantity * customerPrice,
+            rowType
           };
         })
         .filter(l => (l.desc && l.quantity) || l.amount);
@@ -5179,7 +5192,39 @@
       let blackIronAmount = 0;
       let blackIronQty = 0;
       const isBlackIron = (line) => /black iron|gas pipe/i.test(line.desc || '');
+      const isLaborOrCharge = (line) =>
+        line.rowType === 'regular-labor' || line.rowType === 'overtime-labor' ||
+        line.rowType === 'service-charge' || line.rowType.startsWith('labor-');
 
+      // ── Group ALL materials into one line if toggle is on ──
+      if (isMergeMaterialsEnabled()) {
+        let materialsTotal = 0;
+        let materialsCostTotal = 0;
+        rawLines.forEach(line => {
+          if (isLaborOrCharge(line)) {
+            summarized.push(line);
+          } else {
+            materialsTotal  += line.amount;
+            materialsCostTotal += (+line.distributorCost || 0) * (+line.quantity || 0);
+          }
+        });
+        if (materialsTotal > 0) {
+          summarized.push({
+            quantity: 1,
+            desc: 'Materials',
+            unit: 'lot',
+            distributorCost: materialsCostTotal,
+            markup: 0,
+            customerPrice: materialsTotal,
+            price: materialsTotal,
+            amount: materialsTotal,
+            rowType: 'materials-merged'
+          });
+        }
+        return summarized;
+      }
+
+      // ── Default: keep individual lines, just group black iron ──
       rawLines.forEach(line => {
         if (isBlackIron(line)) {
           blackIronAmount += line.amount;
@@ -5203,6 +5248,10 @@
       }
 
       return summarized;
+    }
+
+    function isMergeMaterialsEnabled() {
+      return !!document.getElementById('groupMaterialsToggle')?.checked;
     }
 
     async function generateInvoicePdf(copyType = 'customer') {
