@@ -1093,6 +1093,8 @@
       <label>Time In: <select id="timeIn"></select></label>
       <label>Time Out: <select id="timeOut"></select></label>
 
+      <label>Description: <textarea id="description" placeholder="Auto-filled if Job Type selected. You can edit."></textarea></label>
+
       <!-- ── Tasks Performed ── -->
       <div class="tasks-panel" id="tasksPanel">
         <div class="tasks-panel-header" id="tasksPanelHeader">
@@ -1135,8 +1137,6 @@
           </div>
         </div>
       </div>
-
-      <label>Description: <textarea id="description" placeholder="Auto-filled if Job Type selected. You can edit."></textarea></label>
 
       <input type="hidden" id="editIndex" value="-1">
       <div style="margin-top:1rem;">
@@ -4182,13 +4182,24 @@
 
       box.querySelectorAll('.invoice-entry-check').forEach(cb => {
         cb.addEventListener('change', () => {
-          // If the work order field is blank and an entry is being checked, fill it from the job name
-          const invoiceIdField = document.getElementById('invoiceId');
-          if (!invoiceIdField.value.trim() && cb.checked) {
+          if (cb.checked) {
             const entry = entries.find(e => e.id === cb.value);
-            if (entry && entry.jobName) {
-              const prefix = entry.customerName ? entry.customerName.trim() + ' - ' : '';
-              invoiceIdField.value = prefix + entry.jobName.trim();
+            if (entry) {
+              // Auto-fill Invoice / Work Order from job name if blank
+              const invoiceIdField = document.getElementById('invoiceId');
+              if (!invoiceIdField.value.trim() && entry.jobName) {
+                const prefix = entry.customerName ? entry.customerName.trim() + ' - ' : '';
+                invoiceIdField.value = prefix + entry.jobName.trim();
+              }
+              // Transfer customer name to Client Name field if blank
+              if (entry.customerName) {
+                const clientNameField = document.getElementById('clientName');
+                if (clientNameField && !clientNameField.value.trim()) {
+                  clientNameField.value = entry.customerName.trim();
+                  // Also attempt to auto-fill phone/email/address from saved profile
+                  fillClientProfileByName(entry.customerName.trim());
+                }
+              }
             }
           }
           populateInvoiceFromEntries();
