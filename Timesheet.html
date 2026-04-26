@@ -25,18 +25,29 @@
     .nav-button:hover {transform:scale(1.1);box-shadow:0 0 15px rgba(255,69,0,.8);}
     .nav-button::after {content:attr(data-tooltip);position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#ff4500;color:#fff;padding:5px 10px;border-radius:4px;font-size:.8rem;opacity:0;white-space:nowrap;transition:opacity .2s;pointer-events:none;z-index:10;}
     .nav-button:hover::after {opacity:1;}
-    h1,h2 {color:#ff4500;text-align:center;text-shadow:0 0 10px rgba(255,69,0,.5);}
-    #form,#totalTime {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin-bottom:1.5rem;}
-    label {display:block;margin-bottom:.8rem;position:relative;}
-    input,select,textarea {width:100%;padding:.7rem;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;font-size:16px;box-sizing:border-box;min-height:44px;margin-bottom:0.5rem;}
-    input:focus,select:focus,textarea:focus {outline:none;box-shadow:0 0 10px rgba(255,69,0,.7);}
+    h1 {color:#ff4500;text-align:center;text-shadow:0 0 10px rgba(255,69,0,.5);font-size:clamp(1.5rem,5vw,2.2rem);letter-spacing:.04em;margin-bottom:.25rem;}
+    h2 {color:#ff4500;text-align:center;text-shadow:0 0 10px rgba(255,69,0,.5);}
+    #form {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:12px;box-shadow:0 0 24px rgba(255,69,0,.25);margin-bottom:1.5rem;}
+    #totalTime {background:linear-gradient(135deg,rgba(255,69,0,.15) 0%,rgba(30,30,30,.97) 100%);padding:1.1rem 1.5rem;border-radius:12px;box-shadow:0 0 20px rgba(255,69,0,.3);margin-bottom:1.5rem;border:1px solid rgba(255,69,0,.4);font-size:1.3rem;font-weight:bold;text-align:center;color:#ff9060;letter-spacing:.03em;}
+    label {display:block;margin-bottom:.8rem;position:relative;font-size:.88rem;color:#bbb;letter-spacing:.02em;}
+    input,select,textarea {width:100%;padding:.7rem;background:#222;color:#e0e0e0;border:1px solid rgba(255,69,0,.45);border-radius:8px;font-size:16px;box-sizing:border-box;min-height:44px;margin-bottom:0.5rem;transition:border-color .15s,box-shadow .15s;}
+    input:focus,select:focus,textarea:focus {outline:none;box-shadow:0 0 0 2px rgba(255,69,0,.3),0 0 10px rgba(255,69,0,.2);border-color:#ff4500;}
     textarea {height:80px;resize:vertical;}
-    button {background:#ff4500;color:white;border:none;padding:.8rem 1.5rem;border-radius:6px;cursor:pointer;font-size:1rem;margin:0 .5rem .5rem 0;transition:all .2s;min-height:44px;touch-action:manipulation;display:inline-flex;align-items:center;justify-content:center;}
+    button {background:#ff4500;color:white;border:none;padding:.8rem 1.5rem;border-radius:8px;cursor:pointer;font-size:1rem;margin:0 .5rem .5rem 0;transition:all .2s;min-height:44px;touch-action:manipulation;display:inline-flex;align-items:center;justify-content:center;font-weight:600;}
     button:active {transform:scale(0.98);box-shadow:0 0 15px rgba(255,69,0,.8);}
-    button:hover {transform:scale(1.05);box-shadow:0 0 15px rgba(255,69,0,.8);}
+    button:hover {transform:scale(1.04);box-shadow:0 0 14px rgba(255,69,0,.7);}
     #cancelButton,#clearAllButton {background:#dc3545;}
     #newDayButton {background:#17a2b8;}
     #copyLast {background:#28a745;}
+    /* Two-column paired fields */
+    .form-row {display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+    .form-row label {margin-bottom:0;}
+    @media (max-width:480px) { .form-row {grid-template-columns:1fr;} }
+    /* Form section dividers */
+    .form-section-divider {display:flex;align-items:center;gap:.65rem;margin:.85rem 0 .55rem;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#ff6a30;}
+    .form-section-divider::before,.form-section-divider::after {content:'';flex:1;height:1px;background:rgba(255,69,0,.2);}
+    /* Add/Edit heading pill */
+    #form h2 {font-size:.92rem;font-weight:700;text-align:left;text-shadow:none;margin:.1rem 0 1rem;display:inline-flex;align-items:center;gap:.5rem;background:rgba(255,69,0,.1);border:1px solid rgba(255,69,0,.3);border-radius:999px;padding:.35rem 1rem;color:#ffb08a;}
     #address {padding-right:80px !important;}
     .history-btn {position:absolute;right:8px;top:50%;transform:translateY(-50%);background:#ff4500;color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;min-height:auto;margin:0;}
     .history-btn:active {transform:translateY(-50%) scale(0.95);}
@@ -45,10 +56,11 @@
     #customerNameHistory {display:none;position:absolute;top:100%;left:0;right:0;background:#2a2a2a;border:1px solid #ff4500;border-radius:8px;max-height:300px;overflow-y:auto;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.5);}
     .history-item {padding:12px 16px;cursor:pointer;border-bottom:1px solid #444;}
     .history-item:hover {background:#ff4500;color:white;padding-left:24px;}
-    table {width:100%;border-collapse:collapse;background:rgba(30,30,30,.95);border-radius:10px;overflow:hidden;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1rem 0;}
-    th,td {border:1px solid #ff4500;padding:.6rem;text-align:left;}
-    th {background:#ff4500;color:white;position:sticky;top:0;}
-    tbody tr:hover {background:#333;transform:translateY(-2px);}
+    table {width:100%;border-collapse:collapse;background:rgba(30,30,30,.97);border-radius:12px;overflow:hidden;box-shadow:0 0 22px rgba(255,69,0,.25);margin:1rem 0;border:1px solid rgba(255,69,0,.3);}
+    th,td {border:1px solid rgba(255,69,0,.2);padding:.65rem .7rem;text-align:left;}
+    th {background:linear-gradient(135deg,#c93a00,#ff4500);color:white;position:sticky;top:0;font-size:.82rem;letter-spacing:.05em;text-transform:uppercase;}
+    tbody tr:nth-child(even) {background:rgba(255,69,0,.04);}
+    tbody tr:hover {background:rgba(255,69,0,.1);transition:background .15s;}
     .drag-handle {cursor:move;color:#ff4500;margin-right:8px;}
     .action-select {padding:6px;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:4px;font-size:0.9rem;width:100%;min-height:44px;}
     #totalTime {font-size:1.4rem;font-weight:bold;text-align:center;padding:1rem;}
@@ -370,9 +382,10 @@
       #invoiceSummary .summary-grid {grid-template-columns:repeat(2,1fr);}
     }
 
-    .tabs {display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;margin:1rem 0 1.25rem 0;overflow-x:auto;padding-bottom:0.5rem;}
-    .tab-btn {background:#2a2a2a;border:1px solid #ff4500;color:#ff4500;padding:.6rem 1rem;border-radius:999px;cursor:pointer;font-size:1rem;white-space:nowrap;min-height:44px;display:flex;align-items:center;transition:all .2s;touch-action:manipulation;}
-    .tab-btn.active {background:#ff4500;color:#fff;box-shadow:0 0 15px rgba(255,69,0,.6);}
+    .tabs {display:flex;justify-content:center;gap:.5rem;flex-wrap:wrap;margin:1rem 0 1.25rem 0;overflow-x:auto;padding-bottom:0.5rem;background:rgba(0,0,0,.2);border-radius:12px;padding:.5rem;}
+    .tab-btn {background:transparent;border:1px solid rgba(255,69,0,.3);color:#aaa;padding:.55rem 1rem;border-radius:8px;cursor:pointer;font-size:.92rem;white-space:nowrap;min-height:44px;display:flex;align-items:center;gap:.4rem;transition:all .2s;touch-action:manipulation;font-weight:500;}
+    .tab-btn:hover {border-color:#ff4500;color:#ff4500;}
+    .tab-btn.active {background:linear-gradient(135deg,#c93a00,#ff4500);color:#fff;border-color:transparent;box-shadow:0 2px 12px rgba(255,69,0,.45);font-weight:700;}
     .tab-panel {display:none;}
     .tab-panel.active {display:block;}
 
@@ -928,6 +941,125 @@
       color: #28a745;
       margin-bottom: .35rem;
     }
+
+    /* ── UI Improvements ── */
+
+    /* Time In / Time Out side by side */
+    .time-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+      margin-bottom: .8rem;
+    }
+    .time-row label {
+      margin-bottom: 0;
+    }
+
+    /* Customer Name + Job Name side by side */
+    .name-job-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+      margin-bottom: .8rem;
+    }
+    .name-job-row label {
+      margin-bottom: 0;
+    }
+    @media (max-width: 540px) {
+      .time-row, .name-job-row {
+        grid-template-columns: 1fr;
+        gap: .5rem;
+      }
+    }
+
+    /* Row slide-in animation */
+    @keyframes rowSlideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .entry-row-new {
+      animation: rowSlideIn .28s ease forwards;
+    }
+
+    /* Empty table state */
+    .empty-table-state {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: #666;
+    }
+    .empty-table-state .empty-icon {
+      font-size: 2.5rem;
+      margin-bottom: .6rem;
+      opacity: .4;
+    }
+    .empty-table-state p {
+      margin: .25rem 0;
+      font-size: .92rem;
+      line-height: 1.5;
+    }
+    .empty-table-state .empty-hint {
+      font-size: .8rem;
+      opacity: .6;
+      margin-top: .5rem;
+    }
+
+    /* Keyboard shortcut hint */
+    .kb-hint {
+      display: inline-block;
+      font-size: .76rem;
+      color: #888;
+      margin-top: .35rem;
+    }
+    .kb-hint kbd {
+      background: #333;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: .1rem .35rem;
+      font-size: .72rem;
+      color: #ccc;
+      font-family: inherit;
+    }
+
+    /* Invoice summary stat cards */
+    #invoiceSummary .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .6rem;
+    }
+    #invoiceSummary .summary-item {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,69,0,.2);
+      border-radius: 10px;
+      padding: .65rem .85rem;
+      font-size: .88rem;
+    }
+    #invoiceSummary .summary-item b {
+      display: block;
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: #ff6a30;
+      margin-bottom: .2rem;
+      font-weight: 700;
+    }
+    #invoiceSummary .summary-item span {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #e0e0e0;
+    }
+    @media (max-width: 600px) {
+      #invoiceSummary .summary-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 380px) {
+      #invoiceSummary .summary-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Selector row hover */
+    .selector-row:hover { background: rgba(255,69,0,.06); }
+
   </style>
 </head>
 <body>
@@ -1041,17 +1173,24 @@
   <div id="timesheetTab" class="tab-panel active">
     <div id="form">
       <input type="hidden" id="employee" value="">
-      <label>Date: <input type="date" id="sessionDate"></label>
+
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem;">
+        <label style="flex:1;margin-bottom:0;">Date: <input type="date" id="sessionDate"></label>
+      </div>
+
       <h2>Add / Edit Job Entry</h2>
 
-      <label style="position:relative;">
-        Customer Name:
-        <input type="text" id="customerNameInput" placeholder="e.g. John Smith" autocomplete="off" style="padding-right:80px !important;">
-        <button type="button" class="history-btn" id="customerNameHistoryBtn" title="Saved customers"><i class="fas fa-history"></i></button>
-        <div id="customerNameHistory"></div>
-      </label>
+      <div class="form-section-divider">Job Info</div>
 
-      <label>Job Name: <input type="text" id="jobName" placeholder="e.g. Furnace Tune-Up"></label>
+      <div class="name-job-row">
+        <label style="position:relative;">
+          Customer Name:
+          <input type="text" id="customerNameInput" placeholder="e.g. John Smith" autocomplete="off" style="padding-right:80px !important;">
+          <button type="button" class="history-btn" id="customerNameHistoryBtn" title="Saved customers"><i class="fas fa-history"></i></button>
+          <div id="customerNameHistory"></div>
+        </label>
+        <label>Job Name: <input type="text" id="jobName" placeholder="e.g. Furnace Tune-Up"></label>
+      </div>
 
       <label>Job Type (optional auto-description):
         <select id="jobType">
@@ -1083,6 +1222,8 @@
         </select>
       </label>
 
+      <div class="form-section-divider">Location &amp; Schedule</div>
+
       <label style="position:relative;">
         Address:
         <input type="text" id="address" placeholder="Type to search history..." autocomplete="off">
@@ -1090,8 +1231,12 @@
         <div id="addressHistory"></div>
       </label>
 
-      <label>Time In: <select id="timeIn"></select></label>
-      <label>Time Out: <select id="timeOut"></select></label>
+      <div class="time-row">
+        <label>Time In: <select id="timeIn"></select></label>
+        <label>Time Out: <select id="timeOut"></select></label>
+      </div>
+
+      <div class="form-section-divider">Details</div>
 
       <label>Description: <textarea id="description" placeholder="Auto-filled if Job Type selected. You can edit."></textarea></label>
 
@@ -1143,6 +1288,7 @@
         <button id="actionButton">Add Entry</button>
         <button id="copyLast">Copy Last Job</button>
         <button id="cancelButton" style="display:none;">Cancel Edit</button>
+        <div><span class="kb-hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to save quickly</span></div>
       </div>
     </div>
 
@@ -1240,12 +1386,12 @@
   <div id="invoiceTab" class="tab-panel">
     <div id="invoiceSummary">
       <div class="summary-grid">
-        <div class="summary-item"><b>Date Range:</b> <span id="sumDate">—</span></div>
-        <div class="summary-item"><b>Employee:</b> <span id="sumEmployee">—</span></div>
-        <div class="summary-item"><b>Invoice:</b> <span id="sumSelected">Draft</span></div>
-        <div class="summary-item"><b>Total Hours:</b> <span id="sumTotalHours">0 hrs 0 min</span></div>
-        <div class="summary-item"><b>Regular:</b> <span id="sumRegularHours">0.00</span> hr</div>
-        <div class="summary-item"><b>Overtime:</b> <span id="sumOvertimeHours">0.00</span> hr</div>
+        <div class="summary-item"><b>Date Range</b> <span id="sumDate">—</span></div>
+        <div class="summary-item"><b>Employee</b> <span id="sumEmployee">—</span></div>
+        <div class="summary-item"><b>Invoice</b> <span id="sumSelected">Draft</span></div>
+        <div class="summary-item"><b>Total Hours</b> <span id="sumTotalHours">0 hrs 0 min</span></div>
+        <div class="summary-item"><b>Regular</b> <span id="sumRegularHours">0.00</span><span style="font-size:.75rem;color:#888;font-weight:400;"> hr</span></div>
+        <div class="summary-item"><b>Overtime</b> <span id="sumOvertimeHours">0.00</span><span style="font-size:.75rem;color:#888;font-weight:400;"> hr</span></div>
       </div>
     </div>
 
@@ -2751,7 +2897,7 @@
       if (!name) return;
       customerNameHistory = customerNameHistory.filter(n => n.toLowerCase() !== name.toLowerCase());
       customerNameHistory.unshift(name);
-      if (customerNameHistory.length > 200) customerNameHistory.pop();
+        // No hard cap — grows until localStorage is full
       saveCustomerNameHistory();
     }
 
@@ -4703,6 +4849,23 @@
       tbody.innerHTML = '';
       let totalDec = 0;
 
+      if (!entries.length) {
+        tbody.innerHTML = `
+          <tr><td colspan="8" style="border:none;padding:0;">
+            <div class="empty-table-state">
+              <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
+              <p>No job entries yet for this day.</p>
+              <p>Fill in the form above and hit <strong>Add Entry</strong> to get started.</p>
+              <p class="empty-hint"><kbd style="background:#333;border:1px solid #555;border-radius:4px;padding:.1rem .35rem;font-size:.72rem;color:#ccc;">Ctrl</kbd> + <kbd style="background:#333;border:1px solid #555;border-radius:4px;padding:.1rem .35rem;font-size:.72rem;color:#ccc;">Enter</kbd> to save quickly</p>
+            </div>
+          </td></tr>`;
+        document.getElementById('totalTime').textContent = 'Total Time: 0 hrs 0 min';
+        saveData();
+        renderInvoiceEntrySelector();
+        updateInvoiceSummary();
+        return;
+      }
+
       entries.forEach((e, i) => {
         const inDec = timeToDecimal(e.timeIn);
         const outDec = timeToDecimal(e.timeOut);
@@ -4713,6 +4876,12 @@
         tr.draggable = true;
         tr.dataset.index = i;
         tr.classList.add('entry-row');
+
+        // Animate new rows (the last entry just added)
+        if (i === entries.length - 1 && window._lastAddedEntryId && entries[i].id === window._lastAddedEntryId) {
+          tr.classList.add('entry-row-new');
+          window._lastAddedEntryId = null;
+        }
 
         tr.innerHTML = `
           <td>${formatDate(e.dateStr)}</td>
@@ -4925,12 +5094,15 @@
         invoiceId: existing?.invoiceId || ''
       };
 
-      if (idx === -1) entries.push(entry);
+      if (idx === -1) {
+        entries.push(entry);
+        window._lastAddedEntryId = entry.id;
+      }
       else entries[idx] = entry;
 
       if (addr && !addressHistory.includes(addr)) {
         addressHistory.unshift(addr);
-        if (addressHistory.length > 500) addressHistory.pop();
+        // No hard cap — grows until localStorage is full (monitor in Settings → Storage)
       }
 
       if (custName) addCustomerNameToHistory(custName);
