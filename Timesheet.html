@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6219,6 +6220,8 @@
     setupClientAutoFill();
 
     // ── Quick Add Materials ──────────────────────────────────────────────────
+    const qaSelectedItems = new Set(); // Persistent selection state across searches
+    const qaSelectedQties = new Map(); // Persistent quantities for selected items
     const QA_CATEGORIES = [
       { id: 'all',         label: '🔎 All' },
       { id: 'hvac',        label: '❄️ HVAC' },
@@ -6417,6 +6420,9 @@
     function closeQuickAddModal() {
       const modal = document.getElementById('quickAddMaterialsModal');
       if (modal) { modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true'); }
+      // Clear persistent selections when modal is closed
+      qaSelectedItems.clear();
+      qaSelectedQties.clear();
     }
 
     function renderQuickAddList(filterText) {
@@ -6451,39 +6457,82 @@
         const safeDesc = String(item.desc || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const catLabel = item.category ? (QA_CAT_LABELS[item.category] || '') : '';
         const catBadge = catLabel ? '<span class="qa-cat-badge">' + catLabel + '</span>' : '';
+        
+        // Check if this item was previously selected
+        const isSelected = qaSelectedItems.has(item.desc);
+        const persistedQty = qaSelectedQties.get(item.desc) || 1;
+        
         row.innerHTML =
-          '<input type="checkbox" class="qa-check" aria-label="Select ' + safeDesc + '">' +
+          '<input type="checkbox" class="qa-check" aria-label="Select ' + safeDesc + '"' + (isSelected ? ' checked' : '') + '>' +
           '<div class="qa-material-info">' +
             '<div class="qa-material-name">' + safeDesc + '</div>' +
             '<div class="qa-material-meta">Unit: ' + (item.unit || 'ea') + '&nbsp;&middot;&nbsp;Sell: $' + formatMoney(item.customerPrice || 0) + ' ' + catBadge + '</div>' +
           '</div>' +
-          '<input type="number" class="qa-material-qty" value="1" min="0.01" step="1" title="Quantity" inputmode="decimal">';
+          '<input type="number" class="qa-material-qty" value="' + persistedQty + '" min="0.01" step="1" title="Quantity" inputmode="decimal">';
         row.dataset.desc = item.desc;
+        
+        // Apply selected class if item was previously selected
+        if (isSelected) {
+          row.classList.add('selected');
+        }
+        
         const cb = row.querySelector('.qa-check');
         const qtyInput = row.querySelector('.qa-material-qty');
         cb.addEventListener('change', () => {
           row.classList.toggle('selected', cb.checked);
-          if (cb.checked) setTimeout(() => qtyInput.select(), 0);
+          // Update persistent selection state
+          if (cb.checked) {
+            qaSelectedItems.add(item.desc);
+            qaSelectedQties.set(item.desc, parseFloat(qtyInput.value) || 1);
+            setTimeout(() => qtyInput.select(), 0);
+          } else {
+            qaSelectedItems.delete(item.desc);
+            qaSelectedQties.delete(item.desc);
+          }
           updateQuickAddCount();
         });
         row.addEventListener('click', e => {
           if (e.target === qtyInput) return;
           cb.checked = !cb.checked;
           row.classList.toggle('selected', cb.checked);
-          if (cb.checked) setTimeout(() => qtyInput.select(), 0);
+          // Update persistent selection state
+          if (cb.checked) {
+            qaSelectedItems.add(item.desc);
+            qaSelectedQties.set(item.desc, parseFloat(qtyInput.value) || 1);
+            setTimeout(() => qtyInput.select(), 0);
+          } else {
+            qaSelectedItems.delete(item.desc);
+            qaSelectedQties.delete(item.desc);
+          }
           updateQuickAddCount();
+        });
+        qtyInput.addEventListener('change', () => {
+          // Update quantity in persistent storage when changed
+          if (qaSelectedItems.has(item.desc)) {
+            qaSelectedQties.set(item.desc, parseFloat(qtyInput.value) || 1);
+          }
         });
         qtyInput.addEventListener('keydown', e => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            cb.checked = true; row.classList.add('selected'); updateQuickAddCount();
+            cb.checked = true; 
+            row.classList.add('selected');
+            qaSelectedItems.add(item.desc);
+            qaSelectedQties.set(item.desc, parseFloat(qtyInput.value) || 1);
+            updateQuickAddCount();
             const rows = [...wrap.querySelectorAll('.qa-material-row')];
             const nextRow = rows[rows.indexOf(row) + 1];
             if (nextRow) nextRow.querySelector('.qa-material-qty').focus();
           }
         });
         qtyInput.addEventListener('input', () => {
-          if (+qtyInput.value > 0 && !cb.checked) { cb.checked = true; row.classList.add('selected'); updateQuickAddCount(); }
+          if (+qtyInput.value > 0 && !cb.checked) { 
+            cb.checked = true; 
+            row.classList.add('selected');
+            qaSelectedItems.add(item.desc);
+            qaSelectedQties.set(item.desc, parseFloat(qtyInput.value) || 1);
+            updateQuickAddCount(); 
+          }
         });
         wrap.appendChild(row);
       });
@@ -6497,12 +6546,10 @@
     }
 
     function addSelectedQuickMaterials() {
-      const rows = [...document.querySelectorAll('#quickAddList .qa-material-row')];
-      const toAdd = rows.filter(row => row.querySelector('.qa-check').checked);
-      if (!toAdd.length) { alert('Check at least one material to add.'); return; }
-      toAdd.forEach(row => {
-        const desc = row.dataset.desc;
-        const qty = parseFloat(row.querySelector('.qa-material-qty').value) || 1;
+      if (qaSelectedItems.size === 0) { alert('Check at least one material to add.'); return; }
+      // Use the persistent selection state instead of DOM elements
+      qaSelectedItems.forEach(desc => {
+        const qty = qaSelectedQties.get(desc) || 1;
         const saved = getSavedMaterial(desc);
         createItemRow({ desc, qty, unit: saved?.unit || 'ea', distributorCost: saved?.distributorCost || 0,
           markup: saved?.markup !== undefined ? saved.markup : getDefaultMarkupPercent(), customerPrice: saved?.customerPrice || 0 });
