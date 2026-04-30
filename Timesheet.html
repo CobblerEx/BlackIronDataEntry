@@ -4375,8 +4375,8 @@
         })
         .forEach(e => {
           // Skip entries if their address is not in the selected filter
-          const entryAddress = (e.address || '').trim();
-          if (uniqueAddresses.length > 1 && entryAddress && !selectedAddresses.has(entryAddress)) {
+          const rawEntryAddress = (e.address || '').trim();
+          if (uniqueAddresses.length > 1 && rawEntryAddress && !selectedAddresses.has(rawEntryAddress)) {
             return;
           }
           
@@ -5374,6 +5374,101 @@
       saveInvoiceSession();
     });
 
+    function showAddressHistoryWarning(address, previousEntries) {
+      const modal = document.createElement('div');
+      modal.id = 'addressHistoryWarningModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+      `;
+      
+      // Create entries with checkboxes - all checked by default
+      const entryList = previousEntries
+        .map((e, idx) => `
+          <label style="display:flex;align-items:center;padding:0.75rem;background:rgba(255,69,0,0.05);border:1px solid rgba(255,69,0,0.2);border-radius:6px;margin:0.5rem 0;cursor:pointer;gap:0.75rem;">
+            <input type="checkbox" class="address-history-check" value="${e.id}" checked style="width:20px;height:20px;cursor:pointer;">
+            <div style="flex:1;">
+              <strong>${formatDate(e.dateStr)}</strong> — ${e.jobName || 'No job name'}<br>
+              <small style="opacity:0.8;">${to12hr(e.timeIn)} - ${to12hr(e.timeOut)}</small>
+              ${e.description ? `<br><small style="opacity:0.7;font-style:italic;">${(e.description || '').substring(0, 80)}${(e.description || '').length > 80 ? '...' : ''}</small>` : ''}
+            </div>
+          </label>
+        `)
+        .join('');
+      
+      modal.innerHTML = `
+        <div style="background:#1f1f1f;border:2px solid #ff4500;border-radius:12px;padding:1.5rem;max-width:520px;max-height:80vh;overflow-y:auto;box-shadow:0 0 30px rgba(0,0,0,0.8);">
+          <h3 style="color:#ff4500;margin-top:0;text-align:center;">📍 Previous Work at This Address</h3>
+          <p style="color:#e0e0e0;text-align:center;margin:1rem 0;">
+            Found ${previousEntries.length} previous entr${previousEntries.length === 1 ? 'y' : 'ies'} at:<br>
+            <strong>${address}</strong>
+          </p>
+          <p style="color:#bbb;font-size:0.9rem;margin:1rem 0;">Select which ones to include in this invoice:</p>
+          <div style="background:rgba(30,30,30,0.8);border-radius:8px;padding:1rem;margin:1rem 0;max-height:250px;overflow-y:auto;">
+            ${entryList}
+          </div>
+          <div style="display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap;justify-content:center;">
+            <button type="button" id="selectAllAddressHistoryBtn" style="background:#666;color:white;border:none;padding:0.7rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px;font-size:0.9rem;">Select All</button>
+            <button type="button" id="deselectAllAddressHistoryBtn" style="background:#666;color:white;border:none;padding:0.7rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px;font-size:0.9rem;">Deselect All</button>
+            <button type="button" id="confirmAddressHistoryBtn" style="background:#28a745;color:white;border:none;padding:0.8rem 1.5rem;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px;flex:1;min-width:120px;">✓ Apply Selection</button>
+            <button type="button" id="cancelAddressHistoryBtn" style="background:#555;color:white;border:none;padding:0.8rem 1.5rem;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px;">Close</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      // Select all handler
+      document.getElementById('selectAllAddressHistoryBtn').onclick = () => {
+        modal.querySelectorAll('.address-history-check').forEach(cb => cb.checked = true);
+      };
+      
+      // Deselect all handler
+      document.getElementById('deselectAllAddressHistoryBtn').onclick = () => {
+        modal.querySelectorAll('.address-history-check').forEach(cb => cb.checked = false);
+      };
+      
+      // Confirm selection handler
+      document.getElementById('confirmAddressHistoryBtn').onclick = () => {
+        const selectedIds = new Set(
+          [...modal.querySelectorAll('.address-history-check:checked')].map(cb => cb.value)
+        );
+        modal.remove();
+        
+        // Update checkboxes based on selection - but only add, don't uncheck existing
+        document.querySelectorAll('.invoice-entry-check').forEach(cb => {
+          const entry = entries.find(e => e.id === cb.value);
+          if (entry && (entry.address || '').trim() === address) {
+            if (selectedIds.has(entry.id)) {
+              cb.checked = true;
+            }
+          }
+        });
+        renderInvoiceEntrySelector();
+        updateInvoiceSummary();
+      };
+      
+      // Cancel handler
+      document.getElementById('cancelAddressHistoryBtn').onclick = () => {
+        modal.remove();
+      };
+      
+      // Close on backdrop click
+      modal.onclick = (e) => {
+        if (e.target === modal) {
+          modal.remove();
+        }
+      };
+    }
+
     function showInvoiceLinkWarning(invoiceId, linkedEntries) {
       const modal = document.createElement('div');
       modal.id = 'invoiceLinkWarningModal';
@@ -5473,6 +5568,20 @@
 
     ['clientName','clientPhone','clientEmail','clientAddress','laborDescription'].forEach(id => {
       document.getElementById(id).addEventListener('input', saveInvoiceSession);
+    });
+    
+    // Add address history warning
+    document.getElementById('clientAddress').addEventListener('change', () => {
+      const address = document.getElementById('clientAddress').value.trim();
+      
+      // Check if there are previous entries with this address
+      if (address) {
+        const previousEntries = entries.filter(e => (e.address || '').trim() === address && e.billingStatus !== 'invoiced');
+        
+        if (previousEntries.length > 0) {
+          showAddressHistoryWarning(address, previousEntries);
+        }
+      }
     });
 
     document.getElementById('hourlyRate').addEventListener('input', () => {
