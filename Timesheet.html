@@ -4327,6 +4327,45 @@
         return;
       }
 
+      // Get unique addresses from all entries
+      const uniqueAddresses = [...new Set(entries.map(e => (e.address || '').trim()).filter(Boolean))];
+      const selectedAddresses = new Set(JSON.parse(sessionStorage.getItem('selectedAddressesFilter') || '[]'));
+      
+      // If this is the first time or addresses changed significantly, initialize with all addresses
+      if (selectedAddresses.size === 0 && uniqueAddresses.length > 0) {
+        uniqueAddresses.forEach(addr => selectedAddresses.add(addr));
+        sessionStorage.setItem('selectedAddressesFilter', JSON.stringify([...selectedAddresses]));
+      }
+
+      // Show address filter if multiple addresses exist
+      if (uniqueAddresses.length > 1) {
+        const addressFilterHtml = `
+          <div style="background:rgba(255,69,0,0.1);border:1px solid rgba(255,69,0,0.3);border-radius:8px;padding:0.75rem;margin-bottom:1rem;">
+            <div style="font-size:0.85rem;color:#ff9060;font-weight:600;margin-bottom:0.5rem;">Filter by Address:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+              ${uniqueAddresses.map(addr => `
+                <label style="display:flex;align-items:center;gap:0.4rem;background:${selectedAddresses.has(addr) ? 'rgba(40,167,69,0.2)' : 'rgba(100,100,100,0.2)'};padding:0.4rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.85rem;user-select:none;">
+                  <input type="checkbox" class="address-filter-check" value="${addr.replace(/"/g, '&quot;')}" ${selectedAddresses.has(addr) ? 'checked' : ''} style="cursor:pointer;">
+                  <span>${addr || '(No Address)'}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        `;
+        box.innerHTML = addressFilterHtml;
+        
+        // Add event listeners to address filters
+        box.querySelectorAll('.address-filter-check').forEach(cb => {
+          cb.addEventListener('change', () => {
+            const newSelection = new Set(
+              [...box.querySelectorAll('.address-filter-check:checked')].map(c => c.value)
+            );
+            sessionStorage.setItem('selectedAddressesFilter', JSON.stringify([...newSelection]));
+            renderInvoiceEntrySelector(selectedIds);
+          });
+        });
+      }
+
       entries
         .slice()
         .sort((a, b) => {
@@ -4335,6 +4374,12 @@
           return da.localeCompare(db);
         })
         .forEach(e => {
+          // Skip entries if their address is not in the selected filter
+          const entryAddress = (e.address || '').trim();
+          if (uniqueAddresses.length > 1 && entryAddress && !selectedAddresses.has(entryAddress)) {
+            return;
+          }
+          
           const row = document.createElement('label');
           row.className = 'selector-row';
 
@@ -5313,10 +5358,118 @@
     document.getElementById('hstRate').addEventListener('input', () => { updateInvoiceRunningTotal(); saveInvoiceSession(); });
 
     document.getElementById('invoiceId').addEventListener('input', () => {
+      const invoiceId = document.getElementById('invoiceId').value.trim();
+      
+      // Check if there are previous entries linked to this invoice ID
+      if (invoiceId) {
+        const previouslyLinkedEntries = entries.filter(e => e.invoiceId === invoiceId && e.billingStatus === 'draft-linked');
+        
+        if (previouslyLinkedEntries.length > 0) {
+          showInvoiceLinkWarning(invoiceId, previouslyLinkedEntries);
+        }
+      }
+      
       renderInvoiceEntrySelector();
       updateInvoiceSummary();
       saveInvoiceSession();
     });
+
+    function showInvoiceLinkWarning(invoiceId, linkedEntries) {
+      const modal = document.createElement('div');
+      modal.id = 'invoiceLinkWarningModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+      `;
+      
+      // Create entries with checkboxes - all checked by default
+      const entryList = linkedEntries
+        .map((e, idx) => `
+          <label style="display:flex;align-items:center;padding:0.75rem;background:rgba(255,69,0,0.05);border:1px solid rgba(255,69,0,0.2);border-radius:6px;margin:0.5rem 0;cursor:pointer;gap:0.75rem;">
+            <input type="checkbox" class="warning-entry-check" value="${e.id}" checked style="width:20px;height:20px;cursor:pointer;">
+            <div style="flex:1;">
+              <strong>${formatDate(e.dateStr)}</strong> — ${e.jobName}${e.address ? ` (${e.address})` : ''}<br>
+              <small style="opacity:0.8;">${to12hr(e.timeIn)} - ${to12hr(e.timeOut)}</small>
+            </div>
+          </label>
+        `)
+        .join('');
+      
+      modal.innerHTML = `
+        <div style="background:#1f1f1f;border:2px solid #ff4500;border-radius:12px;padding:1.5rem;max-width:520px;max-height:80vh;overflow-y:auto;box-shadow:0 0 30px rgba(0,0,0,0.8);">
+          <h3 style="color:#ff4500;margin-top:0;text-align:center;">⚠️ Previous Work Found</h3>
+          <p style="color:#e0e0e0;text-align:center;margin:1rem 0;">
+            Invoice "<strong>${invoiceId.replace(/"/g, '&quot;')}</strong>" has ${linkedEntries.length} previous entr${linkedEntries.length === 1 ? 'y' : 'ies'}.
+          </p>
+          <p style="color:#bbb;font-size:0.9rem;margin:1rem 0;">Select which ones to include:</p>
+          <div style="background:rgba(30,30,30,0.8);border-radius:8px;padding:1rem;margin:1rem 0;max-height:250px;overflow-y:auto;">
+            ${entryList}
+          </div>
+          <div style="display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap;justify-content:center;">
+            <button type="button" id="selectAllWarningBtn" style="background:#666;color:white;border:none;padding:0.7rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px;font-size:0.9rem;">Select All</button>
+            <button type="button" id="deselectAllWarningBtn" style="background:#666;color:white;border:none;padding:0.7rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px;font-size:0.9rem;">Deselect All</button>
+            <button type="button" id="confirmWarningBtn" style="background:#28a745;color:white;border:none;padding:0.8rem 1.5rem;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px;flex:1;min-width:120px;">✓ Apply Selection</button>
+            <button type="button" id="cancelLinkWarningBtn" style="background:#555;color:white;border:none;padding:0.8rem 1.5rem;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px;">Cancel</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      // Select all handler
+      document.getElementById('selectAllWarningBtn').onclick = () => {
+        modal.querySelectorAll('.warning-entry-check').forEach(cb => cb.checked = true);
+      };
+      
+      // Deselect all handler
+      document.getElementById('deselectAllWarningBtn').onclick = () => {
+        modal.querySelectorAll('.warning-entry-check').forEach(cb => cb.checked = false);
+      };
+      
+      // Confirm selection handler
+      document.getElementById('confirmWarningBtn').onclick = () => {
+        const selectedIds = new Set(
+          [...modal.querySelectorAll('.warning-entry-check:checked')].map(cb => cb.value)
+        );
+        modal.remove();
+        
+        // Update checkboxes based on selection
+        document.querySelectorAll('.invoice-entry-check').forEach(cb => {
+          const entry = entries.find(e => e.id === cb.value);
+          if (entry && entry.invoiceId === invoiceId) {
+            cb.checked = selectedIds.has(entry.id);
+          }
+        });
+        renderInvoiceEntrySelector();
+        updateInvoiceSummary();
+      };
+      
+      // Cancel handler
+      document.getElementById('cancelLinkWarningBtn').onclick = () => {
+        modal.remove();
+        document.getElementById('invoiceId').value = '';
+        renderInvoiceEntrySelector();
+        updateInvoiceSummary();
+      };
+      
+      // Close on backdrop click
+      modal.onclick = (e) => {
+        if (e.target === modal) {
+          modal.remove();
+          document.getElementById('invoiceId').value = '';
+          renderInvoiceEntrySelector();
+          updateInvoiceSummary();
+        }
+      };
+    }
 
     ['clientName','clientPhone','clientEmail','clientAddress','laborDescription'].forEach(id => {
       document.getElementById(id).addEventListener('input', saveInvoiceSession);
