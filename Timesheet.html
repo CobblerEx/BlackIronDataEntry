@@ -1255,6 +1255,8 @@
             <option value="Commercial Dishwasher Service">Commercial Dishwasher Service</option>
             <option value="Hood &amp; Exhaust Service">Hood &amp; Exhaust Service</option>
             <option value="Refrigeration Service">Refrigeration Service</option>
+            <option value="Compressor Replacement">Compressor Replacement</option>
+            <option value="Compressor Replacement (R290)">Compressor Replacement (R290)</option>
           </optgroup>
           <optgroup label="General">
             <option value="General Service Call">General Service Call</option>
@@ -1946,6 +1948,8 @@
       "Panini Grill Repair": "Diagnosed and repaired Panini grill. Inspected heating elements, thermostat, and control components. Cleaned and degreased cooking surfaces and internal components. Tested grill at operating temperature and verified consistent heat across cooking surface.",
       "Rooftop Unit Maintenance": "Performed preventive maintenance on rooftop HVAC unit. Replaced air filters, inspected and adjusted belts for proper tension and wear, checked all electrical connections and contactors, cleaned condenser coils, inspected heat exchanger and burner assembly, lubricated bearings and moving parts, verified refrigerant pressures, and confirmed proper unit operation including supply and return air temperatures.",
       "Refrigeration Service": "Inspected and serviced commercial refrigeration unit. Checked refrigerant pressures and temperatures, inspected evaporator and condenser coils, cleaned condenser, checked door gaskets and hinges, tested defrost cycle, verified thermostat calibration, and confirmed unit is maintaining proper temperature.",
+      "Compressor Replacement (R290)": "Replaced compressor on R290 (propane) refrigeration system. Ensured adequate ventilation and removed all ignition sources from work area. Installed temporary saddle valves to isolate compressor. Transferred R290 charge and flushed lines with dry nitrogen. Removed failed compressor and installed new R290-rated compressor with correct POE oil charge. Brazed all connections under continuous nitrogen purge. Pressure tested with nitrogen, evacuated to 500 microns, and recharged with R290 by weight to manufacturer specification. Performed startup and verified proper system operation.",
+      "Compressor Replacement": "Replaced compressor on commercial refrigeration system. Recovered refrigerant using certified recovery equipment. Removed failed compressor and replaced filter drier. Installed new compressor with compatible oil charge. Brazed all connections with nitrogen purge. Pressure tested with nitrogen, evacuated system to 500 microns, and recharged to manufacturer specifications. Performed startup and verified proper operating pressures and temperatures.",
       "Commercial Dishwasher Service": "Serviced commercial dishwasher. Inspected and cleaned wash and rinse arms, checked water temperature at wash and final rinse, inspected door gaskets and latches, cleaned strainer and sump, checked chemical dispenser operation, descaled unit as required, and verified proper sanitizing temperatures.",
       "Deep Fryer Service": "Serviced commercial deep fryer. Drained and cleaned fry tank, inspected burners and ignition system (gas) or heating elements (electric), checked thermostat calibration, inspected high-limit safety, cleaned pilot assembly, and verified proper oil temperature and recovery time.",
       "Hood & Exhaust Service": "Inspected and cleaned commercial kitchen exhaust hood and makeup air system. Removed and cleaned filters, inspected fan and motor, checked belt tension, cleaned grease from plenum and exhaust duct access areas, and verified adequate exhaust and makeup air flow.",
@@ -1974,6 +1978,8 @@
       'Commercial Dishwasher Service':{ cat: 'restaurant', equip: 'Commercial Dishwasher' },
       'Hood & Exhaust Service':       { cat: 'restaurant', equip: 'Hood & Exhaust' },
       'Refrigeration Service':        { cat: 'restaurant', equip: 'Commercial Refrigeration' },
+      'Compressor Replacement':       { cat: 'restaurant', equip: 'Compressor Replacement' },
+      'Compressor Replacement (R290)':{ cat: 'restaurant', equip: 'Compressor Replacement (R290)' },
     };
 
     const timeOptions = [];
@@ -3355,6 +3361,34 @@
             { label: 'Refrigerant check',       desc: 'Checked refrigerant pressures and verified system operating within specifications.' },
             { label: 'Cutting board inspection',desc: 'Inspected cutting board surface for cracks and excessive wear.' },
             { label: 'Rail & pan check',        desc: 'Inspected top rail, pan holders, and inserts for proper fit and sealing.' },
+          ],
+          'Compressor Replacement': [
+            { label: 'Refrigerant recovery',    desc: 'Recovered refrigerant from system using certified recovery equipment.' },
+            { label: 'Compressor removal',      desc: 'Disconnected and removed failed compressor, drained oil charge, and inspected system for contamination.' },
+            { label: 'Filter drier replacement',desc: 'Replaced filter drier to protect new compressor from moisture and debris.' },
+            { label: 'Compressor installation', desc: 'Installed new compressor with compatible oil charge and secured all connections.' },
+            { label: 'Braze connections',       desc: 'Brazed refrigerant connections with nitrogen purge to prevent internal oxidation.' },
+            { label: 'Nitrogen pressure hold',  desc: 'Pressurized system with dry nitrogen to 150 PSI and held for 15 minutes to verify no leaks.' },
+            { label: 'System evacuation',       desc: 'Evacuated system with vacuum pump to 500 microns and held to confirm no moisture or leaks.' },
+            { label: 'Refrigerant recharge',    desc: 'Recharged system to manufacturer-specified operating pressures and verified charge by superheat/subcooling.' },
+            { label: 'Leak check',              desc: 'Performed leak check on all brazed and flared connections with electronic leak detector.' },
+            { label: 'Startup & verify',        desc: 'Performed startup and verified suction/discharge pressures, temperatures, and confirmed unit pulling down to setpoint.' },
+          ],
+          'Compressor Replacement (R290)': [
+            { label: 'Area ventilation',        desc: 'Ensured adequate ventilation in work area prior to service — R290 is a flammable refrigerant; verified no ignition sources within 3 metres.' },
+            { label: 'Saddle valve install',    desc: 'Installed temporary saddle valves on suction and discharge lines to isolate compressor for removal without full system discharge.' },
+            { label: 'Compressor isolation',    desc: 'Closed saddle valves and confirmed system pressure isolated to compressor section.' },
+            { label: 'Refrigerant transfer',    desc: 'Transferred R290 charge from compressor section into remaining system using recovery/transfer procedure approved for flammable refrigerants.' },
+            { label: 'Nitrogen flush',          desc: 'Flushed suction and discharge lines with dry nitrogen to purge residual R290 and contaminants before brazing.' },
+            { label: 'Nitrogen pressure hold',  desc: 'Pressurized system with dry nitrogen to 150 PSI and held for 15 minutes to verify no leaks before compressor installation.' },
+            { label: 'Compressor removal',      desc: 'Removed failed compressor, drained oil charge, and inspected for contamination.' },
+            { label: 'Compressor installation', desc: 'Installed new R290-rated compressor with correct polyol ester oil charge.' },
+            { label: 'Braze under nitrogen',    desc: 'Brazed all refrigerant connections with continuous nitrogen purge flowing through the system to prevent internal oxidation.' },
+            { label: 'Leak check (nitrogen)',   desc: 'Pressure tested all brazed connections with nitrogen and leak detection solution prior to refrigerant recharge.' },
+            { label: 'Evacuation',              desc: 'Evacuated system with vacuum pump to 500 microns and held to confirm no moisture or leaks.' },
+            { label: 'R290 recharge',           desc: 'Recharged system with R290 by weight to manufacturer specification. Verified operating pressures and temperatures within range.' },
+            { label: 'Saddle valve removal',    desc: 'Removed temporary saddle valves and brazed line penetrations closed under nitrogen purge. Leak checked all repairs.' },
+            { label: 'Startup & verify',        desc: 'Performed startup, verified suction/discharge pressures, superheat, subcooling, and confirmed unit pulling down to temperature.' },
           ],
         }
       }
