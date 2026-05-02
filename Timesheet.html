@@ -517,6 +517,12 @@
     .qa-cat-btn{background:#2a2a2a;border:1px solid rgba(255,69,0,.3);color:#e0e0e0;padding:.4rem .8rem;border-radius:999px;font-size:.82rem;cursor:pointer;min-height:36px;white-space:nowrap;transition:all .15s;line-height:1.2;}
     .qa-cat-btn:hover{border-color:#ff4500;color:#ff4500;}
     .qa-cat-btn.active{background:#ff4500;color:#fff;border-color:#ff4500;box-shadow:0 0 8px rgba(255,69,0,.35);}
+    /* Quick Add list: 2-column grid on wider screens */
+    #quickAddList{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;}
+    @media (max-width:560px){#quickAddList{grid-template-columns:1fr;}}
+    /* Expand the quick add panel so more rows are visible */
+    #quickAddMaterialsModal .saved-materials-panel{max-height:92vh;width:min(860px,100%);}
+    #quickAddMaterialsModal .saved-materials-body{max-height:calc(92vh - 130px);}
     .sml-edit-form { display:none; margin-top:.65rem; border-top:1px solid rgba(255,69,0,.2); padding-top:.65rem; }
     .saved-material-row.editing .sml-edit-form { display:block; }
     .saved-material-row.editing .sml-view-actions { display:none; }
@@ -1230,6 +1236,7 @@
           <optgroup label="HVAC / Gas">
             <option value="Furnace Tune-Up">Furnace Tune-Up</option>
             <option value="AC Maintenance">Air Conditioner Maintenance</option>
+            <option value="Mini-Split Service">Mini-Split / Ductless Service</option>
             <option value="Rooftop Unit Maintenance">Rooftop Unit Maintenance</option>
             <option value="Compressor Replacement">Compressor Replacement</option>
             <option value="Duct Cleaning">Duct Cleaning</option>
@@ -1237,6 +1244,7 @@
             <option value="Underground Gas Line">Underground Gas Line</option>
             <option value="Pool Heater Install">Pool Heater Gas Line / Install</option>
             <option value="Water Heater Service">Water Heater Service</option>
+            <option value="BBQ Gas Appliance Service">BBQ / Outdoor Gas Appliance Service</option>
           </optgroup>
           <optgroup label="Commercial Kitchen">
             <option value="Ice Machine Cleaning">Ice Machine Cleaning</option>
@@ -1932,6 +1940,8 @@
       "Pool Heater Install": "Installed new natural gas pool heater including gas line extension, electrical connection, bonding, and venting. Performed startup and verified proper operation.",
       "Underground Gas Line": "Installed underground polyethylene gas line from meter to building entrance. Trenched, bedded with sand, installed tracer wire, riser, and transition fitting. Pressure tested per local code.",
       "General Service Call": "Responded to customer service call. Diagnosed issue, performed necessary repairs/adjustments, and verified proper operation of equipment.",
+      "Mini-Split Service": "Performed service on ductless mini-split system. Cleaned indoor and outdoor unit filters and coils, cleared condensate drain, inspected line set connections for leaks, checked refrigerant pressures, and verified system operation in all modes.",
+      "BBQ Gas Appliance Service": "Inspected outdoor gas appliance and supply piping. Checked gas flex connector, shut-off valve, and all connections for leaks. Inspected burners, ignition system, and regulator. Pressure tested gas line. Verified safe and proper operation of appliance.",
       "Ice Machine Cleaning": "Performed full ice machine cleaning and sanitizing service. Removed and cleaned ice bin, evaporator, condenser coils, water distribution components, and float valve. Flushed and sanitized water system. Replaced water filter. Inspected for proper ice production and verified unit is operating within manufacturer specifications.",
       "Panini Grill Repair": "Diagnosed and repaired Panini grill. Inspected heating elements, thermostat, and control components. Cleaned and degreased cooking surfaces and internal components. Tested grill at operating temperature and verified consistent heat across cooking surface.",
       "Rooftop Unit Maintenance": "Performed preventive maintenance on rooftop HVAC unit. Replaced air filters, inspected and adjusted belts for proper tension and wear, checked all electrical connections and contactors, cleaned condenser coils, inspected heat exchanger and burner assembly, lubricated bearings and moving parts, verified refrigerant pressures, and confirmed proper unit operation including supply and return air temperatures.",
@@ -1941,6 +1951,29 @@
       "Hood & Exhaust Service": "Inspected and cleaned commercial kitchen exhaust hood and makeup air system. Removed and cleaned filters, inspected fan and motor, checked belt tension, cleaned grease from plenum and exhaust duct access areas, and verified adequate exhaust and makeup air flow.",
       "Range Oven Service": "Serviced commercial range oven. Inspected burners, ignition system, and gas valve operation. Cleaned burner ports, drip pans, and oven interior. Calibrated thermostat and verified accurate oven temperature. Checked door gasket, hinges, and broiler operation. Tested all burners for proper flame pattern.",
       "Flat Top Griddle Service": "Serviced commercial flat top griddle. Inspected burners and ignition system (gas) or heating elements (electric). Cleaned griddle surface and grease troughs. Calibrated thermostat and verified even heat distribution across cooking surface. Checked gas valve operation, pilot assembly, and verified proper temperature control."
+    };
+
+    // ── Job Type → Tasks panel auto-select map ────────────────────────────────
+    const JOB_TYPE_TO_TASK_MAP = {
+      'Furnace Tune-Up':              { cat: 'hvac',       equip: 'Furnace / Boiler' },
+      'AC Maintenance':               { cat: 'hvac',       equip: 'Air Conditioner' },
+      'Mini-Split Service':           { cat: 'hvac',       equip: 'Mini-Split System' },
+      'Rooftop Unit Maintenance':     { cat: 'hvac',       equip: 'Rooftop Unit' },
+      'Compressor Replacement':       { cat: 'hvac',       equip: 'Compressor Replacement' },
+      'Duct Cleaning':                { cat: 'hvac',       equip: 'Ductwork' },
+      'Gas Line Install':             { cat: 'hvac',       equip: 'Gas Line' },
+      'Underground Gas Line':         { cat: 'hvac',       equip: 'Gas Line' },
+      'Pool Heater Install':          { cat: 'hvac',       equip: 'Pool Heater' },
+      'Water Heater Service':         { cat: 'hvac',       equip: 'Water Heater' },
+      'BBQ Gas Appliance Service':    { cat: 'hvac',       equip: 'BBQ / Outdoor Gas Appliance' },
+      'Ice Machine Cleaning':         { cat: 'restaurant', equip: 'Ice Machine' },
+      'Panini Grill Repair':          { cat: 'restaurant', equip: 'Panini Grill' },
+      'Deep Fryer Service':           { cat: 'restaurant', equip: 'Deep Fryer' },
+      'Range Oven Service':           { cat: 'restaurant', equip: 'Range Oven' },
+      'Flat Top Griddle Service':     { cat: 'restaurant', equip: 'Flat Top Griddle' },
+      'Commercial Dishwasher Service':{ cat: 'restaurant', equip: 'Commercial Dishwasher' },
+      'Hood & Exhaust Service':       { cat: 'restaurant', equip: 'Hood & Exhaust' },
+      'Refrigeration Service':        { cat: 'restaurant', equip: 'Commercial Refrigeration' },
     };
 
     const timeOptions = [];
@@ -1972,6 +2005,26 @@
       if (selected && jobTemplates[selected]) {
         descField.value = jobTemplates[selected];
         document.getElementById('jobName').value = selected;
+      }
+      // ── Auto-select the Tasks panel to match the chosen job type ──
+      const taskMap = JOB_TYPE_TO_TASK_MAP[selected];
+      if (taskMap) {
+        // Switch category
+        tasksActiveCat = taskMap.cat;
+        document.querySelectorAll('.tasks-cat-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.cat === taskMap.cat);
+        });
+        // If panel is open, re-populate equipment list and select the right one
+        if (tasksPanelOpen) {
+          populateTaskEquipOptions();
+          tasksEquipSel.value = taskMap.equip;
+          renderTaskChips();
+        } else {
+          // Just queue the equip selection so it's ready when panel opens
+          tasksActiveCat = taskMap.cat;
+          // Store pending equip for when panel opens
+          tasksEquipSel._pendingEquip = taskMap.equip;
+        }
       }
     });
 
@@ -3032,6 +3085,11 @@
             { label: 'Contactor inspection',        desc: 'Inspected contactor for pitting, burning, and proper operation.' },
             { label: 'TXV / metering device check', desc: 'Inspected TXV / metering device and verified proper superheat and subcooling.' },
             { label: 'Thermostat calibration',      desc: 'Calibrated thermostat and verified accurate temperature control.' },
+            { label: 'Reclaim refrigerant',         desc: 'Recovered refrigerant from system using certified recovery equipment.' },
+            { label: 'Low/high voltage wiring',     desc: 'Removed low voltage and high voltage wiring in preparation for equipment replacement.' },
+            { label: 'New line set',                desc: 'Ran new refrigerant line set from indoor to outdoor unit.' },
+            { label: 'Braze line set',              desc: 'Installed condenser and brazed line set connections.' },
+            { label: 'Reinstall wiring',            desc: 'Reinstalled low voltage and high voltage wiring to new equipment.' },
           ],
           'Mini-Split System': [
             { label: 'Filter cleaning',          desc: 'Removed and cleaned indoor unit filters to restore proper airflow.' },
@@ -3105,6 +3163,30 @@
             { label: 'Pressure test',          desc: 'Performed pressure test on gas supply piping according to gas code.' },
             { label: 'Gas valve test',         desc: 'Tested gas valve operation and verified proper inlet and outlet pressure.' },
             { label: 'Pilot assembly service', desc: 'Cleaned and serviced pilot assembly, thermocouple, and gas valve.' },
+            { label: 'Call tech support',      desc: 'Called tech support to assist with diagnostic.' },
+          ],
+          'Compressor Replacement': [
+            { label: 'Refrigerant recovery',   desc: 'Recovered refrigerant from system using certified recovery equipment.' },
+            { label: 'Compressor removal',     desc: 'Disconnected and removed failed compressor, drained oil charge.' },
+            { label: 'Filter drier replacement',desc: 'Replaced filter drier to protect new compressor from moisture and debris.' },
+            { label: 'Compressor installation',desc: 'Installed new compressor with compatible oil charge and torqued all connections.' },
+            { label: 'Braze connections',      desc: 'Brazed refrigerant connections with nitrogen purge to prevent oxidation.' },
+            { label: 'System evacuation',      desc: 'Evacuated system with vacuum pump to 500 microns and held for 30 minutes to verify no leaks.' },
+            { label: 'Refrigerant recharge',   desc: 'Recharged system to manufacturer-specified operating pressures.' },
+            { label: 'Capacitor replacement',  desc: 'Replaced start/run capacitor as part of compressor replacement service.' },
+            { label: 'Leak check',             desc: 'Performed leak check on all brazed and flared connections.' },
+            { label: 'System startup / test',  desc: 'Started system and verified pressures, temperatures, and operation are within specification.' },
+          ],
+          'BBQ / Outdoor Gas Appliance': [
+            { label: 'Gas connection check',   desc: 'Inspected gas flex connector, shut-off valve, and all connections for leaks.' },
+            { label: 'Burner inspection',      desc: 'Inspected burners for proper flame pattern, blockages, and corrosion.' },
+            { label: 'Ignition test',          desc: 'Tested ignition system and verified reliable spark on all burners.' },
+            { label: 'Regulator check',        desc: 'Inspected and tested gas pressure regulator for proper output pressure.' },
+            { label: 'Pressure test',          desc: 'Performed pressure test on gas piping to the appliance.' },
+            { label: 'Drip leg / trap',        desc: 'Installed or inspected drip leg and sediment trap on gas supply line.' },
+            { label: 'Shut-off valve install', desc: 'Installed dedicated shut-off valve at appliance connection point.' },
+            { label: 'Leak detection',         desc: 'Tested all gas connections with approved leak detection solution.' },
+            { label: 'Startup & verify',       desc: 'Performed startup and verified appliance operating correctly on all settings.' },
           ],
         }
       },
@@ -3253,6 +3335,27 @@
             { label: 'Surface re-seasoning',   desc: 'Cleaned and re-seasoned griddle cooking surface.' },
             { label: 'Element check (electric)',desc: 'Inspected heating elements for continuity and even heat distribution (electric model).' },
           ],
+          'Commercial Refrigeration': [
+            { label: 'Refrigerant check',        desc: 'Checked refrigerant pressures and temperatures, verified system operating within specifications.' },
+            { label: 'Evaporator coil cleaning', desc: 'Cleaned evaporator coil to restore heat transfer efficiency.' },
+            { label: 'Condenser coil cleaning',  desc: 'Cleaned condenser coil to improve unit efficiency and heat rejection.' },
+            { label: 'Door gasket check',        desc: 'Inspected door gaskets for tears, gaps, and proper sealing.' },
+            { label: 'Defrost cycle check',      desc: 'Inspected and tested defrost timer / control for proper defrost cycles.' },
+            { label: 'Temperature calibration',  desc: 'Calibrated thermostat and verified unit holding proper temperature.' },
+            { label: 'Fan motor service',        desc: 'Inspected evaporator and condenser fan motors and verified proper operation.' },
+            { label: 'Drain line clearing',      desc: 'Cleared condensate drain line and verified proper drainage.' },
+            { label: 'Door heater check',        desc: 'Tested door frame heater to prevent ice buildup and ensure proper sealing.' },
+            { label: 'Leak detection',           desc: 'Performed leak search on all refrigerant connections and components.' },
+          ],
+          'Sandwich / Prep Station': [
+            { label: 'Door gasket check',       desc: 'Inspected door and pan cover gaskets for proper sealing.' },
+            { label: 'Coil cleaning',           desc: 'Cleaned evaporator coil to restore unit efficiency.' },
+            { label: 'Temperature calibration', desc: 'Calibrated thermostat and verified unit holding proper holding temperature.' },
+            { label: 'Fan motor service',       desc: 'Inspected evaporator fan motor and verified proper operation.' },
+            { label: 'Refrigerant check',       desc: 'Checked refrigerant pressures and verified system operating within specifications.' },
+            { label: 'Cutting board inspection',desc: 'Inspected cutting board surface for cracks and excessive wear.' },
+            { label: 'Rail & pan check',        desc: 'Inspected top rail, pan holders, and inserts for proper fit and sealing.' },
+          ],
         }
       }
     };
@@ -3272,7 +3375,16 @@
       tasksPanelOpen = !tasksPanelOpen;
       tasksPanelBody.style.display = tasksPanelOpen ? 'block' : 'none';
       tasksPanelArrow.classList.toggle('open', tasksPanelOpen);
-      if (tasksPanelOpen) populateTaskEquipOptions();
+      if (tasksPanelOpen) {
+        populateTaskEquipOptions();
+        // Apply pending equip from job-type auto-select
+        if (tasksEquipSel._pendingEquip) {
+          tasksEquipSel.value = tasksEquipSel._pendingEquip;
+          tasksEquipSel._pendingEquip = null;
+          renderTaskChips();
+          renderSavedCustomChips && renderSavedCustomChips();
+        }
+      }
     });
 
     function populateTaskEquipOptions() {
