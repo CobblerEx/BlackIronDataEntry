@@ -1,7 +1,3 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1969,7 +1965,7 @@
       "Hood & Exhaust Service": "Inspected and cleaned commercial kitchen exhaust hood and makeup air system. Removed and cleaned filters, inspected fan and motor, checked belt tension, cleaned grease from plenum and exhaust duct access areas, and verified adequate exhaust and makeup air flow.",
       "Range Oven Service": "Serviced commercial range oven. Inspected burners, ignition system, and gas valve operation. Cleaned burner ports, drip pans, and oven interior. Calibrated thermostat and verified accurate oven temperature. Checked door gasket, hinges, and broiler operation. Tested all burners for proper flame pattern.",
       "Flat Top Griddle Service": "Serviced commercial flat top griddle. Inspected burners and ignition system (gas) or heating elements (electric). Cleaned griddle surface and grease troughs. Calibrated thermostat and verified even heat distribution across cooking surface. Checked gas valve operation, pilot assembly, and verified proper temperature control.",
-      "Furnace Installation": "Removed existing furnace and disconnected gas, electrical, and venting connections. Installed new high-efficiency gas furnace. Modified and fabricated supply and return ductwork connections using sheet metal, S cleat, and drive cleats. Sealed all duct joints with aluminum tape. Ran new PVC flue exhaust and combustion air intake through exterior wall. Connected gas flex connector and drip leg. Wired new thermostat, connected electrical disconnect, and ran condensate drain with trap and float switch. Performed gas pressure test, started up furnace, and verified all safety controls, burner operation, airflow, and proper CO levels.",
+      "Furnace Installation": "Removed existing furnace and disconnected gas, electrical, and venting connections. Installed new high-efficiency gas furnace. Modified and fabricated supply and return ductwork connections using sheet metal, S cleat, and drive cleats. Sealed all duct joints with aluminum tape. Ran new CSA 636 certified flue exhaust and combustion air intake pipe through exterior wall with approved termination caps. Connected gas flex connector and drip leg. Wired new thermostat, connected electrical disconnect, and ran condensate drain with trap and float switch. Performed gas pressure test, started up furnace, and verified all safety controls, burner operation, airflow, and proper CO levels.",
       "AC Installation": "Installed new air conditioning system. Mounted indoor evaporator coil on furnace plenum with sheet metal transitions, S cleat, and drive cleats. Sealed all duct connections with aluminum tape. Set outdoor condenser on pad, ran pre-insulated refrigerant line set through exterior wall. Installed disconnect box and electrical whip. Brazed refrigerant connections under nitrogen purge, pressure tested system to 400 PSI, evacuated to 500 microns, and charged with R-410A to manufacturer specification. Installed PVC condensate drain line with trap and float switch overflow protection. Confirmed proper system operation, refrigerant pressures, and supply air temperatures.",
       "Water Heater Install - Tank": "Removed old tank water heater and disconnected all utilities. Installed new tank water heater in same location. Connected cold water inlet and hot water outlet using dielectric unions. Installed new T&P relief valve with full-size discharge pipe to safe termination. Connected gas flex connector and ensured proper venting. Installed expansion tank and new ball valve shutoff. Tested all connections for leaks, lit pilot, set thermostat, and verified proper hot water temperature and recovery.",
       "Water Heater Install - Tankless": "Removed existing water heater and capped connections. Upgraded gas line as required for new BTU demand. Installed new condensing tankless water heater. Ran 2-pipe PVC direct-vent through exterior wall for exhaust and combustion air intake. Connected gas, cold water inlet, and hot water outlet with isolation valves. Installed scale filter, condensate drain, and expansion protection. Commissioned unit, set temperature, tested flow rate at multiple fixtures, and verified error-free operation.",
@@ -6540,17 +6536,21 @@
       { desc:'Condensate Pump (secondary)',      unit:'ea',  distributorCost:65,   markup:25, customerPrice:81.25, category:'install' },
       { desc:'Float Switch Overflow Protection', unit:'ea',  distributorCost:18,   markup:25, customerPrice:22.5,  category:'install' },
       { desc:'Condensate Drain Pan (plastic)',   unit:'ea',  distributorCost:25,   markup:25, customerPrice:31.25, category:'install' },
-      // ── Install — Furnace Venting (PVC) ───────────────────────────────────
-      { desc:'PVC Flue Pipe 2" (per ft)',         unit:'ft',  distributorCost:3,    markup:25, customerPrice:3.75,  category:'install' },
-      { desc:'PVC Flue Pipe 3" (per ft)',         unit:'ft',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'install' },
-      { desc:'PVC 90° Elbow 2" (flue)',           unit:'ea',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'install' },
-      { desc:'PVC 90° Elbow 3" (flue)',           unit:'ea',  distributorCost:5.5,  markup:25, customerPrice:6.88,  category:'install' },
-      { desc:'PVC 45° Elbow 2" (flue)',           unit:'ea',  distributorCost:3.5,  markup:25, customerPrice:4.38,  category:'install' },
-      { desc:'PVC 45° Elbow 3" (flue)',           unit:'ea',  distributorCost:4.5,  markup:25, customerPrice:5.63,  category:'install' },
-      { desc:'PVC Exhaust Termination Cap 2"',    unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'install' },
-      { desc:'PVC Exhaust Termination Cap 3"',    unit:'ea',  distributorCost:14,   markup:25, customerPrice:17.5,  category:'install' },
-      { desc:'PVC Intake Hood 2"',                unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,  category:'install' },
-      { desc:'PVC Intake Hood 3"',                unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'install' },
+      // ── Install — Furnace Venting (CSA 636) ───────────────────────────────
+      { desc:'636 Flue Pipe 2" (per ft)',          unit:'ft',  distributorCost:3,    markup:25, customerPrice:3.75,  category:'install' },
+      { desc:'636 Flue Pipe 3" (per ft)',          unit:'ft',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'install' },
+      { desc:'636 90° Elbow 2"',                   unit:'ea',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'install' },
+      { desc:'636 90° Elbow 3"',                   unit:'ea',  distributorCost:5.5,  markup:25, customerPrice:6.88,  category:'install' },
+      { desc:'636 45° Elbow 2"',                   unit:'ea',  distributorCost:3.5,  markup:25, customerPrice:4.38,  category:'install' },
+      { desc:'636 45° Elbow 3"',                   unit:'ea',  distributorCost:4.5,  markup:25, customerPrice:5.63,  category:'install' },
+      { desc:'636 Exhaust Termination Cap 2"',     unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'install' },
+      { desc:'636 Exhaust Termination Cap 3"',     unit:'ea',  distributorCost:14,   markup:25, customerPrice:17.5,  category:'install' },
+      { desc:'636 Intake Hood 2"',                 unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,  category:'install' },
+      { desc:'636 Intake Hood 3"',                 unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'install' },
+      { desc:'636 Coupling 2"',                    unit:'ea',  distributorCost:3,    markup:25, customerPrice:3.75,  category:'install' },
+      { desc:'636 Coupling 3"',                    unit:'ea',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'install' },
+      { desc:'636 Tee with Cap 2"',                unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'install' },
+      { desc:'636 Tee with Cap 3"',                unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,  category:'install' },
       { desc:'Condensate Neutralizer Kit',        unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75, category:'install' },
       // ── Install — Electrical ──────────────────────────────────────────────
       { desc:'Disconnect Box 60A 240V',           unit:'ea',  distributorCost:28,   markup:25, customerPrice:35.0,  category:'install' },
@@ -6603,7 +6603,7 @@
       'furnace install':'install','furnace installation':'install','ac install':'install','ac installation':'install',
       'air conditioner install':'install','ductless install':'install','ductless split':'install','mini-split install':'install',
       'water heater install':'waterheater','tankless':'waterheater',
-      'furnace':'hvac','ac ':'hvac','heat pump':'hvac','air conditi':'hvac','duct':'hvac','hvac':'hvac',
+      'furnace':'hvac','636':'install','ac ':'hvac','heat pump':'hvac','air conditi':'hvac','duct':'hvac','hvac':'hvac',
       'gas line':'gasline','gas pipe':'gasline','black iron':'gasline','gas install':'gasline',
       'water heater':'waterheater',
       'pool heater':'poolheater','pool':'poolheater',
