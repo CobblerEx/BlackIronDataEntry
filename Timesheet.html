@@ -3100,6 +3100,8 @@
             { label: 'Blower motor service',    desc: 'Serviced blower motor, inspected belt, and lubricated bearings.' },
             { label: 'Combustion analysis',     desc: 'Performed combustion analysis to verify safe and efficient burner operation.' },
             { label: 'Inducer motor check',     desc: 'Inspected and tested inducer motor for proper operation and airflow.' },
+            { label: 'Replace capacitor',      desc: 'Tested and replaced blower and inducer motor capacitors as needed.' },
+            
           ],
           'Air Conditioner': [
             { label: 'Filter cleaning',             desc: 'Cleaned air filter to restore proper airflow.' },
@@ -3118,6 +3120,11 @@
             { label: 'New line set',                desc: 'Ran new refrigerant line set from indoor to outdoor unit.' },
             { label: 'Braze line set',              desc: 'Installed condenser and brazed line set connections.' },
             { label: 'Reinstall wiring',            desc: 'Reinstalled low voltage and high voltage wiring to new equipment.' },
+            { label: 'System test',                 desc: 'Tested system operation in all modes and verified proper cooling performance.' },
+            { label: 'replace capacitor',          desc: 'Tested and replaced run capacitor as needed.' },
+            { label: 'replaced contactor',         desc: 'Inspected and replaced contactors as needed due to pitting or burning.' },
+            { label: 'Added Leak Sealant',          desc: 'Added refrigerant leak sealant to system to seal minor leaks.' },
+
           ],
           'Mini-Split System': [
             { label: 'Filter cleaning',          desc: 'Removed and cleaned indoor unit filters to restore proper airflow.' },
@@ -3139,6 +3146,8 @@
             { label: 'Electrical inspection', desc: 'Inspected all electrical connections and components for wear and corrosion.' },
             { label: 'Damper inspection',     desc: 'Inspected all dampers for proper operation and sealing.' },
             { label: 'Bearing lubrication',   desc: 'Lubricated all motor and blower shaft bearings.' },
+            { label: 'replace Capacitors',    desc: 'Tested and replaced run and start capacitors as needed.' },
+            { label: 'replaced Contactors',   desc: 'Inspected and replaced contactors as needed due to pitting or burning.' },
           ],
           'Heat Pump': [
             { label: 'Defrost cycle check',    desc: 'Tested defrost control and verified proper defrost cycle operation.' },
@@ -3157,6 +3166,7 @@
             { label: 'Line purge',                  desc: 'Purged gas line of air to ensure proper gas flow.' },
             { label: 'Regulator check',             desc: 'Inspected and tested gas pressure regulator for proper operation and output pressure.' },
             { label: 'Bonding / grounding check',   desc: 'Verified bonding and grounding of gas piping as per code requirements.' },
+            { label: 'Gas line inspection',         desc: 'Inspected gas line for damage, corrosion, or blockages.' }
           ],
           'Water Heater': [
             { label: 'Anode rod check',        desc: 'Inspected sacrificial anode rod and replaced due to depletion.' },
@@ -3232,6 +3242,14 @@
             { label: 'Drain line clearing',      desc: 'Cleared condensate drain line and verified proper drainage.' },
             { label: 'Door heater check',        desc: 'Tested door frame heater to prevent ice buildup and ensure proper sealing.' },
             { label: 'Thermostat replacement',   desc: 'Replaced faulty thermostat and calibrated to specified temperature setpoint.' },
+            { label: 'Ice buildup removal',      desc: 'Removed ice buildup from evaporator coil and interior surfaces to restore proper airflow and cooling.' },
+            { label: 'Door closer adjustment',   desc: 'Adjusted door closer and hinges for proper alignment and sealing.' },
+            { label: 'Condenser fan check',      desc: 'Inspected condenser fan motor and blades for proper operation and airflow.' },
+            { label: 'Compressor check',         desc: 'Checked compressor operation and verified proper pressures and temperatures.' },
+            { label: 'Light replacement',        desc: 'Replaced interior light bulb and verified proper operation.' },
+            { label: 'Gasket replacement',       desc: 'Replaced worn or damaged door gaskets to restore proper sealing and energy efficiency.' },
+            { label: 'Condenser fan motor replacement', desc: 'Replaced faulty condenser fan motor to restore proper cooling performance.' },
+            { label: 'Install 3 in 1',           desc: 'Installed 3 in 1 Start components to replace failed start capacitor, relay, and overload on compressor.' },
           ],
           'Walk-in Freezer': [
             { label: 'Door gasket check',        desc: 'Inspected door gaskets for tears, gaps, and proper sealing.' },
@@ -3246,9 +3264,10 @@
             { label: 'Thermostat replacement',   desc: 'Replaced faulty thermostat and calibrated to specified temperature setpoint.' },
             { label: 'Ice buildup removal',      desc: 'Removed ice buildup from evaporator coil and interior surfaces to restore proper airflow and cooling.' },
             { label: 'Door closer adjustment',   desc: 'Adjusted door closer and hinges for proper alignment and sealing.' },
-            { label: 'Condenser fan check',        desc: 'Inspected condenser fan motor and blades for proper operation and airflow.' },
-            { label: 'Compressor check',             desc: 'Checked compressor operation and verified proper pressures and temperatures.' },
-            
+            { label: 'Condenser fan check',      desc: 'Inspected condenser fan motor and blades for proper operation and airflow.' },
+            { label: 'Compressor check',         desc: 'Checked compressor operation and verified proper pressures and temperatures.' },
+            { label: '/install 3 in 1',           desc: 'Installed 3 in 1 Start components to replce failed start capacitor, relay, and overload on compressor.' },
+
           ],
           'Reach-in Cooler': [
             { label: 'Door gasket check',       desc: 'Inspected door gaskets for tears, gaps, and proper sealing.' },
@@ -3258,6 +3277,10 @@
             { label: 'Fan motor service',       desc: 'Inspected evaporator fan motor and verified proper operation.' },
             { label: 'Condenser cleaning',      desc: 'Cleaned condenser coil and verified proper airflow.' },
             { label: 'Door closer adjustment',  desc: 'Adjusted door closer and hinges for proper alignment and sealing.' },
+            { label: 'Drain line clearing',      desc: 'Cleared condensate drain line and verified proper drainage.' },
+            { label: 'Light replacement',        desc: 'Replaced interior light bulb and verified proper operation.'},
+            { label: 'ice buildup removal',      desc: 'Removed ice buildup from evaporator coil and interior surfaces to restore proper airflow and cooling.' },
+            { label: 'install 3 in 1',           desc: 'Installed 3 in 1 Start components to replce failed start capacitor, relay, and overload on compressor.' },
           ],
           'Reach-in Freezer': [
             { label: 'Door gasket check',       desc: 'Inspected door gaskets for tears, gaps, and proper sealing.' },
@@ -3267,6 +3290,9 @@
             { label: 'Fan motor service',       desc: 'Inspected evaporator fan motor and verified proper operation.' },
             { label: 'Condenser cleaning',      desc: 'Cleaned condenser coil and verified proper airflow.' },
             { label: 'Door closer adjustment',  desc: 'Adjusted door closer and hinges for proper alignment and sealing.' },
+            { label: 'Drain line clearing',      desc: 'Cleared condensate drain line and verified proper drainage.' },
+            { label: 'ice buildup removal',      desc: 'Removed ice buildup from evaporator coil and interior surfaces to restore proper airflow and cooling.' },
+            { label: 'install 3 in 1',           desc: 'Installed 3 in 1 Start components to replce failed start capacitor, relay, and overload on compressor.' },
           ],
           'Ice Machine': [
             { label: 'Cleaning & sanitizing',       desc: 'Performed full cleaning and sanitizing cycle per manufacturer procedure.' },
