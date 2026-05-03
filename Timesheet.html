@@ -1240,16 +1240,24 @@
       <label>Job Type (optional auto-description):
         <select id="jobType">
           <option value="">-- Select to auto-fill description --</option>
-          <optgroup label="HVAC / Gas">
+          <optgroup label="Installations">
+            <option value="Furnace Installation">Furnace Installation</option>
+            <option value="AC Installation">A/C Installation</option>
+            <option value="Water Heater Install - Tank">Water Heater Installation (Tank)</option>
+            <option value="Water Heater Install - Tankless">Water Heater Installation (Tankless)</option>
+            <option value="Ductless Split Install">Ductless / Mini-Split Installation</option>
+            <option value="Pool Heater Install">Pool Heater Gas Line / Install</option>
+            <option value="Gas Line Install">Gas Line Installation</option>
+            <option value="Underground Gas Line">Underground Gas Line</option>
+          </optgroup>
+          <optgroup label="HVAC / Gas — Service &amp; Maintenance">
             <option value="Furnace Tune-Up">Furnace Tune-Up</option>
             <option value="AC Maintenance">Air Conditioner Maintenance</option>
             <option value="Mini-Split Service">Mini-Split / Ductless Service</option>
+            <option value="Pool Heater Maintenance">Pool Heater Maintenance</option>
             <option value="Rooftop Unit Maintenance">Rooftop Unit Maintenance</option>
             <option value="Compressor Replacement">Compressor Replacement</option>
             <option value="Duct Cleaning">Duct Cleaning</option>
-            <option value="Gas Line Install">Gas Line Installation</option>
-            <option value="Underground Gas Line">Underground Gas Line</option>
-            <option value="Pool Heater Install">Pool Heater Gas Line / Install</option>
             <option value="Water Heater Service">Water Heater Service</option>
             <option value="BBQ Gas Appliance Service">BBQ / Outdoor Gas Appliance Service</option>
           </optgroup>
@@ -1956,26 +1964,37 @@
       "Rooftop Unit Maintenance": "Performed preventive maintenance on rooftop HVAC unit. Replaced air filters, inspected and adjusted belts for proper tension and wear, checked all electrical connections and contactors, cleaned condenser coils, inspected heat exchanger and burner assembly, lubricated bearings and moving parts, verified refrigerant pressures, and confirmed proper unit operation including supply and return air temperatures.",
       "Refrigeration Service": "Inspected and serviced commercial refrigeration unit. Checked refrigerant pressures and temperatures, inspected evaporator and condenser coils, cleaned condenser, checked door gaskets and hinges, tested defrost cycle, verified thermostat calibration, and confirmed unit is maintaining proper temperature.",
       "Compressor Replacement (R290)": "Replaced compressor on R290 (propane) refrigeration system. Ensured adequate ventilation and removed all ignition sources from work area. Installed temporary saddle valves to isolate compressor. Transferred R290 charge and flushed lines with dry nitrogen. Removed failed compressor and installed new R290-rated compressor with correct POE oil charge. Brazed all connections under continuous nitrogen purge. Pressure tested with nitrogen, evacuated to 500 microns, and recharged with R290 by weight to manufacturer specification. Performed startup and verified proper system operation.",
-      "Compressor Replacement": "Replaced compressor on commercial refrigeration system. Recovered refrigerant using certified recovery equipment. Removed failed compressor and replaced filter drier. Installed new compressor with compatible oil charge. Brazed all connections with nitrogen purge. Pressure tested with nitrogen, evacuated system to 500 microns, and recharged to manufacturer specifications. Performed startup and verified proper operating pressures and temperatures.",
       "Commercial Dishwasher Service": "Serviced commercial dishwasher. Inspected and cleaned wash and rinse arms, checked water temperature at wash and final rinse, inspected door gaskets and latches, cleaned strainer and sump, checked chemical dispenser operation, descaled unit as required, and verified proper sanitizing temperatures.",
       "Deep Fryer Service": "Serviced commercial deep fryer. Drained and cleaned fry tank, inspected burners and ignition system (gas) or heating elements (electric), checked thermostat calibration, inspected high-limit safety, cleaned pilot assembly, and verified proper oil temperature and recovery time.",
       "Hood & Exhaust Service": "Inspected and cleaned commercial kitchen exhaust hood and makeup air system. Removed and cleaned filters, inspected fan and motor, checked belt tension, cleaned grease from plenum and exhaust duct access areas, and verified adequate exhaust and makeup air flow.",
       "Range Oven Service": "Serviced commercial range oven. Inspected burners, ignition system, and gas valve operation. Cleaned burner ports, drip pans, and oven interior. Calibrated thermostat and verified accurate oven temperature. Checked door gasket, hinges, and broiler operation. Tested all burners for proper flame pattern.",
-      "Flat Top Griddle Service": "Serviced commercial flat top griddle. Inspected burners and ignition system (gas) or heating elements (electric). Cleaned griddle surface and grease troughs. Calibrated thermostat and verified even heat distribution across cooking surface. Checked gas valve operation, pilot assembly, and verified proper temperature control."
+      "Flat Top Griddle Service": "Serviced commercial flat top griddle. Inspected burners and ignition system (gas) or heating elements (electric). Cleaned griddle surface and grease troughs. Calibrated thermostat and verified even heat distribution across cooking surface. Checked gas valve operation, pilot assembly, and verified proper temperature control.",
+      "Furnace Installation": "Removed existing furnace and disconnected gas, electrical, and venting connections. Installed new high-efficiency gas furnace. Modified and fabricated supply and return ductwork connections using sheet metal, S cleat, and drive cleats. Sealed all duct joints with aluminum tape. Ran new PVC flue exhaust and combustion air intake through exterior wall. Connected gas flex connector and drip leg. Wired new thermostat, connected electrical disconnect, and ran condensate drain with trap and float switch. Performed gas pressure test, started up furnace, and verified all safety controls, burner operation, airflow, and proper CO levels.",
+      "AC Installation": "Installed new air conditioning system. Mounted indoor evaporator coil on furnace plenum with sheet metal transitions, S cleat, and drive cleats. Sealed all duct connections with aluminum tape. Set outdoor condenser on pad, ran pre-insulated refrigerant line set through exterior wall. Installed disconnect box and electrical whip. Brazed refrigerant connections under nitrogen purge, pressure tested system to 400 PSI, evacuated to 500 microns, and charged with R-410A to manufacturer specification. Installed PVC condensate drain line with trap and float switch overflow protection. Confirmed proper system operation, refrigerant pressures, and supply air temperatures.",
+      "Water Heater Install - Tank": "Removed old tank water heater and disconnected all utilities. Installed new tank water heater in same location. Connected cold water inlet and hot water outlet using dielectric unions. Installed new T&P relief valve with full-size discharge pipe to safe termination. Connected gas flex connector and ensured proper venting. Installed expansion tank and new ball valve shutoff. Tested all connections for leaks, lit pilot, set thermostat, and verified proper hot water temperature and recovery.",
+      "Water Heater Install - Tankless": "Removed existing water heater and capped connections. Upgraded gas line as required for new BTU demand. Installed new condensing tankless water heater. Ran 2-pipe PVC direct-vent through exterior wall for exhaust and combustion air intake. Connected gas, cold water inlet, and hot water outlet with isolation valves. Installed scale filter, condensate drain, and expansion protection. Commissioned unit, set temperature, tested flow rate at multiple fixtures, and verified error-free operation.",
+      "Pool Heater Maintenance": "Performed annual preventive maintenance on pool heater. Inspected and cleaned heat exchanger tubes, combustion chamber, and burner tray. Checked pilot assembly, thermostat/sensor, high-limit switch, and water pressure switch. Tested gas valve operation and inspected all gas connections for leaks. Inspected and lubricated bypass valve. Cleared condensate drain. Verified proper ignition sequence, flame pattern, and confirmed pool heating to set temperature.",
+      "Ductless Split Install": "Installed new ductless mini-split system. Mounted indoor air handler on interior wall at designated location. Ran line set, communication wire, and condensate drain through wall sleeve to exterior. Set outdoor unit on wall mounting bracket with vibration isolators. Brazed refrigerant line connections under nitrogen purge, pressure tested to 400 PSI, and evacuated to 500 microns. Charged system per manufacturer specification. Installed outdoor disconnect and wired all control connections. Tested system in cooling, heating, auto, and fan modes and verified proper operation."
     };
 
     // ── Job Type → Tasks panel auto-select map ────────────────────────────────
     const JOB_TYPE_TO_TASK_MAP = {
       'Furnace Tune-Up':              { cat: 'hvac',       equip: 'Furnace / Boiler' },
+      'Furnace Installation':         { cat: 'hvac',       equip: 'Furnace / Boiler' },
       'AC Maintenance':               { cat: 'hvac',       equip: 'Air Conditioner' },
+      'AC Installation':              { cat: 'hvac',       equip: 'Air Conditioner' },
       'Mini-Split Service':           { cat: 'hvac',       equip: 'Mini-Split System' },
+      'Ductless Split Install':       { cat: 'hvac',       equip: 'Mini-Split System' },
       'Rooftop Unit Maintenance':     { cat: 'hvac',       equip: 'Rooftop Unit' },
       'Compressor Replacement':       { cat: 'hvac',       equip: 'Compressor Replacement' },
       'Duct Cleaning':                { cat: 'hvac',       equip: 'Ductwork' },
       'Gas Line Install':             { cat: 'hvac',       equip: 'Gas Line' },
       'Underground Gas Line':         { cat: 'hvac',       equip: 'Gas Line' },
       'Pool Heater Install':          { cat: 'hvac',       equip: 'Pool Heater' },
+      'Pool Heater Maintenance':      { cat: 'hvac',       equip: 'Pool Heater' },
       'Water Heater Service':         { cat: 'hvac',       equip: 'Water Heater' },
+      'Water Heater Install - Tank':  { cat: 'hvac',       equip: 'Water Heater' },
+      'Water Heater Install - Tankless':{ cat: 'hvac',     equip: 'Water Heater' },
       'BBQ Gas Appliance Service':    { cat: 'hvac',       equip: 'BBQ / Outdoor Gas Appliance' },
       'Ice Machine Cleaning':         { cat: 'restaurant', equip: 'Ice Machine' },
       'Panini Grill Repair':          { cat: 'restaurant', equip: 'Panini Grill' },
@@ -6375,6 +6394,7 @@
     // ── Quick Add Materials ──────────────────────────────────────────────────
     const QA_CATEGORIES = [
       { id: 'all',         label: '🔎 All' },
+      { id: 'install',     label: '🔨 Install' },
       { id: 'hvac',        label: '❄️ HVAC' },
       { id: 'gasline',     label: '🔧 Gas Line' },
       { id: 'waterheater', label: '💧 Water Heater' },
@@ -6383,7 +6403,7 @@
       { id: 'general',     label: '🔩 General' },
     ];
     const QA_CAT_LABELS = {
-      hvac:'❄️ HVAC', gasline:'🔧 Gas Line', waterheater:'💧 Water Heater',
+      install:'🔨 Install', hvac:'❄️ HVAC', gasline:'🔧 Gas Line', waterheater:'💧 Water Heater',
       poolheater:'🏊 Pool Heater', commercial:'🍳 Commercial', general:'🔩 General',
     };
     const STARTER_MATERIALS = [
@@ -6472,6 +6492,12 @@
       { desc:'Wire Nuts Assorted (Bag)',         unit:'bag', distributorCost:4,    markup:25, customerPrice:5.0,      category:'general' },
       { desc:'Electrical Tape',                 unit:'roll',distributorCost:3,    markup:25, customerPrice:3.75,   category:'general' },
       { desc:'Duct Tape',                       unit:'roll',distributorCost:5,    markup:25, customerPrice:6.25,      category:'general' },
+      { desc:'Foil HVAC Tape',                  unit:'roll',distributorCost:9,    markup:25, customerPrice:11.25,  category:'general' },
+      { desc:'Aluminum Tape (HVAC)',             unit:'roll',distributorCost:12,   markup:25, customerPrice:15.0,   category:'install' },
+      { desc:'S Cleat 24" (duct connection)',    unit:'ea',  distributorCost:4,    markup:25, customerPrice:5.0,    category:'install' },
+      { desc:'S Cleat (per ft)',                 unit:'ft',  distributorCost:1.5,  markup:25, customerPrice:1.88,   category:'install' },
+      { desc:'Drive Cleat 24" (duct connection)',unit:'ea',  distributorCost:4,    markup:25, customerPrice:5.0,    category:'install' },
+      { desc:'Drive Cleat (per ft)',             unit:'ft',  distributorCost:1.5,  markup:25, customerPrice:1.88,   category:'install' },
       { desc:'Pipe Strap 1/2" (pkg)',            unit:'pkg', distributorCost:4,    markup:25, customerPrice:5.0,   category:'general' },
       { desc:'Pipe Strap 3/4" (pkg)',            unit:'pkg', distributorCost:4,    markup:25, customerPrice:5.0,   category:'general' },
       { desc:'Sheet Metal Screws #8 (pkg)',     unit:'pkg', distributorCost:6,    markup:25, customerPrice:7.5,   category:'general' },
@@ -6481,8 +6507,102 @@
       { desc:'Silicone Sealant (Grey, HVAC)',   unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,     category:'general' },
       { desc:'Spray Foam Insulation',           unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'general' },
       { desc:'Loctite Blue Threadlocker',       unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'general' },
+      // ── Install — Sheet Metal ──────────────────────────────────────────────
+      { desc:'Flex Duct 6" (per ft)',            unit:'ft',  distributorCost:2.5,  markup:25, customerPrice:3.13,  category:'install' },
+      { desc:'Flex Duct 8" (per ft)',            unit:'ft',  distributorCost:3,    markup:25, customerPrice:3.75,  category:'install' },
+      { desc:'Flex Duct 10" (per ft)',           unit:'ft',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'install' },
+      { desc:'Sheet Metal Round Duct 6" (per ft)',unit:'ft', distributorCost:4,    markup:25, customerPrice:5.0,   category:'install' },
+      { desc:'Sheet Metal Round Duct 8" (per ft)',unit:'ft', distributorCost:5.5,  markup:25, customerPrice:6.88,  category:'install' },
+      { desc:'Sheet Metal 90° Elbow 6"',         unit:'ea',  distributorCost:9,    markup:25, customerPrice:11.25, category:'install' },
+      { desc:'Sheet Metal 90° Elbow 8"',         unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'install' },
+      { desc:'Sheet Metal 90° Elbow 10"',        unit:'ea',  distributorCost:15,   markup:25, customerPrice:18.75, category:'install' },
+      { desc:'Sheet Metal Tee 6"',               unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,  category:'install' },
+      { desc:'Sheet Metal Tee 8"',               unit:'ea',  distributorCost:13,   markup:25, customerPrice:16.25, category:'install' },
+      { desc:'Sheet Metal Start Collar 6"',      unit:'ea',  distributorCost:5,    markup:25, customerPrice:6.25,  category:'install' },
+      { desc:'Sheet Metal Start Collar 8"',      unit:'ea',  distributorCost:6,    markup:25, customerPrice:7.5,   category:'install' },
+      { desc:'Sheet Metal Start Collar 10"',     unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'install' },
+      { desc:'Sheet Metal Reducer 8" to 6"',     unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'install' },
+      { desc:'Sheet Metal Reducer 10" to 8"',    unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,  category:'install' },
+      { desc:'Sheet Metal End Cap 6"',           unit:'ea',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'install' },
+      { desc:'Sheet Metal End Cap 8"',           unit:'ea',  distributorCost:5,    markup:25, customerPrice:6.25,  category:'install' },
+      { desc:'Sheet Metal Damper 6"',            unit:'ea',  distributorCost:8,    markup:25, customerPrice:10.0,  category:'install' },
+      { desc:'Sheet Metal Damper 8"',            unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,  category:'install' },
+      { desc:'Sheet Metal Plenum Box',           unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75, category:'install' },
+      { desc:'Supply Register Box 6" Round',     unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'install' },
+      { desc:'Supply Register Box 4"x10"',       unit:'ea',  distributorCost:14,   markup:25, customerPrice:17.5,  category:'install' },
+      { desc:'Duct Insulation Wrap (per ft)',     unit:'ft',  distributorCost:2,    markup:25, customerPrice:2.5,   category:'install' },
+      // ── Install — PVC / Condensate ────────────────────────────────────────
+      { desc:'PVC Condensate Pipe 3/4" (per ft)',unit:'ft',  distributorCost:1.5,  markup:25, customerPrice:1.88,  category:'install' },
+      { desc:'PVC Condensate Trap 3/4"',         unit:'ea',  distributorCost:5,    markup:25, customerPrice:6.25,  category:'install' },
+      { desc:'PVC 90° Elbow 3/4" (condensate)',  unit:'ea',  distributorCost:1.5,  markup:25, customerPrice:1.88,  category:'install' },
+      { desc:'PVC Tee 3/4" (condensate)',        unit:'ea',  distributorCost:2,    markup:25, customerPrice:2.5,   category:'install' },
+      { desc:'PVC End Cap 3/4"',                 unit:'ea',  distributorCost:1,    markup:25, customerPrice:1.25,  category:'install' },
+      { desc:'Condensate Pump (secondary)',      unit:'ea',  distributorCost:65,   markup:25, customerPrice:81.25, category:'install' },
+      { desc:'Float Switch Overflow Protection', unit:'ea',  distributorCost:18,   markup:25, customerPrice:22.5,  category:'install' },
+      { desc:'Condensate Drain Pan (plastic)',   unit:'ea',  distributorCost:25,   markup:25, customerPrice:31.25, category:'install' },
+      // ── Install — Furnace Venting (PVC) ───────────────────────────────────
+      { desc:'PVC Flue Pipe 2" (per ft)',         unit:'ft',  distributorCost:3,    markup:25, customerPrice:3.75,  category:'install' },
+      { desc:'PVC Flue Pipe 3" (per ft)',         unit:'ft',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'install' },
+      { desc:'PVC 90° Elbow 2" (flue)',           unit:'ea',  distributorCost:4,    markup:25, customerPrice:5.0,   category:'install' },
+      { desc:'PVC 90° Elbow 3" (flue)',           unit:'ea',  distributorCost:5.5,  markup:25, customerPrice:6.88,  category:'install' },
+      { desc:'PVC 45° Elbow 2" (flue)',           unit:'ea',  distributorCost:3.5,  markup:25, customerPrice:4.38,  category:'install' },
+      { desc:'PVC 45° Elbow 3" (flue)',           unit:'ea',  distributorCost:4.5,  markup:25, customerPrice:5.63,  category:'install' },
+      { desc:'PVC Exhaust Termination Cap 2"',    unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'install' },
+      { desc:'PVC Exhaust Termination Cap 3"',    unit:'ea',  distributorCost:14,   markup:25, customerPrice:17.5,  category:'install' },
+      { desc:'PVC Intake Hood 2"',                unit:'ea',  distributorCost:10,   markup:25, customerPrice:12.5,  category:'install' },
+      { desc:'PVC Intake Hood 3"',                unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'install' },
+      { desc:'Condensate Neutralizer Kit',        unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75, category:'install' },
+      // ── Install — Electrical ──────────────────────────────────────────────
+      { desc:'Disconnect Box 60A 240V',           unit:'ea',  distributorCost:28,   markup:25, customerPrice:35.0,  category:'install' },
+      { desc:'AC Whip Kit (flexible conduit)',    unit:'ea',  distributorCost:18,   markup:25, customerPrice:22.5,  category:'install' },
+      { desc:'Thermostat Wire 18/5 (per ft)',      unit:'ft',  distributorCost:0.40, markup:25, customerPrice:0.5,   category:'install' },
+      { desc:'Electrical Wire 10/2 (per ft)',     unit:'ft',  distributorCost:1.20, markup:25, customerPrice:1.5,   category:'install' },
+      { desc:'Electrical Wire 12/2 (per ft)',     unit:'ft',  distributorCost:0.90, markup:25, customerPrice:1.13,  category:'install' },
+      { desc:'Circuit Breaker 2-Pole 30A',        unit:'ea',  distributorCost:18,   markup:25, customerPrice:22.5,  category:'install' },
+      { desc:'Circuit Breaker 2-Pole 40A',        unit:'ea',  distributorCost:22,   markup:25, customerPrice:27.5,  category:'install' },
+      { desc:'Conduit 1/2" EMT (per ft)',          unit:'ft',  distributorCost:1,    markup:25, customerPrice:1.25,  category:'install' },
+      { desc:'EMT Connector 1/2"',                unit:'ea',  distributorCost:1.5,  markup:25, customerPrice:1.88,  category:'install' },
+      // ── Install — A/C & Refrigerant ───────────────────────────────────────
+      { desc:'Line Set 3/8"x3/4" Pre-Insulated (per ft)',unit:'ft',distributorCost:6,markup:25,customerPrice:7.5,   category:'install' },
+      { desc:'Line Set Cover Kit (indoor)',       unit:'ea',  distributorCost:22,   markup:25, customerPrice:27.5,  category:'install' },
+      { desc:'Condenser Pad 30"x30"',             unit:'ea',  distributorCost:25,   markup:25, customerPrice:31.25, category:'install' },
+      { desc:'Condenser Pad Risers (set of 4)',   unit:'set', distributorCost:18,   markup:25, customerPrice:22.5,  category:'install' },
+      { desc:'Filter Drier (replace on install)', unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'install' },
+      { desc:'Service Valve Core (pkg)',          unit:'pkg', distributorCost:6,    markup:25, customerPrice:7.5,   category:'install' },
+      // ── Install — Mini-Split Specific ─────────────────────────────────────
+      { desc:'Mini-Split Wall Sleeve 65mm',       unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'install' },
+      { desc:'Mini-Split Mounting Bracket (outdoor)',unit:'ea',distributorCost:35,  markup:25, customerPrice:43.75, category:'install' },
+      { desc:'Mini-Split Drain Hose (per ft)',    unit:'ft',  distributorCost:2,    markup:25, customerPrice:2.5,   category:'install' },
+      { desc:'Mini-Split Communication Wire (per ft)',unit:'ft',distributorCost:0.60,markup:25,customerPrice:0.75,  category:'install' },
+      { desc:'Mini-Split Line Set Cover Kit',     unit:'ea',  distributorCost:28,   markup:25, customerPrice:35.0,  category:'install' },
+      // ── Water Heater — Tank Install ───────────────────────────────────────
+      { desc:'Dielectric Unions 3/4" (pair)',     unit:'pair',distributorCost:18,   markup:25, customerPrice:22.5,  category:'waterheater' },
+      { desc:'Expansion Tank 2 Gallon',           unit:'ea',  distributorCost:45,   markup:25, customerPrice:56.25, category:'waterheater' },
+      { desc:'Expansion Tank 4.4 Gallon',         unit:'ea',  distributorCost:65,   markup:25, customerPrice:81.25, category:'waterheater' },
+      { desc:'Ball Valve 3/4" (water supply)',    unit:'ea',  distributorCost:12,   markup:25, customerPrice:15.0,  category:'waterheater' },
+      { desc:'Copper Pipe 3/4" (per ft)',          unit:'ft',  distributorCost:3.5,  markup:25, customerPrice:4.38,  category:'waterheater' },
+      { desc:'Copper Sweat 90° Elbow 3/4"',       unit:'ea',  distributorCost:2,    markup:25, customerPrice:2.5,   category:'waterheater' },
+      { desc:'Copper Sweat Tee 3/4"',             unit:'ea',  distributorCost:2.5,  markup:25, customerPrice:3.13,  category:'waterheater' },
+      { desc:'Solder & Flux Kit',                 unit:'ea',  distributorCost:14,   markup:25, customerPrice:17.5,  category:'waterheater' },
+      { desc:'Water Heater Vent Pipe 4" (per ft)',unit:'ft',  distributorCost:7,    markup:25, customerPrice:8.75,  category:'waterheater' },
+      { desc:'Water Heater Vent Cap 4"',          unit:'ea',  distributorCost:18,   markup:25, customerPrice:22.5,  category:'waterheater' },
+      // ── Water Heater — Tankless ───────────────────────────────────────────
+      { desc:'Tankless WH Isolation Valve Kit',   unit:'ea',  distributorCost:55,   markup:25, customerPrice:68.75, category:'waterheater' },
+      { desc:'Tankless WH Scale Filter',          unit:'ea',  distributorCost:35,   markup:25, customerPrice:43.75, category:'waterheater' },
+      { desc:'Tankless WH Venting Kit 2"/3"',     unit:'ea',  distributorCost:75,   markup:25, customerPrice:93.75, category:'waterheater' },
+      { desc:'Stainless Flex Gas Connector 1/2"', unit:'ea',  distributorCost:18,   markup:25, customerPrice:22.5,  category:'waterheater' },
+      // ── Pool Heater Maintenance ───────────────────────────────────────────
+      { desc:'Pool Heater Burner Tray',           unit:'ea',  distributorCost:65,   markup:25, customerPrice:81.25, category:'poolheater' },
+      { desc:'Pool Heater Combustion Chamber Gasket',unit:'ea',distributorCost:28,  markup:25, customerPrice:35.0,  category:'poolheater' },
+      { desc:'Pool Heater Heat Exchanger Cleaner',unit:'ea',  distributorCost:18,   markup:25, customerPrice:22.5,  category:'poolheater' },
+      { desc:'Pool Heater Tube Brush Kit',        unit:'ea',  distributorCost:14,   markup:25, customerPrice:17.5,  category:'poolheater' },
+      { desc:'Pool Heater Ignition Board',        unit:'ea',  distributorCost:95,   markup:25, customerPrice:118.75,category:'poolheater' },
+      { desc:'Pool Heater Flue Collar / Vent Cap',unit:'ea',  distributorCost:30,   markup:25, customerPrice:37.5,  category:'poolheater' },
     ];
     const JOB_TYPE_TO_QA_CAT = {
+      'furnace install':'install','furnace installation':'install','ac install':'install','ac installation':'install',
+      'air conditioner install':'install','ductless install':'install','ductless split':'install','mini-split install':'install',
+      'water heater install':'waterheater','tankless':'waterheater',
       'furnace':'hvac','ac ':'hvac','heat pump':'hvac','air conditi':'hvac','duct':'hvac','hvac':'hvac',
       'gas line':'gasline','gas pipe':'gasline','black iron':'gasline','gas install':'gasline',
       'water heater':'waterheater',
