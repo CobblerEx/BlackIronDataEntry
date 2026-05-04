@@ -4829,11 +4829,18 @@
       const savedRegularHours  = regularRow  ? (+regularRow.querySelector('.item-qty').value  || 0) : 0;
       const savedOvertimeHours = overtimeRow ? (+overtimeRow.querySelector('.item-qty').value || 0) : 0;
 
-      // Build a dated description from all linked entries so recovery always has dates
+      // Build a dated description from all linked entries so recovery always has dates.
+      // In append mode the UI laborDescription was already correctly merged by
+      // populateInvoiceFromDraftAppend. Re-generating from live entries would lose
+      // descriptions for old entries that were cleared from the timesheet since the
+      // previous session — so trust the UI value instead.
       const allLinkedEntries = entries.filter(e => selectedIds.includes(e.id));
-      const savedLaborDescriptionDated = allLinkedEntries.length > 0
-        ? getLaborDescriptionFromTimesheet(allLinkedEntries, true)
-        : document.getElementById('laborDescription').value.trim();
+      const currentLaborDesc = document.getElementById('laborDescription').value.trim();
+      const savedLaborDescriptionDated = appendMode
+        ? currentLaborDesc
+        : (allLinkedEntries.length > 0
+            ? getLaborDescriptionFromTimesheet(allLinkedEntries, true)
+            : currentLaborDesc);
 
       invoices[invoiceId] = {
         id: invoiceId,
