@@ -1483,6 +1483,7 @@
       </small>
 
       <label>Include Entries In This Invoice:</label>
+      <input type="text" id="entrySelectorFilter" placeholder="Filter by customer, job, or address…" style="margin-bottom:.35rem;" autocomplete="off">
       <div id="invoiceEntrySelector"></div>
       <small class="muted-note">
         Invoiced entries are locked unless they belong to the invoice ID you currently have open. Draft-linked entries stay selectable for their current draft.
@@ -2774,6 +2775,87 @@
 
     function saveArchivedDays(days) {
       localStorage.setItem('timesheetArchive', JSON.stringify(days));
+    }
+
+    // Returns all entries from archived days that are NOT already in the live entries array,
+    // with billing status resolved from the invoices map.
+    function getAllArchiveEntries() {
+      const archive = getArchivedDays();
+      const linkedMap = {};
+      Object.values(invoices).forEach(inv => {
+        (inv.linkedEntryIds || []).forEach(id => {
+          linkedMap[String(id)] = {
+            invoiceId: inv.id || '',
+            status: inv.status === 'invoiced' ? 'invoiced' : 'draft-linked'
+          };
+        });
+      });
+      const liveIds = new Set(entries.map(e => String(e.id)));
+      const seen = new Set();
+      const result = [];
+      archive.forEach(day => {
+        (day.entries || []).forEach(e => {
+          const sid = String(e.id);
+          if (liveIds.has(sid) || seen.has(sid)) return; // skip if live or duplicate
+          seen.add(sid);
+          const linked = linkedMap[sid];
+          result.push({
+            ...e,
+            billingStatus: linked ? linked.status : (e.billingStatus || 'unbilled'),
+            invoiceId:     linked ? linked.invoiceId : (e.invoiceId || ''),
+            _fromArchive:  true
+          });
+        });
+      });
+      return result;
+    }
+
+    // All entries available for invoicing: live + archived (deduped).
+    function getAllEntriesForInvoicing() {
+      return [...entries, ...getAllArchiveEntries()];
+    }
+
+    // Sync billing status from the invoices map into archived day snapshots.
+    function syncArchiveEntryStatuses() {
+      const linkedMap = {};
+      Object.values(invoices).forEach(inv => {
+        (inv.linkedEntryIds || []).forEach(id => {
+          linkedMap[String(id)] = {
+            invoiceId: inv.id || '',
+            status: inv.status === 'invoiced' ? 'invoiced' : 'draft-linked'
+          };
+        });
+      });
+      const archive = getArchivedDays();
+      let changed = false;
+      archive.forEach(day => {
+        (day.entries || []).forEach((e, i) => {
+          const sid = String(e.id);
+          const linked = linkedMap[sid];
+          const newStatus    = linked ? linked.status    : 'unbilled';
+          const newInvoiceId = linked ? linked.invoiceId : '';
+          if (e.billingStatus !== newStatus || (e.invoiceId || '') !== newInvoiceId) {
+            day.entries[i] = { ...e, billingStatus: newStatus, invoiceId: newInvoiceId };
+            changed = true;
+          }
+        });
+      });
+      if (changed) saveArchivedDays(archive);
+    }
+
+    // Mark archived entries as invoiced (mirrors markSelectedEntriesAsInvoiced for the archive).
+    function markArchiveEntriesAsInvoiced(selectedIds, invoiceId) {
+      const idSet = new Set(selectedIds.map(String));
+      const archive = getArchivedDays();
+      let changed = false;
+      archive.forEach(day => {
+        (day.entries || []).forEach((e, i) => {
+          if (!idSet.has(String(e.id))) return;
+          day.entries[i] = { ...e, billingStatus: 'invoiced', invoiceId: invoiceId || e.invoiceId || '' };
+          changed = true;
+        });
+      });
+      if (changed) saveArchivedDays(archive);
     }
 
     function getArchiveLabel(day) {
@@ -4301,7 +4383,7 @@
 
     function getSelectedInvoiceEntries() {
       const ids = getSelectedInvoiceEntryIds();
-      return entries.filter(e => ids.includes(e.id));
+      return getAllEntriesForInvoicing().filter(e => ids.includes(e.id));
     }
 
     function getFilteredEntries() {
@@ -4345,9 +4427,9 @@
       const mergedIds = [...new Set([...existingIds, ...incomingIds])];
       const addedIds = mergedIds.filter(id => !existingIds.includes(id));
 
-      const existingEntries = entries.filter(e => existingIds.includes(String(e.id)));
-      const addedEntries    = entries.filter(e => addedIds.includes(String(e.id)));
-      const mergedEntries   = entries.filter(e => mergedIds.includes(String(e.id)));
+      const existingEntries = getAllEntriesForInvoicing().filter(e => existingIds.includes(String(e.id)));
+      const addedEntries    = getAllEntriesForInvoicing().filter(e => addedIds.includes(String(e.id)));
+      const mergedEntries   = getAllEntriesForInvoicing().filter(e => mergedIds.includes(String(e.id)));
 
       document.getElementById('invoiceId').value    = existingDraft.id || document.getElementById('invoiceId').value || '';
       document.getElementById('clientName').value   = document.getElementById('clientName').value.trim()   || existingDraft.clientName   || '';
@@ -4486,6 +4568,7 @@
       });
 
       saveData();
+      syncArchiveEntryStatuses();
     }
 
     function markSelectedEntriesAsInvoiced(invoiceId) {
@@ -4508,6 +4591,7 @@
         saveInvoicesToStorage();
       }
 
+      markArchiveEntriesAsInvoiced(selectedIds, invoiceId);
       saveData();
     }
 
@@ -4519,88 +4603,289 @@
       const currentIds = selectedIds ?? getSelectedInvoiceEntryIds();
       const lockedDraftAddress = getLockedDraftAddress(currentInvoiceId);
       const normalizedLockedDraftAddress = normalizeDraftAddress(lockedDraftAddress);
+      const filterVal = (document.getElementById('entrySelectorFilter')?.value || '').toLowerCase().trim();
+
+      // Preserve archive section open/closed state across re-renders
+      const archiveWasOpen = box.dataset.archiveOpen === 'true';
+
       box.innerHTML = '';
 
-      if (!entries.length) {
+      const allForInvoicing = getAllEntriesForInvoicing();
+
+      if (!entries.length && !allForInvoicing.length) {
         box.innerHTML = '<div style="padding:.9rem;">No timesheet entries available.</div>';
         return;
       }
 
-      entries
-        .slice()
-        .sort((a, b) => {
-          const da = `${a.dateStr} ${a.timeIn}`;
-          const db = `${b.dateStr} ${b.timeIn}`;
-          return da.localeCompare(db);
-        })
-        .forEach(e => {
-          const row = document.createElement('label');
-          row.className = 'selector-row';
+      const liveIds = new Set(entries.map(e => String(e.id)));
 
-          const isInvoiced = e.billingStatus === 'invoiced';
-          const isSameInvoice = !!(currentInvoiceId && e.invoiceId && e.invoiceId === currentInvoiceId);
-          const linkedToOtherDraft = e.billingStatus === 'draft-linked' && e.invoiceId && e.invoiceId !== currentInvoiceId;
-          const invoicedToOtherInvoice = isInvoiced && !isSameInvoice;
-          const entryAddress = getEntryAddress(e);
-          const addressMismatch = !!(
-            normalizedLockedDraftAddress &&
-            entryAddress &&
-            normalizeDraftAddress(entryAddress) !== normalizedLockedDraftAddress
-          );
-          const isLocked = invoicedToOtherInvoice || linkedToOtherDraft || addressMismatch;
-          const isChecked = (currentIds.includes(e.id) || isSameInvoice) && !addressMismatch;
+      const sorted = allForInvoicing.slice().sort((a, b) =>
+        (`${a.dateStr} ${a.timeIn}`).localeCompare(`${b.dateStr} ${b.timeIn}`)
+      );
 
-          const statusNote =
-            addressMismatch
-              ? `Address mismatch with loaded draft`
-              : e.billingStatus === 'invoiced'
-                ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
-                : e.billingStatus === 'draft-linked'
-                  ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
-                  : `Unbilled`;
+      const matches = filterVal
+        ? sorted.filter(e => `${e.customerName || ''} ${e.jobName || ''} ${e.address || ''}`.toLowerCase().includes(filterVal))
+        : sorted;
 
-          row.innerHTML = `
-            <input
-              type="checkbox"
-              class="invoice-entry-check"
-              value="${e.id}"
-              ${isChecked ? 'checked' : ''}
-              ${isLocked ? 'disabled' : ''}
-            >
-            <strong>${formatDate(e.dateStr)}</strong> — ${e.jobName}${e.address ? ` <span style="opacity:.8;">(${e.address})</span>` : ''}
-            <br>
-            <small>${to12hr(e.timeIn)} - ${to12hr(e.timeOut)} | ${statusNote}</small>
-          `;
-          box.appendChild(row);
+      const liveEntries     = matches.filter(e => liveIds.has(String(e.id)));
+      const archivedEntries = matches.filter(e => !liveIds.has(String(e.id)));
+
+      if (!matches.length) {
+        box.innerHTML = '<div style="padding:.9rem;opacity:.7;">No entries match that filter.</div>';
+        return;
+      }
+
+      // ── Shared helpers ──────────────────────────────────────────────────────
+
+      function entryMeta(e) {
+        const isInvoiced = e.billingStatus === 'invoiced';
+        const isSameInvoice = !!(currentInvoiceId && e.invoiceId && e.invoiceId === currentInvoiceId);
+        const linkedToOtherDraft = e.billingStatus === 'draft-linked' && e.invoiceId && e.invoiceId !== currentInvoiceId;
+        const invoicedToOtherInvoice = isInvoiced && !isSameInvoice;
+        const entryAddress = getEntryAddress(e);
+        const addressMismatch = !!(normalizedLockedDraftAddress && entryAddress && normalizeDraftAddress(entryAddress) !== normalizedLockedDraftAddress);
+        const isLocked = invoicedToOtherInvoice || linkedToOtherDraft || addressMismatch;
+        const isChecked = (currentIds.includes(e.id) || isSameInvoice) && !addressMismatch;
+        const statusNote = addressMismatch
+          ? 'Address mismatch with loaded draft'
+          : isInvoiced
+            ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
+            : e.billingStatus === 'draft-linked'
+              ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
+              : 'Unbilled';
+        return { isLocked, isChecked, statusNote };
+      }
+
+      function renderGroups(entryList, container) {
+        if (!entryList.length) {
+          const empty = document.createElement('div');
+          empty.style.cssText = 'padding:.6rem .9rem;opacity:.6;font-size:.85rem;';
+          empty.textContent = 'No entries.';
+          container.appendChild(empty);
+          return;
+        }
+
+        const groups = new Map();
+        entryList.forEach(e => {
+          const key = `${(e.customerName || '').trim()}|||${(e.jobName || '').trim()}|||${(e.address || '').trim()}`;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(e);
         });
 
+        let groupIndex = container.querySelectorAll('[data-group-header]').length;
+        groups.forEach((groupEntries, key) => {
+          const [customerName, jobName, address] = key.split('|||');
+          const groupId = `esg_${groupIndex++}`;
+
+          const metas = groupEntries.map(e => ({ e, ...entryMeta(e) }));
+          const selectable = metas.filter(m => !m.isLocked);
+          const checkedCount = selectable.filter(m => m.isChecked).length;
+          const allChecked = selectable.length > 0 && checkedCount === selectable.length;
+          const someChecked = checkedCount > 0 && !allChecked;
+
+          // Rows are collapsed by default; auto-expand if any day is checked
+          const groupOpen = someChecked || allChecked;
+
+          const header = document.createElement('div');
+          header.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.5rem .8rem;background:rgba(255,69,0,.15);border-top:1px solid rgba(255,69,0,.35);cursor:pointer;user-select:none;';
+
+          const groupCb = document.createElement('input');
+          groupCb.type = 'checkbox';
+          groupCb.dataset.groupHeader = groupId;
+          groupCb.checked = allChecked;
+          groupCb.indeterminate = someChecked;
+          groupCb.disabled = selectable.length === 0;
+          groupCb.style.cssText = 'width:auto;min-width:22px;min-height:22px;cursor:pointer;accent-color:#ff4500;flex-shrink:0;';
+          // Prevent checkbox click from toggling the group expand/collapse
+          groupCb.addEventListener('click', e => e.stopPropagation());
+
+          const groupArrow = document.createElement('span');
+          groupArrow.style.cssText = 'font-size:.7rem;color:#ff6a2a;transition:transform .15s;display:inline-block;flex-shrink:0;';
+          groupArrow.textContent = '▶';
+          groupArrow.style.transform = groupOpen ? 'rotate(90deg)' : '';
+
+          const labelSpan = document.createElement('span');
+          labelSpan.style.cssText = 'flex:1;font-weight:700;color:#ffb08a;font-size:.88rem;line-height:1.3;';
+          const customerPart = customerName ? `${customerName} — ` : '';
+          const jobPart = jobName || '(no job name)';
+          const addrPart = address ? ` <span style="font-weight:400;opacity:.72;">(${address})</span>` : '';
+          labelSpan.innerHTML = `${customerPart}${jobPart}${addrPart}`;
+
+          const badge = document.createElement('span');
+          badge.style.cssText = 'font-size:.78rem;color:#aaa;white-space:nowrap;flex-shrink:0;';
+          badge.textContent = `${groupEntries.length} day${groupEntries.length !== 1 ? 's' : ''}`;
+
+          header.appendChild(groupCb);
+          header.appendChild(groupArrow);
+          header.appendChild(labelSpan);
+          header.appendChild(badge);
+          container.appendChild(header);
+
+          // ── Day rows container ──
+          const rowsContainer = document.createElement('div');
+          rowsContainer.dataset.groupRows = groupId;
+          rowsContainer.style.display = groupOpen ? 'block' : 'none';
+
+          metas.forEach(({ e, isLocked, isChecked, statusNote }) => {
+            const row = document.createElement('label');
+            row.className = 'selector-row';
+            row.dataset.groupMember = groupId;
+            row.style.paddingLeft = '2.2rem';
+            row.innerHTML = `
+              <input type="checkbox" class="invoice-entry-check" value="${e.id}"
+                ${isChecked ? 'checked' : ''} ${isLocked ? 'disabled' : ''}>
+              <strong>${formatDate(e.dateStr)}</strong>
+              <br>
+              <small>${to12hr(e.timeIn)} - ${to12hr(e.timeOut)} | ${statusNote}</small>
+            `;
+            rowsContainer.appendChild(row);
+          });
+          container.appendChild(rowsContainer);
+
+          // Toggle expand/collapse on header click
+          header.addEventListener('click', () => {
+            const open = rowsContainer.style.display === 'none';
+            rowsContainer.style.display = open ? 'block' : 'none';
+            groupArrow.style.transform = open ? 'rotate(90deg)' : '';
+          });
+        });
+      }
+
+      // ── Live entries ────────────────────────────────────────────────────────
+      if (!liveEntries.length && !filterVal) {
+        const note = document.createElement('div');
+        note.style.cssText = 'padding:.7rem .9rem;opacity:.65;font-size:.85rem;';
+        note.textContent = 'No entries on today\'s timesheet.';
+        box.appendChild(note);
+      } else {
+        renderGroups(liveEntries, box);
+      }
+
+      // ── Archived entries (collapsible) ──────────────────────────────────────
+      if (archivedEntries.length) {
+        const archiveCheckedCount = archivedEntries.filter(e => {
+          const m = entryMeta(e);
+          return m.isChecked && !m.isLocked;
+        }).length;
+
+        const toggleRow = document.createElement('div');
+        toggleRow.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.45rem .8rem;background:rgba(255,255,255,.04);border-top:1px solid #444;cursor:pointer;user-select:none;';
+        toggleRow.dataset.archiveToggle = 'true';
+
+        const arrow = document.createElement('span');
+        arrow.style.cssText = 'font-size:.75rem;color:#888;transition:transform .15s;display:inline-block;';
+        arrow.textContent = '▶';
+
+        const toggleLabel = document.createElement('span');
+        toggleLabel.style.cssText = 'flex:1;font-size:.85rem;color:#aaa;';
+        const archiveDayCount = new Set(archivedEntries.map(e => e.dateStr)).size;
+        toggleLabel.textContent = `Archived days (${archiveDayCount} day${archiveDayCount !== 1 ? 's' : ''})`;
+
+        if (archiveCheckedCount > 0) {
+          const selBadge = document.createElement('span');
+          selBadge.style.cssText = 'font-size:.78rem;color:#ff4500;white-space:nowrap;';
+          selBadge.textContent = `${archiveCheckedCount} selected`;
+          toggleRow.appendChild(arrow);
+          toggleRow.appendChild(toggleLabel);
+          toggleRow.appendChild(selBadge);
+        } else {
+          toggleRow.appendChild(arrow);
+          toggleRow.appendChild(toggleLabel);
+        }
+
+        const archiveBody = document.createElement('div');
+        archiveBody.dataset.archiveBody = 'true';
+
+        const isOpen = archiveWasOpen || archiveCheckedCount > 0;
+        archiveBody.style.display = isOpen ? 'block' : 'none';
+        arrow.style.transform = isOpen ? 'rotate(90deg)' : '';
+
+        toggleRow.addEventListener('click', () => {
+          const open = archiveBody.style.display === 'none';
+          archiveBody.style.display = open ? 'block' : 'none';
+          arrow.style.transform = open ? 'rotate(90deg)' : '';
+          box.dataset.archiveOpen = open ? 'true' : 'false';
+        });
+
+        renderGroups(archivedEntries, archiveBody);
+        box.appendChild(toggleRow);
+        box.appendChild(archiveBody);
+        box.dataset.archiveOpen = isOpen ? 'true' : 'false';
+      }
+
+      // ── Wire entry checkboxes ──
       box.querySelectorAll('.invoice-entry-check').forEach(cb => {
         cb.addEventListener('change', () => {
           if (cb.checked) {
-            const entry = entries.find(e => e.id === cb.value);
+            const entry = getAllEntriesForInvoicing().find(e => e.id === cb.value);
             if (entry) {
-              // Auto-fill Invoice / Work Order from job name if blank
               const invoiceIdField = document.getElementById('invoiceId');
               if (!invoiceIdField.value.trim() && entry.jobName) {
                 const prefix = entry.customerName ? entry.customerName.trim() + ' - ' : '';
                 invoiceIdField.value = prefix + entry.jobName.trim();
               }
-              // Transfer customer name to Client Name field if blank
               if (entry.customerName) {
                 const clientNameField = document.getElementById('clientName');
                 if (clientNameField && !clientNameField.value.trim()) {
                   clientNameField.value = entry.customerName.trim();
-                  // Also attempt to auto-fill phone/email/address from saved profile
                   fillClientProfileByName(entry.customerName.trim());
                 }
               }
             }
           }
+          _syncGroupHeaderFromMember(cb, box);
           populateInvoiceFromEntries();
           updateInvoiceSummary();
           saveInvoiceSession();
         });
       });
+
+      // ── Wire group header checkboxes ──
+      box.querySelectorAll('[data-group-header]').forEach(groupCb => {
+        groupCb.addEventListener('change', () => {
+          const gid = groupCb.dataset.groupHeader;
+          const rowsContainer = box.querySelector(`[data-group-rows="${gid}"]`);
+          const members = (rowsContainer || box).querySelectorAll(`.selector-row[data-group-member="${gid}"] .invoice-entry-check:not(:disabled)`);
+          members.forEach(cb => {
+            cb.checked = groupCb.checked;
+            if (groupCb.checked) {
+              const entry = getAllEntriesForInvoicing().find(e => e.id === cb.value);
+              if (entry) {
+                const invoiceIdField = document.getElementById('invoiceId');
+                if (!invoiceIdField.value.trim() && entry.jobName) {
+                  const prefix = entry.customerName ? entry.customerName.trim() + ' - ' : '';
+                  invoiceIdField.value = prefix + entry.jobName.trim();
+                }
+                if (entry.customerName) {
+                  const clientNameField = document.getElementById('clientName');
+                  if (clientNameField && !clientNameField.value.trim()) {
+                    clientNameField.value = entry.customerName.trim();
+                    fillClientProfileByName(entry.customerName.trim());
+                  }
+                }
+              }
+            }
+          });
+          groupCb.indeterminate = false;
+          populateInvoiceFromEntries();
+          updateInvoiceSummary();
+          saveInvoiceSession();
+        });
+      });
+    }
+
+    function _syncGroupHeaderFromMember(changedCb, box) {
+      const row = changedCb.closest('[data-group-member]');
+      if (!row) return;
+      const gid = row.dataset.groupMember;
+      const groupCb = box.querySelector(`[data-group-header="${gid}"]`);
+      if (!groupCb) return;
+      const rowsContainer = box.querySelector(`[data-group-rows="${gid}"]`);
+      const members = (rowsContainer || box).querySelectorAll(`.selector-row[data-group-member="${gid}"] .invoice-entry-check:not(:disabled)`);
+      const total = members.length;
+      const checked = [...members].filter(c => c.checked).length;
+      groupCb.checked = total > 0 && checked === total;
+      groupCb.indeterminate = checked > 0 && checked < total;
     }
 
     function updateInvoiceSummary() {
@@ -4649,21 +4934,21 @@
 
       if (existingDraft) {
         const draftIds = (existingDraft.linkedEntryIds || []).map(String);
-        const liveIds  = entries.map(e => String(e.id));
-        const hasArchivedEntries = draftIds.some(id => !liveIds.includes(id));
+        const allInvoicingIds = new Set(getAllEntriesForInvoicing().map(e => String(e.id)));
+        const hasTrulyGoneEntries = draftIds.some(id => !allInvoicingIds.has(id));
 
-        if (hasArchivedEntries) {
-          // Hours of draft entries that are still in the live array
-          const liveDraftEntries = entries.filter(e => draftIds.includes(String(e.id)));
-          let liveDraftRegular = 0, liveDraftOvertime = 0;
-          liveDraftEntries.forEach(e => {
+        if (hasTrulyGoneEntries) {
+          // Hours of draft entries that are still accessible (live or archive)
+          const accessibleDraftEntries = getAllEntriesForInvoicing().filter(e => draftIds.includes(String(e.id)));
+          let accessibleRegular = 0, accessibleOvertime = 0;
+          accessibleDraftEntries.forEach(e => {
             const s = getHoursBreakdown(e);
-            liveDraftRegular  += s.regular;
-            liveDraftOvertime += s.overtime;
+            accessibleRegular  += s.regular;
+            accessibleOvertime += s.overtime;
           });
-          // Archived portion = total saved in draft minus what is still live
-          archivedRegular  = Math.max(0, (+existingDraft.regularHours  || 0) - liveDraftRegular);
-          archivedOvertime = Math.max(0, (+existingDraft.overtimeHours || 0) - liveDraftOvertime);
+          // Only compensate for what's truly unrecoverable (gone from both live and archive)
+          archivedRegular  = Math.max(0, (+existingDraft.regularHours  || 0) - accessibleRegular);
+          archivedOvertime = Math.max(0, (+existingDraft.overtimeHours || 0) - accessibleOvertime);
           archivedDescText = existingDraft.laborDescriptionDated || existingDraft.laborDescription || '';
         }
       }
@@ -4779,7 +5064,7 @@
         }
       }
 
-      const conflicts = entries.filter(e =>
+      const conflicts = getAllEntriesForInvoicing().filter(e =>
         selectedIds.includes(e.id) &&
         e.billingStatus === 'draft-linked' &&
         e.invoiceId &&
@@ -4794,7 +5079,7 @@
         return;
       }
 
-      const selectedEntries = entries.filter(e => selectedIds.includes(e.id));
+      const selectedEntries = getAllEntriesForInvoicing().filter(e => selectedIds.includes(e.id));
       const serviceDate = getServiceDateForEntries(selectedEntries);
       const serviceDateLabel = getServiceDateLabelForEntries(selectedEntries);
       const currentFormAddress = document.getElementById('clientAddress').value.trim();
@@ -4821,7 +5106,7 @@
       }
 
       rememberCurrentClient(true);
-      rememberCurrentLocationProfile(true, getSingleFilteredAddress(entries.filter(e => selectedIds.includes(e.id))));
+      rememberCurrentLocationProfile(true, getSingleFilteredAddress(getAllEntriesForInvoicing().filter(e => selectedIds.includes(e.id))));
 
       // Compute hours from the current table (already built by populateInvoiceFromDraftAppend or populateLaborRowsFromEntries)
       const regularRow  = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
@@ -4834,7 +5119,7 @@
       // populateInvoiceFromDraftAppend. Re-generating from live entries would lose
       // descriptions for old entries that were cleared from the timesheet since the
       // previous session — so trust the UI value instead.
-      const allLinkedEntries = entries.filter(e => selectedIds.includes(e.id));
+      const allLinkedEntries = getAllEntriesForInvoicing().filter(e => selectedIds.includes(e.id));
       const currentLaborDesc = document.getElementById('laborDescription').value.trim();
       const savedLaborDescriptionDated = appendMode
         ? currentLaborDesc
@@ -4914,7 +5199,7 @@
       document.getElementById('clientEmail').value = inv.clientEmail || '';
       document.getElementById('clientAddress').value = inv.clientAddress || '';
       rememberCurrentClient(true);
-      rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(entries.filter(e => (inv.linkedEntryIds || []).includes(e.id))));
+      rememberCurrentLocationProfile(true, inv.clientAddress || getSingleFilteredAddress(getAllEntriesForInvoicing().filter(e => (inv.linkedEntryIds || []).includes(e.id))));
       document.getElementById('hourlyRate').value = inv.hourlyRate ?? 110;
       document.getElementById('overtimeRate').value = inv.overtimeRate ?? 175;
       document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
@@ -4934,7 +5219,7 @@
       });
 
       // Rebuild labor rows from live entries → saved regularHours field → items parsing (old drafts)
-      const linkedEntries = entries.filter(e => (inv.linkedEntryIds || []).map(String).includes(String(e.id)));
+      const linkedEntries = getAllEntriesForInvoicing().filter(e => (inv.linkedEntryIds || []).map(String).includes(String(e.id)));
       let resolvedRegular = 0;
       let resolvedOvertime = 0;
 
@@ -5030,6 +5315,7 @@
       if (btn) btn.classList.add('active');
 
       if (tabId === 'invoiceTab') {
+        syncArchiveEntryStatuses();
         renderInvoiceEntrySelector();
 
         // Only auto-populate if there's no invoice already in progress —
@@ -5478,6 +5764,10 @@
     document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
     document.getElementById('appendInvoiceDraft').onclick = () => appendWorkToLoadedDraft();
 
+    document.getElementById('entrySelectorFilter')?.addEventListener('input', () => {
+      renderInvoiceEntrySelector();
+    });
+
     document.getElementById('showArchivedInvoices').addEventListener('change', () => {
       refreshInvoiceDraftList(document.getElementById('invoiceId').value.trim());
     });
@@ -5728,7 +6018,7 @@
           const selectedIds = getSelectedInvoiceEntryIds();
           const rRow = document.querySelector('#itemsTable tbody tr[data-type="regular-labor"]');
           const oRow = document.querySelector('#itemsTable tbody tr[data-type="overtime-labor"]');
-          const pdfLinkedEntries = entries.filter(e => selectedIds.includes(e.id));
+          const pdfLinkedEntries = getAllEntriesForInvoicing().filter(e => selectedIds.includes(e.id));
           invoices[invoiceIdForSave] = {
             ...(invoices[invoiceIdForSave] || {}),
             id: invoiceIdForSave,
