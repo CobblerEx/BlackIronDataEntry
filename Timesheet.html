@@ -4628,7 +4628,7 @@
         : sorted;
 
       const liveEntries     = matches.filter(e => liveIds.has(String(e.id)));
-      const archivedEntries = matches.filter(e => !liveIds.has(String(e.id)));
+      const archivedEntries = matches.filter(e => !liveIds.has(String(e.id))).reverse();
 
       if (!matches.length) {
         box.innerHTML = '<div style="padding:.9rem;opacity:.7;">No entries match that filter.</div>';
