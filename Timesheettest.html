@@ -4605,117 +4605,189 @@
       const normalizedLockedDraftAddress = normalizeDraftAddress(lockedDraftAddress);
       const filterVal = (document.getElementById('entrySelectorFilter')?.value || '').toLowerCase().trim();
 
+      // Preserve archive section open/closed state across re-renders
+      const archiveWasOpen = box.dataset.archiveOpen === 'true';
+
       box.innerHTML = '';
 
-      if (!entries.length) {
+      const allForInvoicing = getAllEntriesForInvoicing();
+
+      if (!entries.length && !allForInvoicing.length) {
         box.innerHTML = '<div style="padding:.9rem;">No timesheet entries available.</div>';
         return;
       }
 
-      const sorted = getAllEntriesForInvoicing().slice().sort((a, b) => {
-        const da = `${a.dateStr} ${a.timeIn}`;
-        const db = `${b.dateStr} ${b.timeIn}`;
-        return da.localeCompare(db);
-      });
+      const liveIds = new Set(entries.map(e => String(e.id)));
 
-      const visible = filterVal
+      const sorted = allForInvoicing.slice().sort((a, b) =>
+        (`${a.dateStr} ${a.timeIn}`).localeCompare(`${b.dateStr} ${b.timeIn}`)
+      );
+
+      const matches = filterVal
         ? sorted.filter(e => `${e.customerName || ''} ${e.jobName || ''} ${e.address || ''}`.toLowerCase().includes(filterVal))
         : sorted;
 
-      if (!visible.length) {
+      const liveEntries     = matches.filter(e => liveIds.has(String(e.id)));
+      const archivedEntries = matches.filter(e => !liveIds.has(String(e.id)));
+
+      if (!matches.length) {
         box.innerHTML = '<div style="padding:.9rem;opacity:.7;">No entries match that filter.</div>';
         return;
       }
 
-      // Group by customer + job + address
-      const groups = new Map();
-      visible.forEach(e => {
-        const key = `${(e.customerName || '').trim()}|||${(e.jobName || '').trim()}|||${(e.address || '').trim()}`;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(e);
-      });
+      // ── Shared helpers ──────────────────────────────────────────────────────
 
-      let groupIndex = 0;
-      groups.forEach((groupEntries, key) => {
-        const [customerName, jobName, address] = key.split('|||');
-        const groupId = `esg_${groupIndex++}`;
+      function entryMeta(e) {
+        const isInvoiced = e.billingStatus === 'invoiced';
+        const isSameInvoice = !!(currentInvoiceId && e.invoiceId && e.invoiceId === currentInvoiceId);
+        const linkedToOtherDraft = e.billingStatus === 'draft-linked' && e.invoiceId && e.invoiceId !== currentInvoiceId;
+        const invoicedToOtherInvoice = isInvoiced && !isSameInvoice;
+        const entryAddress = getEntryAddress(e);
+        const addressMismatch = !!(normalizedLockedDraftAddress && entryAddress && normalizeDraftAddress(entryAddress) !== normalizedLockedDraftAddress);
+        const isLocked = invoicedToOtherInvoice || linkedToOtherDraft || addressMismatch;
+        const isChecked = (currentIds.includes(e.id) || isSameInvoice) && !addressMismatch;
+        const statusNote = addressMismatch
+          ? 'Address mismatch with loaded draft'
+          : isInvoiced
+            ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
+            : e.billingStatus === 'draft-linked'
+              ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
+              : 'Unbilled';
+        return { isLocked, isChecked, statusNote };
+      }
 
-        // Determine per-entry lock/check states for group header logic
-        function entryMeta(e) {
-          const isInvoiced = e.billingStatus === 'invoiced';
-          const isSameInvoice = !!(currentInvoiceId && e.invoiceId && e.invoiceId === currentInvoiceId);
-          const linkedToOtherDraft = e.billingStatus === 'draft-linked' && e.invoiceId && e.invoiceId !== currentInvoiceId;
-          const invoicedToOtherInvoice = isInvoiced && !isSameInvoice;
-          const entryAddress = getEntryAddress(e);
-          const addressMismatch = !!(normalizedLockedDraftAddress && entryAddress && normalizeDraftAddress(entryAddress) !== normalizedLockedDraftAddress);
-          const isLocked = invoicedToOtherInvoice || linkedToOtherDraft || addressMismatch;
-          const isChecked = (currentIds.includes(e.id) || isSameInvoice) && !addressMismatch;
-          const statusNote = addressMismatch
-            ? 'Address mismatch with loaded draft'
-            : isInvoiced
-              ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
-              : e.billingStatus === 'draft-linked'
-                ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
-                : 'Unbilled';
-          return { isLocked, isChecked, statusNote };
+      function renderGroups(entryList, container) {
+        if (!entryList.length) {
+          const empty = document.createElement('div');
+          empty.style.cssText = 'padding:.6rem .9rem;opacity:.6;font-size:.85rem;';
+          empty.textContent = 'No entries.';
+          container.appendChild(empty);
+          return;
         }
 
-        const metas = groupEntries.map(e => ({ e, ...entryMeta(e) }));
-        const selectable = metas.filter(m => !m.isLocked);
-        const checkedCount = selectable.filter(m => m.isChecked).length;
-        const allChecked = selectable.length > 0 && checkedCount === selectable.length;
-        const someChecked = checkedCount > 0 && !allChecked;
-
-        // ── Group header ──
-        const header = document.createElement('div');
-        header.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.5rem .8rem;background:rgba(255,69,0,.1);border-top:1px solid rgba(255,69,0,.25);border-bottom:1px solid rgba(255,69,0,.15);';
-
-        const groupCb = document.createElement('input');
-        groupCb.type = 'checkbox';
-        groupCb.dataset.groupHeader = groupId;
-        groupCb.checked = allChecked;
-        groupCb.indeterminate = someChecked;
-        groupCb.disabled = selectable.length === 0;
-        groupCb.style.cssText = 'width:auto;min-width:22px;min-height:22px;cursor:pointer;accent-color:#ff4500;flex-shrink:0;';
-
-        const labelSpan = document.createElement('span');
-        labelSpan.style.cssText = 'flex:1;font-weight:700;color:#ffb08a;font-size:.88rem;line-height:1.3;';
-        const customerPart = customerName ? `${customerName} — ` : '';
-        const jobPart = jobName || '(no job name)';
-        const addrPart = address ? ` <span style="font-weight:400;opacity:.72;">(${address})</span>` : '';
-        labelSpan.innerHTML = `${customerPart}${jobPart}${addrPart}`;
-
-        const badge = document.createElement('span');
-        badge.style.cssText = 'font-size:.78rem;color:#888;white-space:nowrap;flex-shrink:0;';
-        badge.textContent = `${groupEntries.length} day${groupEntries.length !== 1 ? 's' : ''}`;
-
-        header.appendChild(groupCb);
-        header.appendChild(labelSpan);
-        header.appendChild(badge);
-        box.appendChild(header);
-
-        // ── Entry rows ──
-        metas.forEach(({ e, isLocked, isChecked, statusNote }) => {
-          const row = document.createElement('label');
-          row.className = 'selector-row';
-          row.dataset.groupMember = groupId;
-          row.style.paddingLeft = '2.2rem';
-
-          row.innerHTML = `
-            <input
-              type="checkbox"
-              class="invoice-entry-check"
-              value="${e.id}"
-              ${isChecked ? 'checked' : ''}
-              ${isLocked ? 'disabled' : ''}
-            >
-            <strong>${formatDate(e.dateStr)}</strong>
-            <br>
-            <small>${to12hr(e.timeIn)} - ${to12hr(e.timeOut)} | ${statusNote}</small>
-          `;
-          box.appendChild(row);
+        const groups = new Map();
+        entryList.forEach(e => {
+          const key = `${(e.customerName || '').trim()}|||${(e.jobName || '').trim()}|||${(e.address || '').trim()}`;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(e);
         });
-      });
+
+        let groupIndex = container.querySelectorAll('[data-group-header]').length;
+        groups.forEach((groupEntries, key) => {
+          const [customerName, jobName, address] = key.split('|||');
+          const groupId = `esg_${groupIndex++}`;
+
+          const metas = groupEntries.map(e => ({ e, ...entryMeta(e) }));
+          const selectable = metas.filter(m => !m.isLocked);
+          const checkedCount = selectable.filter(m => m.isChecked).length;
+          const allChecked = selectable.length > 0 && checkedCount === selectable.length;
+          const someChecked = checkedCount > 0 && !allChecked;
+
+          const header = document.createElement('div');
+          header.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.5rem .8rem;background:rgba(255,69,0,.1);border-top:1px solid rgba(255,69,0,.25);border-bottom:1px solid rgba(255,69,0,.15);';
+
+          const groupCb = document.createElement('input');
+          groupCb.type = 'checkbox';
+          groupCb.dataset.groupHeader = groupId;
+          groupCb.checked = allChecked;
+          groupCb.indeterminate = someChecked;
+          groupCb.disabled = selectable.length === 0;
+          groupCb.style.cssText = 'width:auto;min-width:22px;min-height:22px;cursor:pointer;accent-color:#ff4500;flex-shrink:0;';
+
+          const labelSpan = document.createElement('span');
+          labelSpan.style.cssText = 'flex:1;font-weight:700;color:#ffb08a;font-size:.88rem;line-height:1.3;';
+          const customerPart = customerName ? `${customerName} — ` : '';
+          const jobPart = jobName || '(no job name)';
+          const addrPart = address ? ` <span style="font-weight:400;opacity:.72;">(${address})</span>` : '';
+          labelSpan.innerHTML = `${customerPart}${jobPart}${addrPart}`;
+
+          const badge = document.createElement('span');
+          badge.style.cssText = 'font-size:.78rem;color:#888;white-space:nowrap;flex-shrink:0;';
+          badge.textContent = `${groupEntries.length} day${groupEntries.length !== 1 ? 's' : ''}`;
+
+          header.appendChild(groupCb);
+          header.appendChild(labelSpan);
+          header.appendChild(badge);
+          container.appendChild(header);
+
+          metas.forEach(({ e, isLocked, isChecked, statusNote }) => {
+            const row = document.createElement('label');
+            row.className = 'selector-row';
+            row.dataset.groupMember = groupId;
+            row.style.paddingLeft = '2.2rem';
+            row.innerHTML = `
+              <input type="checkbox" class="invoice-entry-check" value="${e.id}"
+                ${isChecked ? 'checked' : ''} ${isLocked ? 'disabled' : ''}>
+              <strong>${formatDate(e.dateStr)}</strong>
+              <br>
+              <small>${to12hr(e.timeIn)} - ${to12hr(e.timeOut)} | ${statusNote}</small>
+            `;
+            container.appendChild(row);
+          });
+        });
+      }
+
+      // ── Live entries ────────────────────────────────────────────────────────
+      if (!liveEntries.length && !filterVal) {
+        const note = document.createElement('div');
+        note.style.cssText = 'padding:.7rem .9rem;opacity:.65;font-size:.85rem;';
+        note.textContent = 'No entries on today\'s timesheet.';
+        box.appendChild(note);
+      } else {
+        renderGroups(liveEntries, box);
+      }
+
+      // ── Archived entries (collapsible) ──────────────────────────────────────
+      if (archivedEntries.length) {
+        const archiveCheckedCount = archivedEntries.filter(e => {
+          const m = entryMeta(e);
+          return m.isChecked && !m.isLocked;
+        }).length;
+
+        const toggleRow = document.createElement('div');
+        toggleRow.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.45rem .8rem;background:rgba(255,255,255,.04);border-top:1px solid #444;cursor:pointer;user-select:none;';
+        toggleRow.dataset.archiveToggle = 'true';
+
+        const arrow = document.createElement('span');
+        arrow.style.cssText = 'font-size:.75rem;color:#888;transition:transform .15s;display:inline-block;';
+        arrow.textContent = '▶';
+
+        const toggleLabel = document.createElement('span');
+        toggleLabel.style.cssText = 'flex:1;font-size:.85rem;color:#aaa;';
+        const archiveDayCount = new Set(archivedEntries.map(e => e.dateStr)).size;
+        toggleLabel.textContent = `Archived days (${archiveDayCount} day${archiveDayCount !== 1 ? 's' : ''})`;
+
+        if (archiveCheckedCount > 0) {
+          const selBadge = document.createElement('span');
+          selBadge.style.cssText = 'font-size:.78rem;color:#ff4500;white-space:nowrap;';
+          selBadge.textContent = `${archiveCheckedCount} selected`;
+          toggleRow.appendChild(arrow);
+          toggleRow.appendChild(toggleLabel);
+          toggleRow.appendChild(selBadge);
+        } else {
+          toggleRow.appendChild(arrow);
+          toggleRow.appendChild(toggleLabel);
+        }
+
+        const archiveBody = document.createElement('div');
+        archiveBody.dataset.archiveBody = 'true';
+
+        const isOpen = archiveWasOpen || archiveCheckedCount > 0;
+        archiveBody.style.display = isOpen ? 'block' : 'none';
+        arrow.style.transform = isOpen ? 'rotate(90deg)' : '';
+
+        toggleRow.addEventListener('click', () => {
+          const open = archiveBody.style.display === 'none';
+          archiveBody.style.display = open ? 'block' : 'none';
+          arrow.style.transform = open ? 'rotate(90deg)' : '';
+          box.dataset.archiveOpen = open ? 'true' : 'false';
+        });
+
+        renderGroups(archivedEntries, archiveBody);
+        box.appendChild(toggleRow);
+        box.appendChild(archiveBody);
+        box.dataset.archiveOpen = isOpen ? 'true' : 'false';
+      }
 
       // ── Wire entry checkboxes ──
       box.querySelectorAll('.invoice-entry-check').forEach(cb => {
