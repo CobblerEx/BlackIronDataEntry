@@ -1294,6 +1294,14 @@
 
         <div class="form-section-divider">Details</div>
 
+        <label style="position:relative;">
+          <span style="display:flex;align-items:center;gap:.45rem;">
+            <i class="fas fa-comment-dots" style="color:#ff6a30;font-size:.9rem;"></i>
+            Customer Complaint / Reported Issue:
+          </span>
+          <textarea id="customerComplaint" placeholder="e.g. No heat, unit won't ignite. Customer reports furnace cycles on but shuts off after 2 minutes…" style="height:72px;"></textarea>
+        </label>
+
         <!-- ── Tasks Performed ── -->
         <div class="tasks-panel" id="tasksPanel">
           <div class="tasks-panel-header" id="tasksPanelHeader">
@@ -5393,6 +5401,7 @@
         document.getElementById('timeIn').value = e.timeIn;
         document.getElementById('timeOut').value = e.timeOut;
         document.getElementById('description').value = e.description || '';
+        document.getElementById('customerComplaint').value = e.customerComplaint || '';
         document.getElementById('jobType').value = '';
         document.getElementById('editIndex').value = i;
         document.getElementById('actionButton').textContent = 'Update Entry';
@@ -5447,11 +5456,13 @@
             <td>${formatHours(duration)}</td>
             <td class="desc-cell-entry">${(() => {
               const d = (e.description || '').trim();
-              if (!d) return '';
+              const c = (e.customerComplaint || '').trim();
+              const complaintHtml = c ? `<div style="font-size:.75rem;color:#ff9060;margin-bottom:.3rem;"><i class='fas fa-comment-dots' style='margin-right:.3rem;opacity:.8;'></i><em>${c.length > 80 ? c.slice(0, 80) + '…' : c}</em></div>` : '';
+              if (!d) return complaintHtml || '';
               const needsToggle = d.length > 80 || d.split('\n').length > 2;
-              return needsToggle
+              return complaintHtml + (needsToggle
                 ? `<span class="desc-text">${d}</span><button type="button" class="desc-toggle">See more</button>`
-                : `<span class="desc-text expanded">${d}</span>`;
+                : `<span class="desc-text expanded">${d}</span>`);
             })()}</td>
             <td>${getStatusMarkup(e)}</td>
             <td>
@@ -5648,6 +5659,7 @@
         const tIn = document.getElementById('timeIn').value;
         const tOut = document.getElementById('timeOut').value;
         const desc = document.getElementById('description').value.trim();
+        const complaint = document.getElementById('customerComplaint').value.trim();
 
         if (!date) return alert('Select a date');
         if (!job) return alert('Enter job name');
@@ -5664,6 +5676,7 @@
           timeIn: tIn,
           timeOut: tOut,
           description: desc,
+          customerComplaint: complaint,
           billingStatus: existing?.billingStatus || 'unbilled',
           invoiceId: existing?.invoiceId || ''
         };
@@ -5691,7 +5704,7 @@
         document.getElementById('address').value = '';
         document.getElementById('customerNameInput').value = '';
         document.getElementById('description').value = '';
-        document.getElementById('editIndex').value = -1;
+        document.getElementById('customerComplaint').value = '';
         document.getElementById('actionButton').textContent = 'Add Entry';
         document.getElementById('cancelButton').style.display = 'none';
         // Reset tasks panel selections
@@ -5716,7 +5729,7 @@
         document.getElementById('address').value = l.address || '';
         document.getElementById('customerNameInput').value = l.customerName || '';
         document.getElementById('description').value = l.description || '';
-        document.getElementById('timeIn').value = l.timeOut;
+        document.getElementById('customerComplaint').value = l.customerComplaint || '';
         document.getElementById('timeOut').value = getNextTime(l.timeOut);
         document.getElementById('jobType').value = '';
       };
