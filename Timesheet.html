@@ -1561,6 +1561,15 @@
           </div>
         </div>
 
+        <label style="margin-top:1rem;">
+          <span style="display:flex;align-items:center;gap:.45rem;">
+            <i class="fas fa-comment-dots" style="color:#ff6a30;font-size:.9rem;"></i>
+            Customer Complaint / Reported Issue:
+          </span>
+          <textarea id="invoiceComplaint" placeholder="Auto-filled from timesheet entries. Edit as needed." style="height:68px;"></textarea>
+          <small style="color:#888;font-size:.75rem;margin-top:.2rem;display:block;">Printed on the invoice &amp; PDF above the service description.</small>
+        </label>
+
         <label style="margin-top:1rem;">Labor Description:
           <textarea id="laborDescription" placeholder="Service summary auto-filled from your selected timesheet entries."></textarea>
           <small class="muted-note" id="laborDescSyncHint" style="display:none;color:#ffb08a;">
@@ -2539,8 +2548,8 @@
           overtimeRate:     document.getElementById('overtimeRate').value,
           hstRate:          document.getElementById('hstRate').value,
           laborDescription: document.getElementById('laborDescription').value,
+          invoiceComplaint: document.getElementById('invoiceComplaint')?.value || '',
           selectedEntryIds: getSelectedInvoiceEntryIds(),
-          groupMaterials: !!document.getElementById('groupMaterialsToggle')?.checked,
           items
         };
         localStorage.setItem('invoiceSession', JSON.stringify(session));
@@ -2565,6 +2574,7 @@
           if (s.overtimeRate)     document.getElementById('overtimeRate').value     = s.overtimeRate;
           if (s.hstRate)          document.getElementById('hstRate').value          = s.hstRate;
           if (s.laborDescription) document.getElementById('laborDescription').value = s.laborDescription;
+          if (s.invoiceComplaint) { const el = document.getElementById('invoiceComplaint'); if (el) el.value = s.invoiceComplaint; }
           const gmt = document.getElementById('groupMaterialsToggle');
           if (gmt && s.groupMaterials !== undefined) gmt.checked = !!s.groupMaterials;
 
@@ -4980,6 +4990,15 @@
           ? mergeLaborDescriptions(archivedDescText, liveDescText)
           : liveDescText;
 
+        // Auto-fill complaint from selected entries (unique, non-empty)
+        const complaintField = document.getElementById('invoiceComplaint');
+        if (complaintField && !complaintField.dataset.userEdited) {
+          const complaints = [...new Set(
+            filtered.map(e => (e.customerComplaint || '').trim()).filter(Boolean)
+          )];
+          complaintField.value = complaints.join('\n');
+        }
+
         // Only fill client fields from the address-matched profile — never from
         // lastClient, which was causing old customer data to reappear after refresh
         const matchedClientFromAddress = fillClientProfileFromFilteredEntries(filtered, false);
@@ -5030,6 +5049,7 @@
         document.getElementById('clientEmail').value = '';
         document.getElementById('clientAddress').value = '';
         document.getElementById('laborDescription').value = '';
+        const _cc1 = document.getElementById('invoiceComplaint'); if (_cc1) { _cc1.value = ''; delete _cc1.dataset.userEdited; }
 
         const tbody = document.querySelector('#itemsTable tbody');
         tbody.innerHTML = '';
@@ -5154,6 +5174,7 @@
           overtimeRate: +document.getElementById('overtimeRate').value || 0,
           hstRate: +document.getElementById('hstRate').value || 0.13,
           laborDescription: document.getElementById('laborDescription').value.trim(),
+          invoiceComplaint: (document.getElementById('invoiceComplaint')?.value || '').trim(),
           laborDescriptionDated: savedLaborDescriptionDated,
           regularHours: savedRegularHours,
           overtimeHours: savedOvertimeHours,
@@ -5221,6 +5242,8 @@
         document.getElementById('overtimeRate').value = inv.overtimeRate ?? 175;
         document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
         document.getElementById('laborDescription').value = inv.laborDescription || '';
+        const invoiceComplaintEl = document.getElementById('invoiceComplaint');
+        if (invoiceComplaintEl) { invoiceComplaintEl.value = inv.invoiceComplaint || ''; delete invoiceComplaintEl.dataset.userEdited; }
         const gmtLoad = document.getElementById('groupMaterialsToggle');
         if (gmtLoad) gmtLoad.checked = !!inv.groupMaterials;
 
@@ -5820,6 +5843,7 @@
         document.getElementById('clientEmail').value = '';
         document.getElementById('clientAddress').value = '';
         document.getElementById('laborDescription').value = '';
+        const _cc2 = document.getElementById('invoiceComplaint'); if (_cc2) { _cc2.value = ''; delete _cc2.dataset.userEdited; }
         document.querySelector('#itemsTable tbody').innerHTML = '';
         ensureServiceChargeRow();
         ensureRegularLaborRow();
@@ -5867,6 +5891,13 @@
         const hint = document.getElementById('laborDescSyncHint');
         if (hint) hint.style.display = this.value !== _laborDescOriginal ? 'block' : 'none';
       });
+
+      // Track manual edits to invoiceComplaint so auto-fill doesn't clobber them
+      (function() {
+        const el = document.getElementById('invoiceComplaint');
+        if (!el) return;
+        el.addEventListener('input', function() { this.dataset.userEdited = '1'; });
+      })();
 
       document.getElementById('syncDescToTimesheetBtn').addEventListener('click', function() {
         const newDesc = document.getElementById('laborDescription').value.trim();
@@ -6052,6 +6083,7 @@
               overtimeRate: +document.getElementById('overtimeRate').value || 0,
               hstRate: +document.getElementById('hstRate').value || 0.13,
               laborDescription: document.getElementById('laborDescription').value.trim(),
+              invoiceComplaint: (document.getElementById('invoiceComplaint')?.value || '').trim(),
               laborDescriptionDated: pdfLinkedEntries.length > 0
                 ? getLaborDescriptionFromTimesheet(pdfLinkedEntries, true)
                 : document.getElementById('laborDescription').value.trim(),
@@ -6166,6 +6198,18 @@
             const splitEntryLines = doc.splitTextToSize("VISITS: " + entryLines.join(" | "), 190);
             doc.text(splitEntryLines, 10, tableStartY);
             tableStartY += ((splitEntryLines.length - 1) * 6) + 8;
+          }
+
+          // Print the customer complaint / reported issue
+          const invoiceComplaintText = (document.getElementById('invoiceComplaint')?.value || '').trim();
+          if (invoiceComplaintText) {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text("CUSTOMER COMPLAINT / REPORTED ISSUE:", 10, tableStartY);
+            doc.setFont("helvetica", "normal");
+            const splitComplaint = doc.splitTextToSize(invoiceComplaintText, 190);
+            doc.text(splitComplaint, 10, tableStartY + 6);
+            tableStartY += 6 + (splitComplaint.length * 5) + 6;
           }
 
           // Print the labor / service description below visits
