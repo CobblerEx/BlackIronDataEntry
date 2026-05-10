@@ -1,6 +1,4 @@
-
-
-  <!DOCTYPE html>
+<!DOCTYPE html>
   <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -1517,6 +1515,7 @@
           <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
           <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
           <button id="generateBossCopy" type="button" class="mini-btn">Generate Boss Copy PDF</button>
+          <button id="emailDraftBtn" type="button" class="mini-btn" style="background:#17a2b8;">📧 Email Draft</button>
         </div>
 
         <label style="display:flex;align-items:center;gap:.55rem;margin:.6rem 0 0 0;cursor:pointer;font-size:.9rem;user-select:none;">
@@ -1584,6 +1583,14 @@
           <div>Subtotal: <b id="rtSubtotal">$0.00</b></div>
           <div>HST (<span id="rtHstPct">13%</span>): <b id="rtHst">$0.00</b></div>
           <div style="font-size:1.2rem;color:#ff4500;">Total: <b id="rtTotal">$0.00</b></div>
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:.6rem;border-top:1px solid rgba(255,69,0,.25);margin-top:.4rem;padding-top:.4rem;">
+            <label style="color:#bbb;font-size:.9rem;margin:0;display:flex;align-items:center;gap:.5rem;">
+              Deposit Received ($):
+              <input type="number" id="depositAmount" min="0" step="0.01" value="0"
+                style="width:110px;padding:.3rem .5rem;font-size:.95rem;background:#222;color:#e0e0e0;border:1px solid rgba(255,69,0,.45);border-radius:6px;text-align:right;margin:0;">
+            </label>
+          </div>
+          <div id="rtBalanceWrap" style="font-size:1.25rem;color:#7CFF9B;display:none;">Balance Due: <b id="rtBalance">$0.00</b></div>
         </div>
       </div>
     </div>
@@ -4296,11 +4303,15 @@
         });
         const hst = subtotal * hstRate;
         const total = subtotal + hst;
+        const deposit = parseFloat(document.getElementById('depositAmount')?.value || '0') || 0;
+        const balance = Math.max(0, total - deposit);
         const el = id => document.getElementById(id);
         if (el('rtSubtotal')) el('rtSubtotal').textContent = '$' + formatMoney(subtotal);
         if (el('rtHst')) el('rtHst').textContent = '$' + formatMoney(hst);
         if (el('rtTotal')) el('rtTotal').textContent = '$' + formatMoney(total);
         if (el('rtHstPct')) el('rtHstPct').textContent = Math.round(hstRate * 100) + '%';
+        if (el('rtBalance')) el('rtBalance').textContent = '$' + formatMoney(balance);
+        if (el('rtBalanceWrap')) el('rtBalanceWrap').style.display = deposit > 0 ? 'block' : 'none';
       }
 
       function createLaborEntryRow(entry, kind, qty) {
@@ -5022,6 +5033,10 @@
         document.getElementById('clientEmail').value = '';
         document.getElementById('clientAddress').value = '';
         document.getElementById('laborDescription').value = '';
+        const depEl = document.getElementById('depositAmount');
+        if (depEl) { depEl.value = '0'; }
+        const balWrap = document.getElementById('rtBalanceWrap');
+        if (balWrap) balWrap.style.display = 'none';
 
         const tbody = document.querySelector('#itemsTable tbody');
         tbody.innerHTML = '';
@@ -5145,6 +5160,7 @@
           hourlyRate: +document.getElementById('hourlyRate').value || 0,
           overtimeRate: +document.getElementById('overtimeRate').value || 0,
           hstRate: +document.getElementById('hstRate').value || 0.13,
+          deposit: +document.getElementById('depositAmount')?.value || 0,
           laborDescription: document.getElementById('laborDescription').value.trim(),
           laborDescriptionDated: savedLaborDescriptionDated,
           regularHours: savedRegularHours,
@@ -5213,6 +5229,8 @@
         document.getElementById('overtimeRate').value = inv.overtimeRate ?? 175;
         document.getElementById('hstRate').value = inv.hstRate ?? 0.13;
         document.getElementById('laborDescription').value = inv.laborDescription || '';
+        const depEl = document.getElementById('depositAmount');
+        if (depEl) depEl.value = inv.deposit ?? 0;
         const gmtLoad = document.getElementById('groupMaterialsToggle');
         if (gmtLoad) gmtLoad.checked = !!inv.groupMaterials;
 
@@ -6038,6 +6056,7 @@
               hourlyRate: +document.getElementById('hourlyRate').value || 0,
               overtimeRate: +document.getElementById('overtimeRate').value || 0,
               hstRate: +document.getElementById('hstRate').value || 0.13,
+              deposit: +document.getElementById('depositAmount')?.value || 0,
               laborDescription: document.getElementById('laborDescription').value.trim(),
               laborDescriptionDated: pdfLinkedEntries.length > 0
                 ? getLaborDescriptionFromTimesheet(pdfLinkedEntries, true)
@@ -6079,6 +6098,8 @@
           const bossSubtotal = lines.reduce((sum, l) => sum + ((+l.distributorCost || 0) * (+l.quantity || 0)), 0);
           const hst = subtotal * hstRate;
           const total = subtotal + hst;
+          const deposit = parseFloat(document.getElementById('depositAmount')?.value || '0') || 0;
+          const balance = Math.max(0, total - deposit);
           const bossHst = bossSubtotal * hstRate;
           const bossTotal = bossSubtotal + bossHst;
           const materialCostTotal = detailedLines
@@ -6230,6 +6251,14 @@
             doc.text("SUBTOTAL: $" + formatMoney(subtotal), 132, finalY);
             doc.text("HST: $"     + formatMoney(hst),       132, finalY + 8);
             doc.text("TOTAL: $"   + formatMoney(total),     132, finalY + 16);
+            if (deposit > 0) {
+              doc.text("DEPOSIT RECEIVED: -$" + formatMoney(deposit), 132, finalY + 24);
+              doc.setFont("helvetica", "bold");
+              doc.setFontSize(12);
+              doc.text("BALANCE DUE: $" + formatMoney(balance), 132, finalY + 34);
+              doc.setFont("helvetica", "bold");
+              doc.setFontSize(10);
+            }
           }
 
           doc.setFont("helvetica", "normal");
@@ -6272,6 +6301,35 @@
 
       document.getElementById('generateInvoice').onclick = async () => generateInvoicePdf('customer');
       document.getElementById('generateBossCopy').onclick = async () => generateInvoicePdf('boss');
+
+      // Deposit field — live update running total
+      document.getElementById('depositAmount').addEventListener('input', updateInvoiceRunningTotal);
+
+      // Email Draft button
+      document.getElementById('emailDraftBtn').addEventListener('click', function() {
+        const to      = (document.getElementById('clientEmail').value || '').trim();
+        const name    = (document.getElementById('clientName').value  || 'there').trim();
+        const invId   = (document.getElementById('invoiceId').value   || '').trim();
+        const total   = document.getElementById('rtTotal')?.textContent   || '$0.00';
+        const deposit = parseFloat(document.getElementById('depositAmount')?.value || '0') || 0;
+        const balance = document.getElementById('rtBalance')?.textContent || total;
+
+        const subject = invId
+          ? `Invoice ${invId} — Archer's Equipment Repair`
+          : `Invoice from Archer's Equipment Repair`;
+
+        let body = `Hi ${name},\n\nPlease find your invoice details below.\n\n`;
+        body += `Invoice Total: ${total}\n`;
+        if (deposit > 0) {
+          body += `Deposit Received: -$${deposit.toFixed(2)}\n`;
+          body += `Balance Due: ${balance}\n`;
+        }
+        body += `\ne-Transfer accepted at Jason@archerser.ca\n\n`;
+        body += `Thank you for choosing Archer's Equipment Repair!\n\nArcher's Equipment Repair Ltd.\nPhone: 519-383-9654`;
+
+        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailto;
+      });
 
 
       function getClientProfiles() {
