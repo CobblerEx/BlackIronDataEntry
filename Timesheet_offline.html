@@ -207,7 +207,7 @@
         position:fixed;
         top:0;left:0;right:0;
         z-index:600;
-        background:#8b3a00;
+        background:#1b4332;
         color:#fff;
         padding:.65rem 1rem;
         display:flex;
@@ -221,7 +221,7 @@
         transition:transform .3s ease;
       }
       #priceAlertBanner.show { transform:translateY(0); }
-      #priceAlertBanner b { color:#ffcc88; }
+      #priceAlertBanner b { color:#a8d5b5; }
       #priceAlertBanner button { margin:0; padding:.35rem .8rem; font-size:.85rem; min-height:34px; }
       .sticky-action-bar .sab-label {
         font-size:.8rem;
@@ -1527,13 +1527,24 @@
           <span id="profileLockStatus" class="profile-lock-status">Saved names and addresses will stay paired unless you turn this off or edit them in Clients / Addresses.</span>
         </div>
 
-        <div class="inline-group" style="margin-top:1rem;">
-          <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Selected Entries</button>
-          <button type="button" id="addItem" class="mini-btn">Add Item</button>
-          <button type="button" id="quickAddMaterials" class="mini-btn" style="background:#17a2b8;">⚡ Quick Add</button>
-          <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
-          <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
-          <button id="generateBossCopy" type="button" class="mini-btn">Generate Boss Copy PDF</button>
+        <div style="margin-top:1rem;display:flex;flex-direction:column;gap:.3rem;">
+          <!-- Section label -->
+          <span style="font-size:.7rem;color:#74c69d;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.1rem;">Entries &amp; Items</span>
+          <!-- Row 1: 3 equal + 1 danger -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:.4rem;align-items:stretch;">
+            <button type="button" id="populateInvoice" class="mini-btn" style="margin:0;">Auto Fill</button>
+            <button type="button" id="addItem" class="mini-btn" style="margin:0;">+ Add Item</button>
+            <button type="button" id="quickAddMaterials" class="mini-btn" style="background:#17a2b8;margin:0;">⚡ Quick Add</button>
+            <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;margin:0;padding-left:.75rem;padding-right:.75rem;">Clear</button>
+          </div>
+          <!-- Section label -->
+          <span style="font-size:.7rem;color:#74c69d;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-top:.5rem;margin-bottom:.1rem;">Generate &amp; Send</span>
+          <!-- Row 2: 3 equal buttons -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;align-items:stretch;">
+            <button id="generateInvoice" type="button" class="mini-btn" style="margin:0;"><i class="fas fa-file-invoice-dollar" style="margin-right:.3rem;"></i>Invoice PDF</button>
+            <button id="generateBossCopy" type="button" class="mini-btn" style="margin:0;"><i class="fas fa-file-alt" style="margin-right:.3rem;"></i>Boss Copy</button>
+            <button id="emailInvoiceBtn" type="button" class="mini-btn" style="background:#2d6a4f;margin:0;"><i class="fas fa-envelope" style="margin-right:.3rem;"></i>Email Client</button>
+          </div>
         </div>
 
         <label style="display:flex;align-items:center;gap:.55rem;margin:.6rem 0 0 0;cursor:pointer;font-size:.9rem;user-select:none;">
@@ -30714,6 +30725,78 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       document.getElementById('savedMaterialsSort')?.addEventListener('change', () => renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || ''));
       document.getElementById('savedMaterialsModal').addEventListener('click', (e) => { if (e.target.id === 'savedMaterialsModal') closeSavedMaterialsModal(); });
       document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
+
+      document.getElementById('emailInvoiceBtn').addEventListener('click', async function() {
+        // Build a PDF blob then use Web Share API (iOS) or mailto fallback
+        const { jsPDF } = window.jspdf;
+        const clientEmail = document.getElementById('clientEmail').value.trim();
+        const clientName  = document.getElementById('clientName').value.trim() || 'Client';
+        const invoiceId   = document.getElementById('invoiceId').value.trim() || 'Invoice';
+
+        // Generate PDF blob
+        let pdfDoc;
+        try {
+          // Re-use the existing generate logic by triggering it silently
+          // We'll build the PDF the same way generateInvoice does, but capture the blob
+          const btn = document.getElementById('generateInvoice');
+          // Save original save method
+          const _save = jsPDF.prototype.save;
+          let capturedBlob = null;
+          jsPDF.prototype.save = function(filename) {
+            capturedBlob = new Blob([this.output('arraybuffer')], { type: 'application/pdf' });
+            capturedBlob._filename = filename;
+            jsPDF.prototype.save = _save; // restore
+          };
+          btn.click();
+          // Wait one tick for sync PDF generation
+          await new Promise(r => setTimeout(r, 50));
+          jsPDF.prototype.save = _save; // ensure restored
+
+          if (!capturedBlob) {
+            alert('Please fill in the invoice details first, then try again.');
+            return;
+          }
+
+          const filename = capturedBlob._filename || `${clientName}_Invoice.pdf`;
+
+          // Try Web Share API (iOS Safari supports this with files)
+          if (navigator.share && navigator.canShare) {
+            const file = new File([capturedBlob], filename, { type: 'application/pdf' });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: `Invoice ${invoiceId} — ${clientName}`,
+                text: `Please find your invoice ${invoiceId} attached.`
+              });
+              return;
+            }
+          }
+
+          // Fallback: mailto link with instructions (can't attach via mailto, so prompt)
+          if (clientEmail) {
+            const subject = encodeURIComponent(`Invoice ${invoiceId} — ${clientName}`);
+            const body    = encodeURIComponent(
+              `Hi ${clientName},\n\nPlease find your invoice ${invoiceId} attached.\n\nThank you.`
+            );
+            // Also trigger download so they have the file to attach manually
+            const url = URL.createObjectURL(capturedBlob);
+            const a   = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+            setTimeout(() => { window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`; }, 500);
+          } else {
+            // No email address — just download
+            const url = URL.createObjectURL(capturedBlob);
+            const a   = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+            alert('No client email on file. PDF downloaded — add a Client Email to enable direct sharing.');
+          }
+        } catch(err) {
+          console.error('Email invoice error:', err);
+          if (err.name !== 'AbortError') alert('Could not share invoice: ' + err.message);
+        }
+      });
       document.getElementById('clearInvoice').onclick = () => clearInvoice();
       document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
       document.getElementById('appendInvoiceDraft').onclick = () => appendWorkToLoadedDraft();
