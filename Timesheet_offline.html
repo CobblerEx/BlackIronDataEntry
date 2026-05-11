@@ -6768,14 +6768,15 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
           ? `Invoice ${invId} — Archer's Equipment Repair`
           : `Invoice from Archer's Equipment Repair`;
 
-        let body = `Hi ${name},\n\nPlease find your invoice details below.\n\n`;
-        body += `Invoice Total: ${total}\n`;
+        const nl = '\r\n';
+        let body = `Hi ${name},${nl}${nl}Please find your invoice details below.${nl}${nl}`;
+        body += `Invoice Total: ${total}${nl}`;
         if (deposit > 0) {
-          body += `Deposit Received: -$${deposit.toFixed(2)}\n`;
-          body += `Balance Due: ${balance}\n`;
+          body += `Deposit Received: -$${deposit.toFixed(2)}${nl}`;
+          body += `Balance Due: ${balance}${nl}`;
         }
-        body += `\ne-Transfer accepted at Jason@archerser.ca\n\n`;
-        body += `Thank you for choosing Archer's Equipment Repair!\n\nArcher's Equipment Repair Ltd.\nPhone: 519-383-9654`;
+        body += `${nl}e-Transfer accepted at Jason@archerser.ca${nl}${nl}`;
+        body += `Thank you for choosing Archer's Equipment Repair!${nl}${nl}Archer's Equipment Repair Ltd.${nl}Phone: 519-383-9654`;
 
         const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         window.location.href = mailto;
