@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+
+
+  <!DOCTYPE html>
   <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -67,6 +69,22 @@
       #invoiceBuilder {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1.5rem 0;}
       .invoice-grid {display:grid;grid-template-columns:1fr;gap:1rem;}
       .inline-group {display:flex;gap:.5rem;align-items:end;flex-wrap:wrap;}
+
+      /* ── Invoice action button grid ── */
+      .invoice-action-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .55rem;
+        margin-top: 1rem;
+      }
+      .invoice-action-grid .iag-full  { grid-column: 1 / -1; }
+      .invoice-action-grid .mini-btn  { width: 100%; margin: 0; justify-content: center; }
+      .iag-divider {
+        grid-column: 1 / -1;
+        height: 1px;
+        background: rgba(255,69,0,.2);
+        margin: .1rem 0;
+      }
       .mini-btn {padding:.5rem .8rem;font-size:.9rem;}
       .items-table td,.items-table th {vertical-align:middle;}
       .items-table input {min-width:90px;}
@@ -1508,14 +1526,21 @@
           <span id="profileLockStatus" class="profile-lock-status">Saved names and addresses will stay paired unless you turn this off or edit them in Clients / Addresses.</span>
         </div>
 
-        <div class="inline-group" style="margin-top:1rem;">
-          <button type="button" id="populateInvoice" class="mini-btn">Auto Fill From Selected Entries</button>
+        <div class="inline-group invoice-action-grid" style="margin-top:1rem;">
+          <!-- Row 1: primary workflow -->
+          <button type="button" id="populateInvoice" class="mini-btn iag-full">Auto Fill From Selected Entries</button>
+          <!-- Row 2: add items -->
           <button type="button" id="addItem" class="mini-btn">Add Item</button>
           <button type="button" id="quickAddMaterials" class="mini-btn" style="background:#17a2b8;">⚡ Quick Add</button>
-          <button type="button" id="clearInvoice" class="mini-btn" style="background:#dc3545;">Clear Invoice</button>
-          <button id="generateInvoice" type="button" class="mini-btn">Generate Invoice PDF</button>
-          <button id="generateBossCopy" type="button" class="mini-btn">Generate Boss Copy PDF</button>
+          <!-- Divider -->
+          <div class="iag-divider"></div>
+          <!-- Row 3: primary output -->
+          <button id="generateInvoice" type="button" class="mini-btn iag-full">Generate Invoice PDF</button>
+          <!-- Row 4: secondary outputs -->
+          <button id="generateBossCopy" type="button" class="mini-btn">Boss Copy PDF</button>
           <button id="emailDraftBtn" type="button" class="mini-btn" style="background:#17a2b8;">📧 Email Draft</button>
+          <!-- Row 5: destructive -->
+          <button type="button" id="clearInvoice" class="mini-btn iag-full" style="background:#dc3545;">Clear Invoice</button>
         </div>
 
         <label style="display:flex;align-items:center;gap:.55rem;margin:.6rem 0 0 0;cursor:pointer;font-size:.9rem;user-select:none;">
