@@ -1120,6 +1120,51 @@
       /* Selector row hover */
       .selector-row:hover { background: rgba(255,69,0,.06); }
 
+      /* ── Materials Templates Modal ── */
+      #matTmplModal { display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;align-items:center;justify-content:center;padding:1rem; }
+      #matTmplModal.show { display:flex; }
+      #matTmplModal .saved-materials-panel { width:min(860px,100%);max-height:92vh; }
+      #matTmplModal .saved-materials-body  { max-height:calc(92vh - 130px);overflow:auto; }
+
+      /* view vs manage toggle */
+      .mtm-tabs { display:flex;gap:.4rem;margin-bottom:.85rem;flex-wrap:wrap; }
+      .mtm-tab  { padding:.4rem .9rem;border-radius:999px;border:1px solid rgba(255,69,0,.4);background:transparent;color:#ccc;font-size:.85rem;cursor:pointer;min-height:36px;transition:all .15s; }
+      .mtm-tab.active { background:#ff4500;color:#fff;border-color:#ff4500;box-shadow:0 0 8px rgba(255,69,0,.4); }
+
+      /* template groups in picker view */
+      .mtm-group { border:1px solid rgba(255,69,0,.2);border-radius:10px;margin-bottom:.7rem;overflow:hidden; }
+      .mtm-group-header { display:flex;align-items:center;gap:.6rem;padding:.7rem .85rem;background:linear-gradient(135deg,rgba(255,69,0,.12),rgba(30,30,30,.5));cursor:pointer;user-select:none;-webkit-user-select:none; }
+      .mtm-group-header:active { background:rgba(255,69,0,.15); }
+      .mtm-group-title { flex:1;font-weight:700;color:#ff9060;font-size:.95rem; }
+      .mtm-group-arrow { color:#ff4500;font-size:.8rem;transition:transform .2s; }
+      .mtm-group-arrow.open { transform:rotate(180deg); }
+      .mtm-group-body { display:none;padding:.5rem .85rem .75rem; }
+      .mtm-group-body.open { display:block; }
+      .mtm-item-row { display:flex;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05);min-height:38px; }
+      .mtm-item-row:last-child { border-bottom:none; }
+      .mtm-item-cb { width:auto;min-width:22px;min-height:22px;accent-color:#ff4500;cursor:pointer;flex:0 0 auto;margin:0; }
+      .mtm-item-name { flex:1;font-size:.9rem;color:#ddd;cursor:pointer; }
+      .mtm-item-qty  { width:62px;padding:.35rem .4rem;text-align:center;font-size:.9rem;background:#222;color:#e0e0e0;border:1px solid rgba(255,69,0,.4);border-radius:6px;min-height:36px;box-sizing:border-box;flex:0 0 auto;margin:0; }
+      .mtm-item-unit { font-size:.78rem;color:#888;white-space:nowrap;flex:0 0 auto;min-width:28px; }
+      .mtm-sel-all   { font-size:.78rem;color:#ff9060;cursor:pointer;background:none;border:none;padding:0;min-height:auto;margin:0 0 0 auto;text-decoration:underline;white-space:nowrap; }
+      .mtm-sel-all:hover { color:#ff4500; }
+      .mtm-footer    { padding:.85rem 1rem;border-top:1px solid rgba(255,69,0,.25);display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;background:#1f1f1f;border-radius:0 0 14px 14px; }
+      .mtm-count     { flex:1;font-size:.9rem;color:#bbb; }
+
+      /* manage view */
+      .mtm-manage-group { border:1px solid rgba(255,69,0,.22);border-radius:10px;margin-bottom:.7rem;overflow:hidden; }
+      .mtm-manage-header { display:flex;align-items:center;gap:.5rem;padding:.6rem .8rem;background:rgba(255,69,0,.07);cursor:pointer;user-select:none; }
+      .mtm-manage-title { flex:1;font-weight:700;color:#ffb08a;font-size:.9rem; }
+      .mtm-manage-body { display:none;padding:.5rem .8rem .75rem; }
+      .mtm-manage-body.open { display:block; }
+      .mtm-manage-item-row { display:flex;align-items:center;gap:.45rem;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04); }
+      .mtm-manage-item-row:last-child { border-bottom:none; }
+      .mtm-in-name { flex:1;padding:.35rem .5rem;font-size:.85rem;background:#222;border:1px solid rgba(255,69,0,.35);border-radius:6px;color:#e0e0e0;min-height:34px;box-sizing:border-box;margin:0; }
+      .mtm-in-qty  { width:58px;padding:.35rem .4rem;text-align:center;font-size:.85rem;background:#222;border:1px solid rgba(255,69,0,.35);border-radius:6px;color:#e0e0e0;min-height:34px;box-sizing:border-box;margin:0; }
+      .mtm-in-unit { width:66px;padding:.35rem .5rem;font-size:.85rem;background:#222;border:1px solid rgba(255,69,0,.35);border-radius:6px;color:#e0e0e0;min-height:34px;box-sizing:border-box;margin:0; }
+      .mtm-add-item-row { display:flex;gap:.45rem;margin-top:.6rem;flex-wrap:wrap;align-items:center; }
+      .mtm-add-item-row input { margin:0; }
+
     </style>
   </head>
   <body>
@@ -1532,6 +1577,7 @@
           <!-- Row 2: add items -->
           <button type="button" id="addItem" class="mini-btn">Add Item</button>
           <button type="button" id="quickAddMaterials" class="mini-btn" style="background:#17a2b8;">⚡ Quick Add</button>
+          <button type="button" id="openMatTemplates" class="mini-btn iag-full" style="background:#6f42c1;">📋 Load From Job Template</button>
           <!-- Divider -->
           <div class="iag-divider"></div>
           <!-- Row 3: primary output -->
@@ -1670,9 +1716,32 @@
       </div>
     </div>
 
-    <div id="clientProfilesModal" class="saved-materials-modal" aria-hidden="true">
-      <div class="saved-materials-panel" style="width:min(1100px,100%);">
+    <!-- ── Materials Templates Modal ── -->
+    <div id="matTmplModal" aria-hidden="true">
+      <div class="saved-materials-panel">
         <div class="saved-materials-header">
+          <h3>📋 Job Templates</h3>
+          <button type="button" id="closeMatTmpl" class="mini-btn" style="background:#dc3545;">Close</button>
+        </div>
+        <div class="saved-materials-body" id="matTmplBody">
+          <div class="mtm-tabs">
+            <button type="button" class="mtm-tab active" data-mtm-tab="pick">Add to Invoice</button>
+            <button type="button" class="mtm-tab" data-mtm-tab="manage">Manage Templates</button>
+          </div>
+          <div id="mtmPickView"></div>
+          <div id="mtmManageView" style="display:none;">
+            <button type="button" id="mtmNewTmplBtn" style="background:#ff4500;color:#fff;border:none;padding:.6rem 1.2rem;border-radius:8px;font-size:.9rem;cursor:pointer;min-height:40px;font-weight:700;margin-bottom:.85rem;">+ New Template</button>
+            <div id="mtmManageList"></div>
+          </div>
+        </div>
+        <div class="mtm-footer" id="mtmFooter">
+          <span class="mtm-count" id="mtmCount"></span>
+          <button type="button" id="mtmAddToInvoiceBtn" style="background:#ff4500;color:#fff;border:none;padding:.7rem 1.4rem;border-radius:6px;font-size:1rem;cursor:pointer;min-height:44px;font-weight:700;">Add Selected to Invoice</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="clientProfilesModal" class="saved-materials-modal" aria-hidden="true">        <div class="saved-materials-header">
           <h3>Clients / Addresses</h3>
           <button type="button" id="closeClientProfiles" class="mini-btn" style="background:#dc3545;">Close</button>
         </div>
@@ -7302,6 +7371,358 @@
         updateInvoiceRunningTotal();
       }
       // ────────────────────────────────────────────────────────────────────────
+      // ── Materials Templates ────────────────────────────────────────────────────
+      (function() {
+        const MTM_KEY = 'materialsTemplates_v1';
+        function uid() { return 'mt_' + Math.random().toString(36).substr(2,9) + '_' + Date.now(); }
+
+        const DEFAULT_TEMPLATES = [
+          { id: uid(), name: 'A/C Install', items: [
+            { id:uid(), name:'Condensing unit',              qty:1,  unit:'unit' },
+            { id:uid(), name:'Air handler / evap coil',     qty:1,  unit:'unit' },
+            { id:uid(), name:'Refrigerant lineset',          qty:1,  unit:'set'  },
+            { id:uid(), name:'Disconnect box (240V)',         qty:1,  unit:'ea'   },
+            { id:uid(), name:'Thermostat',                   qty:1,  unit:'ea'   },
+            { id:uid(), name:'Thermostat wire 18/5',         qty:1,  unit:'roll' },
+            { id:uid(), name:'Drain pan',                    qty:1,  unit:'ea'   },
+            { id:uid(), name:'Condensate drain line (PVC)',  qty:1,  unit:'ft'   },
+            { id:uid(), name:'P-trap',                       qty:1,  unit:'ea'   },
+            { id:uid(), name:'Filter drier (liquid line)',   qty:1,  unit:'ea'   },
+            { id:uid(), name:'Refrigerant R-410A / R-32',   qty:1,  unit:'lb'   },
+            { id:uid(), name:'Electrical wire 12 AWG',       qty:1,  unit:'ft'   },
+            { id:uid(), name:'Breaker 2-pole',               qty:1,  unit:'ea'   },
+            { id:uid(), name:'Flex duct connector',          qty:2,  unit:'ea'   },
+            { id:uid(), name:'Foil tape',                    qty:1,  unit:'roll' },
+            { id:uid(), name:'Vibration isolation pads',     qty:4,  unit:'ea'   },
+          ]},
+          { id: uid(), name: 'Furnace Install', items: [
+            { id:uid(), name:'Furnace unit',                 qty:1,  unit:'unit' },
+            { id:uid(), name:'Flue pipe / vent connector',   qty:1,  unit:'set'  },
+            { id:uid(), name:'B-vent cap',                   qty:1,  unit:'ea'   },
+            { id:uid(), name:'Gas flex connector 3/4"',      qty:1,  unit:'ea'   },
+            { id:uid(), name:'Drip leg assembly',            qty:1,  unit:'ea'   },
+            { id:uid(), name:'Manual shutoff valve 3/4"',    qty:1,  unit:'ea'   },
+            { id:uid(), name:'Thermostat',                   qty:1,  unit:'ea'   },
+            { id:uid(), name:'Thermostat wire 18/5',         qty:1,  unit:'roll' },
+            { id:uid(), name:'Filter',                       qty:1,  unit:'ea'   },
+            { id:uid(), name:'Electrical wire 14 AWG',       qty:1,  unit:'ft'   },
+            { id:uid(), name:'15A breaker',                  qty:1,  unit:'ea'   },
+            { id:uid(), name:'Flex duct connector (supply)', qty:2,  unit:'ea'   },
+            { id:uid(), name:'Flex duct connector (return)', qty:1,  unit:'ea'   },
+            { id:uid(), name:'Foil tape',                    qty:1,  unit:'roll' },
+            { id:uid(), name:'Yellow gas tape (PTFE)',        qty:1,  unit:'roll' },
+          ]},
+          { id: uid(), name: 'Ductless Install (Pre-Insulated Line Sets)', items: [
+            { id:uid(), name:'Outdoor condenser unit',       qty:1,  unit:'unit' },
+            { id:uid(), name:'Indoor wall-mount head',       qty:1,  unit:'unit' },
+            { id:uid(), name:'Pre-insulated lineset',        qty:1,  unit:'set'  },
+            { id:uid(), name:'Wall sleeve / cover plate',    qty:1,  unit:'ea'   },
+            { id:uid(), name:'Disconnect box (240V)',         qty:1,  unit:'ea'   },
+            { id:uid(), name:'Electrical wire 10 or 12 AWG', qty:1,  unit:'ft'   },
+            { id:uid(), name:'Breaker 2-pole',               qty:1,  unit:'ea'   },
+            { id:uid(), name:'Mini-split mounting bracket',  qty:1,  unit:'set'  },
+            { id:uid(), name:'Concrete anchors / lag bolts', qty:4,  unit:'ea'   },
+            { id:uid(), name:'Condensate drain hose',        qty:1,  unit:'ft'   },
+            { id:uid(), name:'Line hide / chase cover',      qty:1,  unit:'set'  },
+            { id:uid(), name:'Communication wire 14/4',      qty:1,  unit:'ft'   },
+            { id:uid(), name:'Refrigerant R-410A / R-32',   qty:1,  unit:'lb'   },
+          ]},
+          { id: uid(), name: 'Pool Heater Gas Hook Up', items: [
+            { id:uid(), name:'Drip leg assembly',            qty:1,  unit:'ea'   },
+            { id:uid(), name:'3/4" shutoff valve',           qty:1,  unit:'ea'   },
+            { id:uid(), name:'3/4" union',                   qty:1,  unit:'ea'   },
+            { id:uid(), name:'3/4" tee',                     qty:1,  unit:'ea'   },
+            { id:uid(), name:'3/4" 90° elbow',               qty:2,  unit:'ea'   },
+            { id:uid(), name:'3/4" gas flex connector',      qty:1,  unit:'ea'   },
+            { id:uid(), name:'3/4" black iron pipe',         qty:1,  unit:'ft'   },
+            { id:uid(), name:'Yellow gas tape (PTFE)',        qty:1,  unit:'roll' },
+          ]},
+        ];
+
+        function loadTmplData() {
+          try { const r=JSON.parse(localStorage.getItem(MTM_KEY)); if(r&&r.templates) return r; } catch(e) {}
+          const d = { templates: DEFAULT_TEMPLATES };
+          saveTmplData(d); return d;
+        }
+        function saveTmplData(d) { try { localStorage.setItem(MTM_KEY, JSON.stringify(d)); } catch(e) {} }
+        function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        let tmplData = loadTmplData();
+        let _mtmActiveTab = 'pick';
+        // selections: { itemId: { checked, qty } }
+        let _mtmSel = {};
+
+        // ── Open / Close ──
+        function openMatTmplModal() {
+          tmplData = loadTmplData();
+          _mtmSel = {};
+          document.getElementById('matTmplModal').classList.add('show');
+          document.getElementById('matTmplModal').setAttribute('aria-hidden','false');
+          switchMtmTab(_mtmActiveTab);
+        }
+        function closeMatTmplModal() {
+          document.getElementById('matTmplModal').classList.remove('show');
+          document.getElementById('matTmplModal').setAttribute('aria-hidden','true');
+        }
+
+        document.getElementById('closeMatTmpl').addEventListener('click', closeMatTmplModal);
+        document.getElementById('matTmplModal').addEventListener('click', function(e) { if (e.target === this) closeMatTmplModal(); });
+        document.getElementById('openMatTemplates').addEventListener('click', openMatTmplModal);
+
+        // ── Tabs ──
+        function switchMtmTab(tab) {
+          _mtmActiveTab = tab;
+          document.querySelectorAll('.mtm-tab').forEach(b => b.classList.toggle('active', b.dataset.mtmTab === tab));
+          const pickView   = document.getElementById('mtmPickView');
+          const manageView = document.getElementById('mtmManageView');
+          const footer     = document.getElementById('mtmFooter');
+          if (tab === 'pick') {
+            pickView.style.display = 'block';
+            manageView.style.display = 'none';
+            footer.style.display = 'flex';
+            renderPickView();
+          } else {
+            pickView.style.display = 'none';
+            manageView.style.display = 'block';
+            footer.style.display = 'none';
+            renderManageView();
+          }
+        }
+        document.querySelectorAll('.mtm-tab').forEach(btn => {
+          btn.addEventListener('click', () => switchMtmTab(btn.dataset.mtmTab));
+        });
+
+        // ── Pick View ──
+        function renderPickView() {
+          const wrap = document.getElementById('mtmPickView');
+          wrap.innerHTML = '';
+          if (!tmplData.templates.length) {
+            wrap.innerHTML = '<p style="color:#666;padding:.75rem 0;">No templates yet. Go to Manage Templates to create one.</p>';
+            updateMtmCount(); return;
+          }
+          tmplData.templates.forEach(tmpl => {
+            const group = document.createElement('div');
+            group.className = 'mtm-group';
+
+            const hdr = document.createElement('div');
+            hdr.className = 'mtm-group-header';
+            hdr.innerHTML = `<span class="mtm-group-title">${esc(tmpl.name)}</span>
+              <button type="button" class="mtm-sel-all" data-tmpl="${tmpl.id}">Select all</button>
+              <span class="mtm-group-arrow">▼</span>`;
+            group.appendChild(hdr);
+
+            const body = document.createElement('div');
+            body.className = 'mtm-group-body';
+            group.appendChild(body);
+
+            // Toggle
+            hdr.querySelector('.mtm-group-arrow').addEventListener('click', () => {
+              body.classList.toggle('open');
+              hdr.querySelector('.mtm-group-arrow').classList.toggle('open', body.classList.contains('open'));
+            });
+            hdr.querySelector('.mtm-group-title').addEventListener('click', () => {
+              body.classList.toggle('open');
+              hdr.querySelector('.mtm-group-arrow').classList.toggle('open', body.classList.contains('open'));
+            });
+
+            // Select all
+            hdr.querySelector('.mtm-sel-all').addEventListener('click', (e) => {
+              e.stopPropagation();
+              const allChecked = tmpl.items.every(item => _mtmSel[item.id]?.checked);
+              tmpl.items.forEach(item => {
+                _mtmSel[item.id] = { checked: !allChecked, qty: _mtmSel[item.id]?.qty ?? item.qty };
+              });
+              body.querySelectorAll('.mtm-item-cb').forEach((cb, i) => {
+                cb.checked = !allChecked;
+              });
+              updateMtmCount();
+            });
+
+            // Items
+            tmpl.items.forEach(item => {
+              const saved = _mtmSel[item.id] || { checked: false, qty: item.qty };
+              const row = document.createElement('div');
+              row.className = 'mtm-item-row';
+              row.innerHTML = `
+                <input type="checkbox" class="mtm-item-cb" ${saved.checked ? 'checked' : ''} aria-label="${esc(item.name)}">
+                <span class="mtm-item-name">${esc(item.name)}</span>
+                <input type="number" class="mtm-item-qty" value="${saved.qty}" min="0.01" step="1" inputmode="decimal">
+                <span class="mtm-item-unit">${esc(item.unit)}</span>`;
+              const cb  = row.querySelector('.mtm-item-cb');
+              const qty = row.querySelector('.mtm-item-qty');
+              const sync = () => { _mtmSel[item.id] = { checked: cb.checked, qty: parseFloat(qty.value)||1 }; updateMtmCount(); };
+              cb.addEventListener('change', sync);
+              qty.addEventListener('input', () => { if (+qty.value>0 && !cb.checked) { cb.checked=true; } sync(); });
+              row.querySelector('.mtm-item-name').addEventListener('click', () => { cb.checked=!cb.checked; sync(); });
+              body.appendChild(row);
+            });
+            wrap.appendChild(group);
+          });
+          updateMtmCount();
+        }
+
+        function updateMtmCount() {
+          const n = Object.values(_mtmSel).filter(s=>s.checked).length;
+          const el = document.getElementById('mtmCount');
+          if (el) el.textContent = n > 0 ? n + ' item' + (n===1?'':'s') + ' selected' : '';
+        }
+
+        // ── Add to Invoice ──
+        document.getElementById('mtmAddToInvoiceBtn').addEventListener('click', () => {
+          const toAdd = Object.entries(_mtmSel).filter(([,s])=>s.checked);
+          if (!toAdd.length) { alert('Check at least one item to add.'); return; }
+          // Build a quick lookup: itemId → item name/unit
+          const itemMap = {};
+          tmplData.templates.forEach(t => t.items.forEach(i => { itemMap[i.id] = i; }));
+          toAdd.forEach(([id, sel]) => {
+            const item = itemMap[id]; if (!item) return;
+            const qty = sel.qty || 1;
+            const saved = typeof getSavedMaterial === 'function' ? getSavedMaterial(item.name) : null;
+            if (typeof createItemRow === 'function') {
+              createItemRow({
+                desc: item.name,
+                qty,
+                unit: item.unit || 'ea',
+                distributorCost: saved?.distributorCost || 0,
+                markup: saved?.markup !== undefined ? saved.markup : (typeof getDefaultMarkupPercent === 'function' ? getDefaultMarkupPercent() : 25),
+                customerPrice: saved?.customerPrice || 0
+              });
+            }
+          });
+          closeMatTmplModal();
+          if (typeof saveInvoiceSession === 'function') saveInvoiceSession();
+          if (typeof updateInvoiceRunningTotal === 'function') updateInvoiceRunningTotal();
+        });
+
+        // ── Manage View ──
+        function renderManageView() {
+          const wrap = document.getElementById('mtmManageList');
+          wrap.innerHTML = '';
+          if (!tmplData.templates.length) {
+            wrap.innerHTML = '<p style="color:#666;font-size:.9rem;margin:.5rem 0;">No templates yet.</p>';
+            return;
+          }
+          tmplData.templates.forEach(tmpl => {
+            const group = document.createElement('div');
+            group.className = 'mtm-manage-group';
+
+            const hdr = document.createElement('div');
+            hdr.className = 'mtm-manage-header';
+            // Editable title
+            const titleInput = document.createElement('input');
+            titleInput.className = 'mtm-in-name mtm-manage-title';
+            titleInput.value = tmpl.name;
+            titleInput.style.cssText = 'flex:1;font-weight:700;color:#ffb08a;font-size:.92rem;background:transparent;border-color:transparent;';
+            titleInput.addEventListener('change', () => {
+              tmpl.name = titleInput.value.trim() || tmpl.name;
+              saveTmplData(tmplData);
+            });
+            titleInput.addEventListener('click', e => e.stopPropagation());
+
+            const arrowBtn = document.createElement('span');
+            arrowBtn.className = 'mtm-group-arrow';
+            arrowBtn.textContent = '▼';
+            arrowBtn.style.cursor = 'pointer';
+
+            const delTmplBtn = document.createElement('button');
+            delTmplBtn.type = 'button';
+            delTmplBtn.textContent = '🗑';
+            delTmplBtn.title = 'Delete template';
+            delTmplBtn.style.cssText = 'background:#dc3545;color:#fff;border:none;padding:.2rem .5rem;border-radius:5px;font-size:.82rem;cursor:pointer;min-height:auto;margin:0;';
+            delTmplBtn.addEventListener('click', e => {
+              e.stopPropagation();
+              if (!confirm('Delete template "' + tmpl.name + '"?')) return;
+              tmplData.templates = tmplData.templates.filter(t => t.id !== tmpl.id);
+              saveTmplData(tmplData);
+              renderManageView();
+            });
+
+            hdr.appendChild(titleInput);
+            hdr.appendChild(arrowBtn);
+            hdr.appendChild(delTmplBtn);
+
+            const body = document.createElement('div');
+            body.className = 'mtm-manage-body';
+
+            function renderMgmtItems() {
+              body.innerHTML = '';
+              tmpl.items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'mtm-manage-item-row';
+                const nameIn = document.createElement('input');
+                nameIn.type = 'text'; nameIn.className = 'mtm-in-name'; nameIn.value = item.name;
+                const qtyIn  = document.createElement('input');
+                qtyIn.type = 'number'; qtyIn.className = 'mtm-in-qty'; qtyIn.value = item.qty; qtyIn.min = '0'; qtyIn.step = 'any';
+                const unitIn = document.createElement('input');
+                unitIn.type = 'text'; unitIn.className = 'mtm-in-unit'; unitIn.value = item.unit; unitIn.placeholder = 'unit';
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button'; delBtn.textContent = '×';
+                delBtn.style.cssText = 'background:#dc3545;color:#fff;border:none;padding:.2rem .5rem;border-radius:5px;font-size:.95rem;cursor:pointer;min-height:30px;margin:0;line-height:1;';
+                const save = () => {
+                  item.name = nameIn.value.trim() || item.name;
+                  item.qty  = parseFloat(qtyIn.value) || 1;
+                  item.unit = unitIn.value.trim() || item.unit;
+                  saveTmplData(tmplData);
+                };
+                nameIn.addEventListener('change', save); qtyIn.addEventListener('change', save); unitIn.addEventListener('change', save);
+                delBtn.addEventListener('click', () => {
+                  tmpl.items = tmpl.items.filter(i => i.id !== item.id);
+                  saveTmplData(tmplData);
+                  renderMgmtItems();
+                });
+                row.appendChild(nameIn); row.appendChild(qtyIn); row.appendChild(unitIn); row.appendChild(delBtn);
+                body.appendChild(row);
+              });
+
+              // Add new item row
+              const addRow = document.createElement('div');
+              addRow.className = 'mtm-add-item-row';
+              const newName = document.createElement('input'); newName.type='text'; newName.className='mtm-in-name'; newName.placeholder='New item name'; newName.style.flex='1';
+              const newQty  = document.createElement('input'); newQty.type='number'; newQty.className='mtm-in-qty'; newQty.placeholder='Qty'; newQty.min='0'; newQty.step='any'; newQty.value='1';
+              const newUnit = document.createElement('input'); newUnit.type='text'; newUnit.className='mtm-in-unit'; newUnit.placeholder='ea';
+              const addBtn  = document.createElement('button'); addBtn.type='button'; addBtn.textContent='+ Add';
+              addBtn.style.cssText='background:#28a745;color:#fff;border:none;padding:.35rem .8rem;border-radius:6px;font-size:.85rem;cursor:pointer;min-height:34px;margin:0;white-space:nowrap;';
+              addBtn.addEventListener('click', () => {
+                const n = newName.value.trim(); if (!n) { newName.focus(); return; }
+                tmpl.items.push({ id: uid(), name: n, qty: parseFloat(newQty.value)||1, unit: newUnit.value.trim()||'ea' });
+                saveTmplData(tmplData);
+                renderMgmtItems();
+              });
+              newName.addEventListener('keydown', e => { if (e.key==='Enter') addBtn.click(); });
+              addRow.appendChild(newName); addRow.appendChild(newQty); addRow.appendChild(newUnit); addRow.appendChild(addBtn);
+              body.appendChild(addRow);
+            }
+            renderMgmtItems();
+
+            hdr.addEventListener('click', (e) => {
+              if (e.target === titleInput || e.target === delTmplBtn) return;
+              body.classList.toggle('open');
+              arrowBtn.classList.toggle('open', body.classList.contains('open'));
+            });
+            arrowBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              body.classList.toggle('open');
+              arrowBtn.classList.toggle('open', body.classList.contains('open'));
+            });
+
+            group.appendChild(hdr);
+            group.appendChild(body);
+            wrap.appendChild(group);
+          });
+        }
+
+        // ── New Template ──
+        document.getElementById('mtmNewTmplBtn').addEventListener('click', () => {
+          const name = prompt('Template name:');
+          if (!name || !name.trim()) return;
+          tmplData.templates.push({ id: uid(), name: name.trim(), items: [] });
+          saveTmplData(tmplData);
+          renderManageView();
+        });
+
+      })(); // end Materials Templates IIFE
+      // ──────────────────────────────────────────────────────────────────────────
+
       loadData();
       clearForm();
       ensureServiceChargeRow();
