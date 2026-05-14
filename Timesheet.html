@@ -7608,27 +7608,41 @@
 
             const hdr = document.createElement('div');
             hdr.className = 'mtm-manage-header';
-            // Editable title
-            const titleInput = document.createElement('input');
-            titleInput.className = 'mtm-in-name mtm-manage-title';
-            titleInput.value = tmpl.name;
-            titleInput.style.cssText = 'flex:1;font-weight:700;color:#ffb08a;font-size:.92rem;background:transparent;border-color:transparent;';
-            titleInput.addEventListener('change', () => {
-              tmpl.name = titleInput.value.trim() || tmpl.name;
-              saveTmplData(tmplData);
-            });
-            titleInput.addEventListener('click', e => e.stopPropagation());
+            hdr.style.cssText += 'cursor:pointer;user-select:none;-webkit-user-select:none;';
+
+            // Plain text title — entire header is the tap target
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'mtm-manage-title';
+            titleSpan.textContent = tmpl.name;
+            titleSpan.style.cssText = 'flex:1;font-weight:700;color:#ffb08a;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
 
             const arrowBtn = document.createElement('span');
             arrowBtn.className = 'mtm-group-arrow';
             arrowBtn.textContent = '▼';
-            arrowBtn.style.cursor = 'pointer';
+            arrowBtn.style.cssText = 'font-size:.85rem;color:#ff4500;transition:transform .2s;flex-shrink:0;padding:0 .25rem;';
+
+            // Small rename button — stopPropagation so it doesn't toggle expand
+            const renameBtn = document.createElement('button');
+            renameBtn.type = 'button';
+            renameBtn.title = 'Rename';
+            renameBtn.innerHTML = '✏️';
+            renameBtn.style.cssText = 'background:none;border:1px solid rgba(255,69,0,.35);color:#ffb08a;padding:.2rem .45rem;border-radius:5px;font-size:.8rem;cursor:pointer;min-height:auto;margin:0;flex-shrink:0;line-height:1;';
+            renameBtn.addEventListener('click', e => {
+              e.stopPropagation();
+              const newName = prompt('Rename template:', tmpl.name);
+              if (newName === null) return;
+              const trimmed = newName.trim();
+              if (!trimmed) return;
+              tmpl.name = trimmed;
+              titleSpan.textContent = trimmed;
+              saveTmplData(tmplData);
+            });
 
             const delTmplBtn = document.createElement('button');
             delTmplBtn.type = 'button';
             delTmplBtn.textContent = '🗑';
             delTmplBtn.title = 'Delete template';
-            delTmplBtn.style.cssText = 'background:#dc3545;color:#fff;border:none;padding:.2rem .5rem;border-radius:5px;font-size:.82rem;cursor:pointer;min-height:auto;margin:0;';
+            delTmplBtn.style.cssText = 'background:#dc3545;color:#fff;border:none;padding:.2rem .5rem;border-radius:5px;font-size:.82rem;cursor:pointer;min-height:auto;margin:0;flex-shrink:0;';
             delTmplBtn.addEventListener('click', e => {
               e.stopPropagation();
               if (!confirm('Delete template "' + tmpl.name + '"?')) return;
@@ -7637,8 +7651,9 @@
               renderManageView();
             });
 
-            hdr.appendChild(titleInput);
+            hdr.appendChild(titleSpan);
             hdr.appendChild(arrowBtn);
+            hdr.appendChild(renameBtn);
             hdr.appendChild(delTmplBtn);
 
             const body = document.createElement('div');
@@ -7695,14 +7710,14 @@
             renderMgmtItems();
 
             hdr.addEventListener('click', (e) => {
-              if (e.target === titleInput || e.target === delTmplBtn) return;
+              if (e.target === renameBtn || e.target === delTmplBtn) return;
               body.classList.toggle('open');
-              arrowBtn.classList.toggle('open', body.classList.contains('open'));
+              arrowBtn.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
             });
             arrowBtn.addEventListener('click', (e) => {
               e.stopPropagation();
               body.classList.toggle('open');
-              arrowBtn.classList.toggle('open', body.classList.contains('open'));
+              arrowBtn.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
             });
 
             group.appendChild(hdr);
