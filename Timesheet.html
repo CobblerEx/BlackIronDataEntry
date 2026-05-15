@@ -201,11 +201,14 @@
         border-top:1px solid rgba(255,69,0,.35);
         box-shadow:0 -2px 16px rgba(0,0,0,.4);
         transition:transform .25s ease, opacity .25s ease;
+        visibility: visible;
       }
       .sticky-action-bar.hidden {
         transform:translateY(110%);
         opacity:0;
         pointer-events:none;
+        visibility: hidden;
+        transition:transform .25s ease, opacity .25s ease, visibility 0s linear .25s;
       }
 
       #priceAlertBanner {
@@ -8960,8 +8963,9 @@
           if (mainQty && stickyQty) stickyQty.value = mainQty.value;
         }
         function syncMainFromSticky() {
+          const parsedQty = Math.max(1, parseInt(stickyQty.value, 10) || 1);
           if (mainOd  && stickyOd)  { mainOd.value  = stickyOd.value;  mainOd.dispatchEvent(new Event('change')); }
-          if (mainQty && stickyQty)   mainQty.value = stickyQty.value;
+          if (mainQty && stickyQty)   mainQty.value = parsedQty;
         }
 
         if (stickyOd)  stickyOd.addEventListener('change', syncMainFromSticky);
@@ -9053,7 +9057,7 @@
         <option value="2">2"</option>
         <option value="2 1/2">2 1/2"</option>
       </select>
-      <input type="number" id="biQtySticky" min="1" value="1" style="background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;padding:.35rem .5rem;font-size:.88rem;min-height:38px;width:54px;text-align:center;">
+      <input type="tel" id="biQtySticky" min="1" value="1" style="background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:6px;padding:.35rem .5rem;font-size:16px;min-height:38px;width:54px;text-align:center;touch-action:manipulation;-webkit-transform:translateZ(0);transform:translateZ(0);" autocomplete="off" autocorrect="off" spellcheck="false">
       <button type="button" id="biAddItemSticky">+ Add Item</button>
       <button type="button" id="biSendInvoiceSticky" style="background:#28a745;">Send All To Invoice</button>
     </div>
