@@ -8963,13 +8963,17 @@
           if (mainQty && stickyQty) stickyQty.value = mainQty.value;
         }
         function syncMainFromSticky() {
-          const parsedQty = Math.max(1, parseInt(stickyQty.value, 10) || 1);
           if (mainOd  && stickyOd)  { mainOd.value  = stickyOd.value;  mainOd.dispatchEvent(new Event('change')); }
-          if (mainQty && stickyQty)   mainQty.value = parsedQty;
+          if (mainQty && stickyQty)   mainQty.value = stickyQty.value;
         }
 
         if (stickyOd)  stickyOd.addEventListener('change', syncMainFromSticky);
         if (stickyQty) stickyQty.addEventListener('input',  syncMainFromSticky);
+        if (stickyQty) stickyQty.addEventListener('blur', () => {
+          const clamped = Math.max(1, parseInt(stickyQty.value, 10) || 1);
+          stickyQty.value = clamped;
+          if (mainQty) mainQty.value = clamped;
+        });
         if (mainOd)    mainOd.addEventListener('change',    syncStickyFromMain);
         if (mainQty)   mainQty.addEventListener('input',    syncStickyFromMain);
 
