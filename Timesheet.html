@@ -1870,7 +1870,7 @@
             </select>
           </label>
           <label>Quantity:
-            <input type="number" id="biQty" min="1" value="1" class="select-on-focus">
+            <input type="tel" id="biQty" value="1" class="select-on-focus" autocomplete="off" autocorrect="off" style="font-size:16px;">
           </label>
         </div>
 
@@ -8958,13 +8958,20 @@
         const mainOd    = document.getElementById('biOdSize');
         const mainQty   = document.getElementById('biQty');
 
+        let _syncing = false;
         function syncStickyFromMain() {
+          if (_syncing) return;
+          _syncing = true;
           if (mainOd  && stickyOd)  stickyOd.value  = mainOd.value;
           if (mainQty && stickyQty) stickyQty.value = mainQty.value;
+          _syncing = false;
         }
         function syncMainFromSticky() {
+          if (_syncing) return;
+          _syncing = true;
           if (mainOd  && stickyOd)  { mainOd.value  = stickyOd.value;  mainOd.dispatchEvent(new Event('change')); }
           if (mainQty && stickyQty)   mainQty.value = stickyQty.value;
+          _syncing = false;
         }
 
         if (stickyOd)  stickyOd.addEventListener('change', syncMainFromSticky);
