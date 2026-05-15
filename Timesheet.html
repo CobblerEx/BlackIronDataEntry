@@ -8873,7 +8873,7 @@
       els.jobName.addEventListener('change', () => { saveHistory(els.jobName.value); saveState(); });
       els.jobName.addEventListener('input', saveState);
       els.od.addEventListener('change', () => { els.cutPipeSize.value = els.od.value; saveState(); });
-      els.qty.addEventListener('focus', () => els.qty.select());
+      els.qty.addEventListener('focus', () => setTimeout(() => { try { els.qty.select(); } catch(e) {} }, 0));
       els.list.addEventListener('click', e => {
         const card = e.target.closest('.bi-card');
         if (!card) return;
