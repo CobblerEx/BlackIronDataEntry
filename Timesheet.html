@@ -4176,8 +4176,8 @@
         markup.addEventListener('blur', saveCurrentMaterial);
         customerPrice.addEventListener('blur', () => saveCurrentMaterial(true));
         [distributorCost, markup, customerPrice].forEach(input => {
-          input.addEventListener('focus', () => setTimeout(() => input.select(), 0));
-          input.addEventListener('mouseup', (e) => e.preventDefault());
+          input.addEventListener('focus', () => setTimeout(() => { try { input.select(); } catch(e) {} }, 0));
+          input.addEventListener('mouseup', (e) => { if (document.activeElement !== input) e.preventDefault(); });
         });
         tr.querySelector('.remove-item').onclick = () => { tr.remove(); updateInvoiceRunningTotal(); };
         recalc();
@@ -8873,7 +8873,7 @@
       els.jobName.addEventListener('change', () => { saveHistory(els.jobName.value); saveState(); });
       els.jobName.addEventListener('input', saveState);
       els.od.addEventListener('change', () => { els.cutPipeSize.value = els.od.value; saveState(); });
-      els.qty.addEventListener('focus', () => setTimeout(() => { try { els.qty.select(); } catch(e) {} }, 0));
+      els.qty.addEventListener('focus', () => { try { els.qty.select(); } catch(e) {} });
       els.list.addEventListener('click', e => {
         const card = e.target.closest('.bi-card');
         if (!card) return;
