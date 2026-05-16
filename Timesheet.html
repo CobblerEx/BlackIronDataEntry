@@ -7710,8 +7710,11 @@
                   right.style.cssText = 'font-size:.78rem;color:#ff9060;white-space:nowrap;flex-shrink:0;background:rgba(255,69,0,.12);padding:.15rem .4rem;border-radius:4px;';
                   right.textContent = mat.unit || 'ea';
                   opt.appendChild(left); opt.appendChild(right);
-                  opt.addEventListener('touchstart', function(e){ opt.style.background='rgba(255,69,0,.22)'; }, {passive:true});
+                  let _touchMoved = false;
+                  opt.addEventListener('touchstart', function(e){ _touchMoved = false; opt.style.background='rgba(255,69,0,.22)'; }, {passive:true});
+                  opt.addEventListener('touchmove', function(e){ _touchMoved = true; opt.style.background=''; }, {passive:true});
                   opt.addEventListener('touchend', function(e){
+                    if (_touchMoved) return; // finger dragged = scroll, not a tap
                     e.preventDefault();
                     inputEl.value = mat.desc;
                     if (unitEl) unitEl.value = mat.unit || 'ea';
