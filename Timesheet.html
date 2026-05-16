@@ -63,7 +63,6 @@
       tbody tr:hover {background:rgba(255,69,0,.1);transition:background .15s;}
       .drag-handle {cursor:move;color:#ff4500;margin-right:8px;}
       .action-select {padding:6px;background:#2a2a2a;color:#e0e0e0;border:1px solid #ff4500;border-radius:4px;font-size:0.9rem;width:100%;min-height:44px;}
-      #totalTime {font-size:1.4rem;font-weight:bold;text-align:center;padding:1rem;}
       #loading {display:none;text-align:center;padding:1.5rem;background:rgba(0,0,0,.8);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:10px;z-index:1000;}
       .spinner {border:5px solid #333;border-top:5px solid #ff4500;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;display:inline-block;}
       #invoiceBuilder {background:rgba(30,30,30,.95);padding:1.5rem;border-radius:10px;box-shadow:0 0 20px rgba(255,69,0,.3);margin:1.5rem 0;}
@@ -414,14 +413,7 @@
         padding:1rem 1.2rem;
         margin: 0 0 1rem 0;
       }
-      #invoiceSummary .summary-grid {
-        display:grid;
-        grid-template-columns: 1fr;
-        gap:.75rem 1rem;
-        align-items:center;
-      }
-      #invoiceSummary .summary-item {font-size:1rem;}
-      #invoiceSummary .summary-item b {color:#ff4500;}
+
 
       #importSection{
         background:rgba(30,30,30,.95);
@@ -585,7 +577,7 @@
       .bi-collapse-btn {background:none;border:1px solid rgba(255,69,0,.45);color:#ff4500;width:32px;height:32px;border-radius:6px;font-size:.85rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;transition:all .2s;min-height:auto;margin:0;padding:0;line-height:1;}
       .bi-collapse-btn:hover {background:#ff4500;color:#fff;box-shadow:0 0 8px rgba(255,69,0,.6);}
       .bi-collapse-btn.collapsed {transform:rotate(180deg);}
-      .bi-section-body {overflow:hidden;transition:max-height .35s ease, opacity .25s ease;max-height:9999px;opacity:1;}
+      .bi-section-body {overflow:hidden;transition:max-height .4s ease, opacity .25s ease;max-height:4000px;opacity:1;}
       .bi-section-body.collapsed {max-height:0 !important;opacity:0;pointer-events:none;}
       .bi-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;}
       .bi-fit-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin:.75rem 0 1rem 0;}
@@ -2029,6 +2021,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
 
     <script>
+      // Safe _ls wrapper — prevents crashes in Safari private browsing
+      const _ls = (() => {
+        try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
+        catch(e) { const m={}; return { getItem:k=>m[k]??null, setItem:(k,v)=>{m[k]=String(v);}, removeItem:k=>{delete m[k];}, clear:()=>{for(const k in m) delete m[k];} }; }
+      })();
+
       const LOGO_URL = "https://cobblerex.github.io/BlackIronDataEntry/archers_logo.jpg";
 
       function detectFmt(url) {
@@ -2249,12 +2247,12 @@
       }
 
       let entries = [];
-      let addressHistory = JSON.parse(localStorage.getItem('addressHistory') || '[]');
-      let invoices = JSON.parse(localStorage.getItem('savedInvoices') || '{}');
-      let materialCatalog = JSON.parse(localStorage.getItem('materialCatalog') || '{}');
+      let addressHistory = JSON.parse(_ls.getItem('addressHistory') || '[]');
+      let invoices = JSON.parse(_ls.getItem('savedInvoices') || '{}');
+      let materialCatalog = JSON.parse(_ls.getItem('materialCatalog') || '{}');
 
       function saveMaterialCatalog() {
-        localStorage.setItem('materialCatalog', JSON.stringify(materialCatalog));
+        _ls.setItem('materialCatalog', JSON.stringify(materialCatalog));
         renderMaterialSuggestions();
       }
 
@@ -2545,7 +2543,7 @@
       }
 
       function saveInvoicesToStorage() {
-        localStorage.setItem('savedInvoices', JSON.stringify(invoices));
+        _ls.setItem('savedInvoices', JSON.stringify(invoices));
       }
       function shouldShowArchivedInvoices() {
         return !!document.getElementById('showArchivedInvoices')?.checked;
@@ -2616,8 +2614,8 @@
           date: document.getElementById('sessionDate').value,
           entries
         };
-        localStorage.setItem('timesheetData', JSON.stringify(data));
-        localStorage.setItem('addressHistory', JSON.stringify(addressHistory));
+        _ls.setItem('timesheetData', JSON.stringify(data));
+        _ls.setItem('addressHistory', JSON.stringify(addressHistory));
       }
 
       function saveInvoiceSession() {
@@ -2637,17 +2635,17 @@
           groupMaterials: !!document.getElementById('groupMaterialsToggle')?.checked,
           items
         };
-        localStorage.setItem('invoiceSession', JSON.stringify(session));
+        _ls.setItem('invoiceSession', JSON.stringify(session));
       }
 
       function loadInvoiceSession() {
-        const raw = localStorage.getItem('invoiceSession');
+        const raw = _ls.getItem('invoiceSession');
         if (!raw) return;
         try {
           const s = JSON.parse(raw);
           // Version check — clear sessions saved before stale type filtering was added
           if (!s._v || s._v < 2) {
-            localStorage.removeItem('invoiceSession');
+            _ls.removeItem('invoiceSession');
             return;
           }
           if (s.invoiceId)        document.getElementById('invoiceId').value        = s.invoiceId;
@@ -2694,11 +2692,11 @@
       }
 
       function loadData() {
-        const saved = localStorage.getItem('timesheetData');
+        const saved = _ls.getItem('timesheetData');
         if (saved) {
           const d = JSON.parse(saved);
           // savedEmployeeName always wins — it's the explicitly chosen name
-          document.getElementById('employee').value = localStorage.getItem('savedEmployeeName') || d.employee || '';
+          document.getElementById('employee').value = _ls.getItem('savedEmployeeName') || d.employee || '';
           document.getElementById('sessionDate').value = d.date || new Date().toISOString().split('T')[0];
           entries = (d.entries || []).map(e => ({
             id: e.id || generateEntryId(),
@@ -2708,7 +2706,7 @@
           }));
         } else {
           // First run — no saved data at all
-          const savedName = localStorage.getItem('savedEmployeeName');
+          const savedName = _ls.getItem('savedEmployeeName');
           if (savedName) {
             document.getElementById('employee').value = savedName;
           } else {
@@ -2716,7 +2714,7 @@
             const name = prompt('Welcome! Please enter your name to get started:');
             if (name && name.trim()) {
               document.getElementById('employee').value = name.trim();
-              localStorage.setItem('savedEmployeeName', name.trim());
+              _ls.setItem('savedEmployeeName', name.trim());
             }
           }
         }
@@ -2726,10 +2724,10 @@
         loadInvoiceSession();
       }
 
-      // Save employee name to localStorage on every keystroke
+      // Save employee name to _ls on every keystroke
       document.getElementById('employee').addEventListener('input', function() {
         const name = this.value.trim();
-        if (name) localStorage.setItem('savedEmployeeName', name);
+        if (name) _ls.setItem('savedEmployeeName', name);
       });
 
       // ── Settings drawer ──────────────────────────────────────────────────
@@ -2740,7 +2738,7 @@
 
         function openDrawer() {
           // Sync name field with current value
-          nameInput.value = localStorage.getItem('savedEmployeeName') || document.getElementById('employee').value || '';
+          nameInput.value = _ls.getItem('savedEmployeeName') || document.getElementById('employee').value || '';
           drawer.classList.add('show');
           overlay.classList.add('show');
           setTimeout(() => nameInput.focus(), 80);
@@ -2759,7 +2757,7 @@
         nameInput.addEventListener('input', function() {
           const name = this.value.trim();
           document.getElementById('employee').value = name;
-          if (name) localStorage.setItem('savedEmployeeName', name);
+          if (name) _ls.setItem('savedEmployeeName', name);
         });
 
         // Drawer action buttons delegate to the hidden originals / existing functions
@@ -2792,9 +2790,9 @@
       // ── Storage health ────────────────────────────────────────────────────
       function getLocalStorageUsedBytes() {
         let total = 0;
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          total += (key.length + (localStorage.getItem(key) || '').length) * 2; // UTF-16
+        for (let i = 0; i < _ls.length; i++) {
+          const key = _ls.key(i);
+          total += (key.length + (_ls.getItem(key) || '').length) * 2; // UTF-16
         }
         return total;
       }
@@ -2875,11 +2873,11 @@
       }
 
       function getArchivedDays() {
-        return JSON.parse(localStorage.getItem('timesheetArchive') || '[]');
+        return JSON.parse(_ls.getItem('timesheetArchive') || '[]');
       }
 
       function saveArchivedDays(days) {
-        localStorage.setItem('timesheetArchive', JSON.stringify(days));
+        _ls.setItem('timesheetArchive', JSON.stringify(days));
       }
 
       // Returns all entries from archived days that are NOT already in the live entries array,
@@ -3102,7 +3100,7 @@
         }
 
         entries = JSON.parse(JSON.stringify(selected.day.entries || []));
-        document.getElementById('employee').value = selected.day.employee || document.getElementById('employee').value || localStorage.getItem('savedEmployeeName') || '';
+        document.getElementById('employee').value = selected.day.employee || document.getElementById('employee').value || _ls.getItem('savedEmployeeName') || '';
         document.getElementById('sessionDate').value = selected.day.date || getTodayDateString();
         saveData();
         renderTable();
@@ -3113,7 +3111,7 @@
       }
 
       function archiveCurrentTimesheetDay() {
-        const employee = document.getElementById('employee').value || localStorage.getItem('savedEmployeeName') || '';
+        const employee = document.getElementById('employee').value || _ls.getItem('savedEmployeeName') || '';
         const sessionDate = document.getElementById('sessionDate').value || getTodayDateString();
         if (!entries.length) return false;
 
@@ -3200,13 +3198,13 @@
       });
 
       // ── Customer Name History ─────────────────────────────────────────────
-      let customerNameHistory = JSON.parse(localStorage.getItem('customerNameHistory') || '[]');
+      let customerNameHistory = JSON.parse(_ls.getItem('customerNameHistory') || '[]');
 
       const custNameInput  = document.getElementById('customerNameInput');
       const custDropdown   = document.getElementById('customerNameHistory');
 
       function saveCustomerNameHistory() {
-        localStorage.setItem('customerNameHistory', JSON.stringify(customerNameHistory));
+        _ls.setItem('customerNameHistory', JSON.stringify(customerNameHistory));
       }
 
       function addCustomerNameToHistory(name) {
@@ -3214,7 +3212,7 @@
         if (!name) return;
         customerNameHistory = customerNameHistory.filter(n => n.toLowerCase() !== name.toLowerCase());
         customerNameHistory.unshift(name);
-          // No hard cap — grows until localStorage is full
+          // No hard cap — grows until _ls is full
         saveCustomerNameHistory();
       }
 
@@ -3222,7 +3220,7 @@
         custDropdown.innerHTML = '';
         // Merge dedicated history with names saved in client profiles
         const profileNames = Object.values(
-          (function(){ try { return JSON.parse(localStorage.getItem('clientProfiles') || '{}'); } catch(e){ return {}; } })()
+          (function(){ try { return JSON.parse(_ls.getItem('clientProfiles') || '{}'); } catch(e){ return {}; } })()
         ).map(p => p && p.name ? p.name.trim() : '').filter(Boolean);
         const merged = [...customerNameHistory];
         profileNames.forEach(n => { if (!merged.some(m => m.toLowerCase() === n.toLowerCase())) merged.push(n); });
@@ -3752,10 +3750,10 @@
       const SAVED_TASKS_KEY = 'savedCustomTasks';
 
       function getSavedCustomTasks() {
-        try { return JSON.parse(localStorage.getItem(SAVED_TASKS_KEY) || '{}'); } catch(e) { return {}; }
+        try { return JSON.parse(_ls.getItem(SAVED_TASKS_KEY) || '{}'); } catch(e) { return {}; }
       }
       function setSavedCustomTasks(data) {
-        localStorage.setItem(SAVED_TASKS_KEY, JSON.stringify(data));
+        _ls.setItem(SAVED_TASKS_KEY, JSON.stringify(data));
       }
       function savedTaskKey() {
         return [tasksActiveCat, tasksEquipSel.value, tasksWorkSel.value].join('||');
@@ -4221,11 +4219,11 @@
       }
 
       function getDefaultServiceCharge() {
-        return parseFloat(localStorage.getItem('defaultServiceCharge') || '110') || 110;
+        return parseFloat(_ls.getItem('defaultServiceCharge') || '110') || 110;
       }
 
       function setDefaultServiceCharge(val) {
-        localStorage.setItem('defaultServiceCharge', String(val));
+        _ls.setItem('defaultServiceCharge', String(val));
         const field = document.getElementById('defaultServiceCharge');
         if (field) field.value = val;
       }
@@ -5121,7 +5119,7 @@
 
       function clearInvoice(skipConfirm = false) {
         if (!skipConfirm && !confirm('Clear all invoice data? Any unsaved changes will be lost.')) return;
-        localStorage.removeItem('invoiceSession');
+        _ls.removeItem('invoiceSession');
         document.getElementById('invoiceId').value = '';
         document.getElementById('clientName').value = '';
         document.getElementById('clientPhone').value = '';
@@ -5510,7 +5508,7 @@
         document.getElementById('editIndex').value = i;
         document.getElementById('actionButton').textContent = 'Update Entry';
         document.getElementById('cancelButton').style.display = 'inline-block';
-        document.getElementById('form').scrollIntoView({ behavior:'smooth' });
+        document.getElementById('form').scrollIntoView({ behavior: ('scrollBehavior' in document.documentElement.style) ? 'smooth' : 'auto' });
       }
 
       function renderTable() {
@@ -5789,7 +5787,7 @@
 
         if (addr && !addressHistory.includes(addr)) {
           addressHistory.unshift(addr);
-          // No hard cap — grows until localStorage is full (monitor in Settings → Storage)
+          // No hard cap — grows until _ls is full (monitor in Settings → Storage)
         }
 
         if (custName) addCustomerNameToHistory(custName);
@@ -5913,7 +5911,7 @@
       };
 
       document.getElementById('newInvoiceDraft').onclick = () => {
-        localStorage.removeItem('invoiceSession');
+        _ls.removeItem('invoiceSession');
         document.getElementById('invoiceId').value = '';
         document.getElementById('clientName').value = '';
         document.getElementById('clientPhone').value = '';
@@ -6364,7 +6362,7 @@
           const safeClientName = (clientName || 'Client').replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
           doc.save(`${safeClientName || 'Client'}_${serviceDateForFile}_${copyType === 'boss' ? 'Boss_Copy' : 'Invoice'}.pdf`);
 
-          localStorage.setItem('lastClient', JSON.stringify({
+          _ls.setItem('lastClient', JSON.stringify({
             name: clientName,
             phone: clientPhone,
             email: clientEmail,
@@ -6428,19 +6426,19 @@
 
 
       function getClientProfiles() {
-        return JSON.parse(localStorage.getItem('clientProfiles') || '{}');
+        return JSON.parse(_ls.getItem('clientProfiles') || '{}');
       }
 
       function saveClientProfiles(profiles) {
-        localStorage.setItem('clientProfiles', JSON.stringify(profiles));
+        _ls.setItem('clientProfiles', JSON.stringify(profiles));
       }
 
       function getLocationProfiles() {
-        return JSON.parse(localStorage.getItem('locationProfiles') || '{}');
+        return JSON.parse(_ls.getItem('locationProfiles') || '{}');
       }
 
       function saveLocationProfiles(profiles) {
-        localStorage.setItem('locationProfiles', JSON.stringify(profiles));
+        _ls.setItem('locationProfiles', JSON.stringify(profiles));
       }
 
       function normalizeClientKey(name) {
@@ -7441,11 +7439,11 @@
         ];
 
         function loadTmplData() {
-          try { const r=JSON.parse(localStorage.getItem(MTM_KEY)); if(r&&r.templates) return r; } catch(e) {}
+          try { const r=JSON.parse(_ls.getItem(MTM_KEY)); if(r&&r.templates) return r; } catch(e) {}
           const d = { templates: DEFAULT_TEMPLATES };
           saveTmplData(d); return d;
         }
-        function saveTmplData(d) { try { localStorage.setItem(MTM_KEY, JSON.stringify(d)); } catch(e) {} }
+        function saveTmplData(d) { try { _ls.setItem(MTM_KEY, JSON.stringify(d)); } catch(e) {} }
         function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
         let tmplData = loadTmplData();
@@ -7665,14 +7663,19 @@
               tmpl.items.forEach(item => {
                 const row = document.createElement('div');
                 row.className = 'mtm-manage-item-row';
+
+                // Name with autocomplete wrapper
+                const nameWrapEx = document.createElement('div');
+                nameWrapEx.style.cssText = 'position:relative;flex:1;min-width:0;';
+
                 const nameIn = document.createElement('input');
-                nameIn.type = 'text'; nameIn.className = 'mtm-in-name'; nameIn.value = item.name;
+                nameIn.type = 'text'; nameIn.className = 'mtm-in-name'; nameIn.value = item.name; nameIn.style.width='100%';
                 const qtyIn  = document.createElement('input');
                 qtyIn.type = 'number'; qtyIn.className = 'mtm-in-qty'; qtyIn.value = item.qty; qtyIn.min = '0'; qtyIn.step = 'any';
                 const unitIn = document.createElement('input');
                 unitIn.type = 'text'; unitIn.className = 'mtm-in-unit'; unitIn.value = item.unit; unitIn.placeholder = 'unit';
                 const delBtn = document.createElement('button');
-                delBtn.type = 'button'; delBtn.textContent = '×';
+                delBtn.type = 'button'; delBtn.textContent = 'x';
                 delBtn.style.cssText = 'background:#dc3545;color:#fff;border:none;padding:.2rem .5rem;border-radius:5px;font-size:.95rem;cursor:pointer;min-height:30px;margin:0;line-height:1;';
                 const save = () => {
                   item.name = nameIn.value.trim() || item.name;
@@ -7680,32 +7683,146 @@
                   item.unit = unitIn.value.trim() || item.unit;
                   saveTmplData(tmplData);
                 };
-                nameIn.addEventListener('change', save); qtyIn.addEventListener('change', save); unitIn.addEventListener('change', save);
-                delBtn.addEventListener('click', () => {
-                  tmpl.items = tmpl.items.filter(i => i.id !== item.id);
+
+                // Autocomplete for existing item name
+                const acDropEx = document.createElement('div');
+                acDropEx.style.cssText = 'position:absolute;top:calc(100% + 2px);left:0;right:0;background:#1f1f1f;border:1px solid #ff4500;border-radius:6px;box-shadow:0 8px 18px rgba(0,0,0,.35);max-height:180px;overflow-y:auto;z-index:9999;display:none;';
+                function showAcDropEx(query) {
+                  acDropEx.innerHTML = '';
+                  const q = (query || '').trim().toLowerCase();
+                  const allMats = typeof materialCatalog !== 'undefined' ? Object.values(materialCatalog) : [];
+                  const filtered = allMats.filter(function(m){ return !q || m.desc.toLowerCase().includes(q); });
+                  filtered.sort(function(a,b){
+                    const aS = a.desc.toLowerCase().startsWith(q)?0:1, bS = b.desc.toLowerCase().startsWith(q)?0:1;
+                    if (aS!==bS) return aS-bS; return a.desc.localeCompare(b.desc);
+                  });
+                  if (!filtered.length) { acDropEx.style.display='none'; return; }
+                  filtered.slice(0,40).forEach(function(mat) {
+                    const opt = document.createElement('div');
+                    opt.style.cssText = 'padding:.5rem .7rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.15);min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:.5rem;';
+                    const left = document.createElement('span'); left.style.cssText='font-weight:600;font-size:.88rem;word-break:break-word;'; left.textContent = mat.desc;
+                    const right = document.createElement('span'); right.style.cssText='font-size:.75rem;color:#bbb;white-space:nowrap;flex-shrink:0;'; right.textContent = mat.unit||'ea';
+                    opt.appendChild(left); opt.appendChild(right);
+                    opt.addEventListener('mousedown', function(e) {
+                      e.preventDefault();
+                      nameIn.value = mat.desc;
+                      unitIn.value = mat.unit || 'ea';
+                      acDropEx.style.display='none';
+                      save();
+                    });
+                    opt.addEventListener('mouseover', function(){ opt.style.background='rgba(255,69,0,.18)'; });
+                    opt.addEventListener('mouseout', function(){ opt.style.background=''; });
+                    acDropEx.appendChild(opt);
+                  });
+                  acDropEx.style.display = 'block';
+                }
+                nameIn.addEventListener('input', function(){ showAcDropEx(nameIn.value); });
+                nameIn.addEventListener('focus', function(){ if(nameIn.value) showAcDropEx(nameIn.value); });
+                nameIn.addEventListener('blur', function(){ setTimeout(function(){ acDropEx.style.display='none'; save(); }, 150); });
+                nameIn.addEventListener('keydown', function(e){ if(e.key==='Escape'||e.key==='Enter') acDropEx.style.display='none'; });
+
+                nameWrapEx.appendChild(nameIn);
+                nameWrapEx.appendChild(acDropEx);
+
+                qtyIn.addEventListener('change', save); unitIn.addEventListener('change', save);
+                delBtn.addEventListener('click', function() {
+                  tmpl.items = tmpl.items.filter(function(i){ return i.id !== item.id; });
                   saveTmplData(tmplData);
                   renderMgmtItems();
                 });
-                row.appendChild(nameIn); row.appendChild(qtyIn); row.appendChild(unitIn); row.appendChild(delBtn);
+                row.appendChild(nameWrapEx); row.appendChild(qtyIn); row.appendChild(unitIn); row.appendChild(delBtn);
                 body.appendChild(row);
               });
 
               // Add new item row
               const addRow = document.createElement('div');
               addRow.className = 'mtm-add-item-row';
-              const newName = document.createElement('input'); newName.type='text'; newName.className='mtm-in-name'; newName.placeholder='New item name'; newName.style.flex='1';
+
+              // Wrapper for name + autocomplete dropdown
+              const nameWrap = document.createElement('div');
+              nameWrap.style.cssText = 'position:relative;flex:1;min-width:0;';
+
+              const newName = document.createElement('input'); newName.type='text'; newName.className='mtm-in-name'; newName.placeholder='Search saved materials…'; newName.style.width='100%';
               const newQty  = document.createElement('input'); newQty.type='number'; newQty.className='mtm-in-qty'; newQty.placeholder='Qty'; newQty.min='0'; newQty.step='any'; newQty.value='1';
               const newUnit = document.createElement('input'); newUnit.type='text'; newUnit.className='mtm-in-unit'; newUnit.placeholder='ea';
               const addBtn  = document.createElement('button'); addBtn.type='button'; addBtn.textContent='+ Add';
               addBtn.style.cssText='background:#28a745;color:#fff;border:none;padding:.35rem .8rem;border-radius:6px;font-size:.85rem;cursor:pointer;min-height:34px;margin:0;white-space:nowrap;';
+
+              // Autocomplete dropdown
+              const acDrop = document.createElement('div');
+              acDrop.className = 'material-autocomplete';
+              acDrop.style.cssText = 'position:absolute;top:calc(100% + 2px);left:0;right:0;background:#1f1f1f;border:1px solid #ff4500;border-radius:6px;box-shadow:0 8px 18px rgba(0,0,0,.35);max-height:200px;overflow-y:auto;z-index:9999;display:none;';
+
+              function showAcDrop(query) {
+                acDrop.innerHTML = '';
+                const q = (query || '').trim().toLowerCase();
+                const allMats = typeof materialCatalog !== 'undefined' ? Object.values(materialCatalog) : [];
+                // Already-in-template names to optionally de-emphasize
+                const inTemplate = new Set(tmpl.items.map(i => i.name.toLowerCase()));
+                const filtered = allMats.filter(m => !q || m.desc.toLowerCase().includes(q));
+                filtered.sort((a, b) => {
+                  // Exact/prefix matches first, then alphabetical
+                  const aS = a.desc.toLowerCase().startsWith(q) ? 0 : 1;
+                  const bS = b.desc.toLowerCase().startsWith(q) ? 0 : 1;
+                  if (aS !== bS) return aS - bS;
+                  return a.desc.localeCompare(b.desc);
+                });
+                if (!filtered.length) { acDrop.style.display='none'; return; }
+                filtered.slice(0, 40).forEach(mat => {
+                  const opt = document.createElement('div');
+                  opt.style.cssText = 'padding:.5rem .7rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.15);min-height:38px;display:flex;align-items:center;justify-content:space-between;gap:.5rem;' + (inTemplate.has(mat.desc.toLowerCase()) ? 'opacity:.55;' : '');
+                  const left = document.createElement('span');
+                  left.style.cssText = 'font-weight:600;font-size:.9rem;word-break:break-word;';
+                  left.textContent = mat.desc;
+                  const right = document.createElement('span');
+                  right.style.cssText = 'font-size:.78rem;color:#bbb;white-space:nowrap;flex-shrink:0;';
+                  right.textContent = mat.unit || 'ea';
+                  opt.appendChild(left); opt.appendChild(right);
+                  opt.addEventListener('mousedown', e => {
+                    e.preventDefault();
+                    newName.value = mat.desc;
+                    newUnit.value = mat.unit || 'ea';
+                    acDrop.style.display = 'none';
+                    newQty.focus();
+                  });
+                  opt.addEventListener('mouseover', () => opt.style.background = 'rgba(255,69,0,.18)');
+                  opt.addEventListener('mouseout',  () => opt.style.background = '');
+                  acDrop.appendChild(opt);
+                });
+                acDrop.style.display = 'block';
+              }
+
+              newName.addEventListener('input', () => showAcDrop(newName.value));
+              newName.addEventListener('focus', () => showAcDrop(newName.value));
+              newName.addEventListener('blur',  () => setTimeout(() => { acDrop.style.display='none'; }, 150));
+              newName.addEventListener('keydown', e => {
+                if (e.key === 'Escape') { acDrop.style.display='none'; return; }
+                if (e.key === 'Enter') { acDrop.style.display='none'; addBtn.click(); return; }
+                if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && acDrop.style.display !== 'none') {
+                  const opts = acDrop.querySelectorAll('div');
+                  if (!opts.length) return;
+                  e.preventDefault();
+                  const cur = acDrop.querySelector('div.ac-active');
+                  let idx = cur ? [...opts].indexOf(cur) : -1;
+                  if (cur) cur.classList.remove('ac-active'), cur.style.background='';
+                  idx = e.key === 'ArrowDown' ? Math.min(idx+1, opts.length-1) : Math.max(idx-1, 0);
+                  opts[idx].classList.add('ac-active');
+                  opts[idx].style.background = 'rgba(255,69,0,.18)';
+                  opts[idx].scrollIntoView({ block:'nearest' });
+                }
+              });
+
+              nameWrap.appendChild(newName);
+              nameWrap.appendChild(acDrop);
+
               addBtn.addEventListener('click', () => {
                 const n = newName.value.trim(); if (!n) { newName.focus(); return; }
                 tmpl.items.push({ id: uid(), name: n, qty: parseFloat(newQty.value)||1, unit: newUnit.value.trim()||'ea' });
                 saveTmplData(tmplData);
                 renderMgmtItems();
               });
-              newName.addEventListener('keydown', e => { if (e.key==='Enter') addBtn.click(); });
-              addRow.appendChild(newName); addRow.appendChild(newQty); addRow.appendChild(newUnit); addRow.appendChild(addBtn);
+
+              addRow.appendChild(nameWrap); addRow.appendChild(newQty); addRow.appendChild(newUnit); addRow.appendChild(addBtn);
               body.appendChild(addRow);
             }
             renderMgmtItems();
@@ -7766,10 +7883,10 @@
       const HISTORY_KEY = 'blackIronMergedJobHistory';
       const FIT_COLLAPSE_KEY = 'biFitGroupCollapsed';
       function getFitGroupCollapsed() {
-        try { return JSON.parse(localStorage.getItem(FIT_COLLAPSE_KEY) || '{}'); } catch(e) { return {}; }
+        try { return JSON.parse(_ls.getItem(FIT_COLLAPSE_KEY) || '{}'); } catch(e) { return {}; }
       }
       function saveFitGroupCollapsed(st) {
-        try { localStorage.setItem(FIT_COLLAPSE_KEY, JSON.stringify(st)); } catch(e) {}
+        try { _ls.setItem(FIT_COLLAPSE_KEY, JSON.stringify(st)); } catch(e) {}
       }
       const APP_STORAGE_KEYS = ['timesheetData', 'addressHistory', 'customerNameHistory', 'savedCustomTasks', 'savedInvoices', 'materialCatalog', 'timesheetArchive', 'lastClient', 'clientProfiles', 'locationProfiles', 'lastBackupDate', STORAGE_KEY, HISTORY_KEY];
       const els = {
@@ -7847,14 +7964,14 @@
       function saveState(){
         state.jobName = els.jobName.value.trim();
         state.lastOd = els.od.value;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        _ls.setItem(STORAGE_KEY, JSON.stringify(state));
         els.lastSize.textContent = state.lastOd || '—';
         if (els.cutPipeSize) els.cutPipeSize.value = els.od.value || state.lastOd || '1/2';
         renderJobHistory();
       }
       function loadState(){
         try {
-          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+          const saved = JSON.parse(_ls.getItem(STORAGE_KEY) || '{}');
           if (saved && typeof saved === 'object') state = Object.assign(state, saved);
         } catch(e) {}
         els.jobName.value = state.jobName || '';
@@ -7869,14 +7986,14 @@
         calcDrawLayout();
       }
       function getHistory(){
-        try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) { return []; }
+        try { return JSON.parse(_ls.getItem(HISTORY_KEY) || '[]'); } catch(e) { return []; }
       }
       function saveHistory(name){
         name = String(name || '').trim();
         if (!name) return;
         const arr = getHistory().filter(v => v !== name);
         arr.unshift(name);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 30)));
+        _ls.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 30)));
         renderJobHistory();
       }
       function renderJobHistory(){
@@ -7892,7 +8009,7 @@
       function buildBackupPayload(){
         const storage = {};
         APP_STORAGE_KEYS.forEach(key => {
-          const value = localStorage.getItem(key);
+          const value = _ls.getItem(key);
           if (value !== null) storage[key] = value;
         });
         return {
@@ -7910,7 +8027,7 @@
       }
 
       function checkBackupReminder(){
-        const lastBackup = localStorage.getItem('lastBackupDate');
+        const lastBackup = _ls.getItem('lastBackupDate');
         if (!lastBackup) {
           setBackupReminderVisibility(true);
           return;
@@ -7933,7 +8050,7 @@
           document.body.appendChild(a);
           a.click();
           a.remove();
-          localStorage.setItem('lastBackupDate', new Date().toISOString());
+          _ls.setItem('lastBackupDate', new Date().toISOString());
           checkBackupReminder();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch (err) {
@@ -7958,10 +8075,10 @@
             const storage = payload && payload.storage && typeof payload.storage === 'object' ? payload.storage : null;
             if (!storage) throw new Error('Invalid backup file.');
             if (!confirm('Restore backup data now? This will replace the app data currently saved in this browser.')) return;
-            APP_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+            APP_STORAGE_KEYS.forEach(key => _ls.removeItem(key));
             Object.entries(storage).forEach(([key, value]) => {
               if (APP_STORAGE_KEYS.includes(key) && typeof value === 'string') {
-                localStorage.setItem(key, value);
+                _ls.setItem(key, value);
               }
             });
             alert('Backup restored successfully. The app will now reload.');
@@ -8008,7 +8125,7 @@
         els.gasCopperSizeWrap.classList.toggle('bi-hidden', f !== 'Gas Copper');
         // Hide pipe size for items that don't use black iron sizing
         const hideOd = f === 'Gas Copper' || f.startsWith('Flex Connector') || f === 'Commercial Flex 3/4 48"' || f === 'Gastite Bonding Clamp';
-        const odLabel = document.querySelector('label:has(#biOdSize)');
+        const odLabel = document.querySelector('label:has(#biOdSize)') || document.getElementById('biOdSize')?.closest('label');
         if (odLabel) odLabel.style.display = hideOd ? 'none' : '';
       }
       function buildSizeDetail(){
@@ -9017,10 +9134,10 @@
     // ── Black Iron collapsible sections ────────────────────────────────────────
     const BI_COLLAPSE_KEY = 'biSectionCollapsed';
     function biLoadCollapsed() {
-      try { return JSON.parse(localStorage.getItem(BI_COLLAPSE_KEY) || '{}'); } catch(e) { return {}; }
+      try { return JSON.parse(_ls.getItem(BI_COLLAPSE_KEY) || '{}'); } catch(e) { return {}; }
     }
     function biSaveCollapsed(state) {
-      try { localStorage.setItem(BI_COLLAPSE_KEY, JSON.stringify(state)); } catch(e) {}
+      try { _ls.setItem(BI_COLLAPSE_KEY, JSON.stringify(state)); } catch(e) {}
     }
     function biToggleSection(bodyId, headerEl) {
       const body = document.getElementById(bodyId);
