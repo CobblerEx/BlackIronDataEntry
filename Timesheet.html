@@ -7660,22 +7660,105 @@
 
             function renderMgmtItems() {
               body.innerHTML = '';
+              // ── Shared fixed autocomplete dropdown (escapes overflow:hidden) ──
+              if (!document.getElementById('_mtmAcDrop')) {
+                const _drop = document.createElement('div');
+                _drop.id = '_mtmAcDrop';
+                _drop.style.cssText = 'position:fixed;background:#1f1f1f;border:1px solid #ff4500;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.55);max-height:220px;overflow-y:auto;z-index:99999;display:none;min-width:200px;';
+                document.body.appendChild(_drop);
+              }
+              const _acDrop = document.getElementById('_mtmAcDrop');
+
+              function _positionDrop(inputEl) {
+                const r = inputEl.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - r.bottom;
+                const spaceAbove = r.top;
+                if (spaceBelow >= 150 || spaceBelow >= spaceAbove) {
+                  _acDrop.style.top  = (r.bottom + 4) + 'px';
+                  _acDrop.style.bottom = 'auto';
+                  _acDrop.style.maxHeight = Math.min(220, spaceBelow - 8) + 'px';
+                } else {
+                  _acDrop.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+                  _acDrop.style.top = 'auto';
+                  _acDrop.style.maxHeight = Math.min(220, spaceAbove - 8) + 'px';
+                }
+                _acDrop.style.left  = r.left + 'px';
+                _acDrop.style.width = r.width + 'px';
+              }
+
+              let _acActiveInput = null;
+
+              function _showAcDrop(inputEl, unitEl, query, inTemplateSet) {
+                _acActiveInput = inputEl;
+                _acDrop.innerHTML = '';
+                const q = (query || '').trim().toLowerCase();
+                const allMats = typeof materialCatalog !== 'undefined' ? Object.values(materialCatalog) : [];
+                const filtered = allMats.filter(function(m){ return !q || m.desc.toLowerCase().includes(q); });
+                filtered.sort(function(a,b){
+                  const aS = a.desc.toLowerCase().startsWith(q)?0:1, bS = b.desc.toLowerCase().startsWith(q)?0:1;
+                  if (aS!==bS) return aS-bS; return a.desc.localeCompare(b.desc);
+                });
+                if (!filtered.length) { _acDrop.style.display='none'; return; }
+                filtered.slice(0,50).forEach(function(mat) {
+                  const opt = document.createElement('div');
+                  const alreadyIn = inTemplateSet && inTemplateSet.has(mat.desc.toLowerCase());
+                  opt.style.cssText = 'padding:.6rem .8rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.15);display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:44px;' + (alreadyIn ? 'opacity:.5;' : '');
+                  const left = document.createElement('span');
+                  left.style.cssText = 'font-weight:600;font-size:.92rem;word-break:break-word;color:#e0e0e0;';
+                  left.textContent = mat.desc;
+                  const right = document.createElement('span');
+                  right.style.cssText = 'font-size:.78rem;color:#ff9060;white-space:nowrap;flex-shrink:0;background:rgba(255,69,0,.12);padding:.15rem .4rem;border-radius:4px;';
+                  right.textContent = mat.unit || 'ea';
+                  opt.appendChild(left); opt.appendChild(right);
+                  opt.addEventListener('touchstart', function(e){ opt.style.background='rgba(255,69,0,.22)'; }, {passive:true});
+                  opt.addEventListener('touchend', function(e){
+                    e.preventDefault();
+                    inputEl.value = mat.desc;
+                    if (unitEl) unitEl.value = mat.unit || 'ea';
+                    _acDrop.style.display='none';
+                    inputEl.dispatchEvent(new Event('change'));
+                  });
+                  opt.addEventListener('mousedown', function(e){
+                    e.preventDefault();
+                    inputEl.value = mat.desc;
+                    if (unitEl) unitEl.value = mat.unit || 'ea';
+                    _acDrop.style.display='none';
+                    inputEl.dispatchEvent(new Event('change'));
+                  });
+                  opt.addEventListener('mouseover', function(){ opt.style.background='rgba(255,69,0,.18)'; });
+                  opt.addEventListener('mouseout',  function(){ opt.style.background=''; });
+                  _acDrop.appendChild(opt);
+                });
+                _positionDrop(inputEl);
+                _acDrop.style.display = 'block';
+              }
+
+              function _hideAcDrop() { _acDrop.style.display='none'; _acActiveInput=null; }
+
+              function _bindAcToInput(inputEl, unitEl, getInTemplateSet) {
+                inputEl.setAttribute('autocomplete','off');
+                inputEl.addEventListener('input', function(){ _showAcDrop(inputEl, unitEl, inputEl.value, getInTemplateSet ? getInTemplateSet() : null); });
+                inputEl.addEventListener('focus', function(){ _showAcDrop(inputEl, unitEl, inputEl.value, getInTemplateSet ? getInTemplateSet() : null); });
+                inputEl.addEventListener('blur',  function(){ setTimeout(_hideAcDrop, 200); });
+                inputEl.addEventListener('keydown', function(e){
+                  if (e.key==='Escape') { _hideAcDrop(); return; }
+                  if (e.key==='Enter')  { _hideAcDrop(); return; }
+                });
+                window.addEventListener('scroll', function(){ if(_acActiveInput===inputEl) _positionDrop(inputEl); }, {passive:true});
+              }
+
+              // ── Existing items ──
               tmpl.items.forEach(item => {
                 const row = document.createElement('div');
                 row.className = 'mtm-manage-item-row';
-
-                // Name with autocomplete wrapper
-                const nameWrapEx = document.createElement('div');
-                nameWrapEx.style.cssText = 'position:relative;flex:1;min-width:0;';
-
                 const nameIn = document.createElement('input');
-                nameIn.type = 'text'; nameIn.className = 'mtm-in-name'; nameIn.value = item.name; nameIn.style.width='100%';
+                nameIn.type = 'text'; nameIn.className = 'mtm-in-name'; nameIn.value = item.name; nameIn.style.flex='1';
                 const qtyIn  = document.createElement('input');
                 qtyIn.type = 'number'; qtyIn.className = 'mtm-in-qty'; qtyIn.value = item.qty; qtyIn.min = '0'; qtyIn.step = 'any';
                 const unitIn = document.createElement('input');
                 unitIn.type = 'text'; unitIn.className = 'mtm-in-unit'; unitIn.value = item.unit; unitIn.placeholder = 'unit';
                 const delBtn = document.createElement('button');
-                delBtn.type = 'button'; delBtn.textContent = 'x';
+                delBtn.type = 'button'; delBtn.textContent = '×';
                 delBtn.style.cssText = 'background:#dc3545;color:#fff;border:none;padding:.2rem .5rem;border-radius:5px;font-size:.95rem;cursor:pointer;min-height:30px;margin:0;line-height:1;';
                 const save = () => {
                   item.name = nameIn.value.trim() || item.name;
@@ -7683,146 +7766,36 @@
                   item.unit = unitIn.value.trim() || item.unit;
                   saveTmplData(tmplData);
                 };
-
-                // Autocomplete for existing item name
-                const acDropEx = document.createElement('div');
-                acDropEx.style.cssText = 'position:absolute;top:calc(100% + 2px);left:0;right:0;background:#1f1f1f;border:1px solid #ff4500;border-radius:6px;box-shadow:0 8px 18px rgba(0,0,0,.35);max-height:180px;overflow-y:auto;z-index:9999;display:none;';
-                function showAcDropEx(query) {
-                  acDropEx.innerHTML = '';
-                  const q = (query || '').trim().toLowerCase();
-                  const allMats = typeof materialCatalog !== 'undefined' ? Object.values(materialCatalog) : [];
-                  const filtered = allMats.filter(function(m){ return !q || m.desc.toLowerCase().includes(q); });
-                  filtered.sort(function(a,b){
-                    const aS = a.desc.toLowerCase().startsWith(q)?0:1, bS = b.desc.toLowerCase().startsWith(q)?0:1;
-                    if (aS!==bS) return aS-bS; return a.desc.localeCompare(b.desc);
-                  });
-                  if (!filtered.length) { acDropEx.style.display='none'; return; }
-                  filtered.slice(0,40).forEach(function(mat) {
-                    const opt = document.createElement('div');
-                    opt.style.cssText = 'padding:.5rem .7rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.15);min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:.5rem;';
-                    const left = document.createElement('span'); left.style.cssText='font-weight:600;font-size:.88rem;word-break:break-word;'; left.textContent = mat.desc;
-                    const right = document.createElement('span'); right.style.cssText='font-size:.75rem;color:#bbb;white-space:nowrap;flex-shrink:0;'; right.textContent = mat.unit||'ea';
-                    opt.appendChild(left); opt.appendChild(right);
-                    opt.addEventListener('mousedown', function(e) {
-                      e.preventDefault();
-                      nameIn.value = mat.desc;
-                      unitIn.value = mat.unit || 'ea';
-                      acDropEx.style.display='none';
-                      save();
-                    });
-                    opt.addEventListener('mouseover', function(){ opt.style.background='rgba(255,69,0,.18)'; });
-                    opt.addEventListener('mouseout', function(){ opt.style.background=''; });
-                    acDropEx.appendChild(opt);
-                  });
-                  acDropEx.style.display = 'block';
-                }
-                nameIn.addEventListener('input', function(){ showAcDropEx(nameIn.value); });
-                nameIn.addEventListener('focus', function(){ if(nameIn.value) showAcDropEx(nameIn.value); });
-                nameIn.addEventListener('blur', function(){ setTimeout(function(){ acDropEx.style.display='none'; save(); }, 150); });
-                nameIn.addEventListener('keydown', function(e){ if(e.key==='Escape'||e.key==='Enter') acDropEx.style.display='none'; });
-
-                nameWrapEx.appendChild(nameIn);
-                nameWrapEx.appendChild(acDropEx);
-
-                qtyIn.addEventListener('change', save); unitIn.addEventListener('change', save);
-                delBtn.addEventListener('click', function() {
-                  tmpl.items = tmpl.items.filter(function(i){ return i.id !== item.id; });
+                nameIn.addEventListener('change', save); qtyIn.addEventListener('change', save); unitIn.addEventListener('change', save);
+                _bindAcToInput(nameIn, unitIn, null);
+                delBtn.addEventListener('click', () => {
+                  _hideAcDrop();
+                  tmpl.items = tmpl.items.filter(i => i.id !== item.id);
                   saveTmplData(tmplData);
                   renderMgmtItems();
                 });
-                row.appendChild(nameWrapEx); row.appendChild(qtyIn); row.appendChild(unitIn); row.appendChild(delBtn);
+                row.appendChild(nameIn); row.appendChild(qtyIn); row.appendChild(unitIn); row.appendChild(delBtn);
                 body.appendChild(row);
               });
 
-              // Add new item row
+              // ── Add new item row ──
               const addRow = document.createElement('div');
               addRow.className = 'mtm-add-item-row';
-
-              // Wrapper for name + autocomplete dropdown
-              const nameWrap = document.createElement('div');
-              nameWrap.style.cssText = 'position:relative;flex:1;min-width:0;';
-
-              const newName = document.createElement('input'); newName.type='text'; newName.className='mtm-in-name'; newName.placeholder='Search saved materials…'; newName.style.width='100%';
+              const newName = document.createElement('input'); newName.type='text'; newName.className='mtm-in-name'; newName.placeholder='Search saved materials…'; newName.style.flex='1';
               const newQty  = document.createElement('input'); newQty.type='number'; newQty.className='mtm-in-qty'; newQty.placeholder='Qty'; newQty.min='0'; newQty.step='any'; newQty.value='1';
               const newUnit = document.createElement('input'); newUnit.type='text'; newUnit.className='mtm-in-unit'; newUnit.placeholder='ea';
               const addBtn  = document.createElement('button'); addBtn.type='button'; addBtn.textContent='+ Add';
               addBtn.style.cssText='background:#28a745;color:#fff;border:none;padding:.35rem .8rem;border-radius:6px;font-size:.85rem;cursor:pointer;min-height:34px;margin:0;white-space:nowrap;';
-
-              // Autocomplete dropdown
-              const acDrop = document.createElement('div');
-              acDrop.className = 'material-autocomplete';
-              acDrop.style.cssText = 'position:absolute;top:calc(100% + 2px);left:0;right:0;background:#1f1f1f;border:1px solid #ff4500;border-radius:6px;box-shadow:0 8px 18px rgba(0,0,0,.35);max-height:200px;overflow-y:auto;z-index:9999;display:none;';
-
-              function showAcDrop(query) {
-                acDrop.innerHTML = '';
-                const q = (query || '').trim().toLowerCase();
-                const allMats = typeof materialCatalog !== 'undefined' ? Object.values(materialCatalog) : [];
-                // Already-in-template names to optionally de-emphasize
-                const inTemplate = new Set(tmpl.items.map(i => i.name.toLowerCase()));
-                const filtered = allMats.filter(m => !q || m.desc.toLowerCase().includes(q));
-                filtered.sort((a, b) => {
-                  // Exact/prefix matches first, then alphabetical
-                  const aS = a.desc.toLowerCase().startsWith(q) ? 0 : 1;
-                  const bS = b.desc.toLowerCase().startsWith(q) ? 0 : 1;
-                  if (aS !== bS) return aS - bS;
-                  return a.desc.localeCompare(b.desc);
-                });
-                if (!filtered.length) { acDrop.style.display='none'; return; }
-                filtered.slice(0, 40).forEach(mat => {
-                  const opt = document.createElement('div');
-                  opt.style.cssText = 'padding:.5rem .7rem;cursor:pointer;border-bottom:1px solid rgba(255,69,0,.15);min-height:38px;display:flex;align-items:center;justify-content:space-between;gap:.5rem;' + (inTemplate.has(mat.desc.toLowerCase()) ? 'opacity:.55;' : '');
-                  const left = document.createElement('span');
-                  left.style.cssText = 'font-weight:600;font-size:.9rem;word-break:break-word;';
-                  left.textContent = mat.desc;
-                  const right = document.createElement('span');
-                  right.style.cssText = 'font-size:.78rem;color:#bbb;white-space:nowrap;flex-shrink:0;';
-                  right.textContent = mat.unit || 'ea';
-                  opt.appendChild(left); opt.appendChild(right);
-                  opt.addEventListener('mousedown', e => {
-                    e.preventDefault();
-                    newName.value = mat.desc;
-                    newUnit.value = mat.unit || 'ea';
-                    acDrop.style.display = 'none';
-                    newQty.focus();
-                  });
-                  opt.addEventListener('mouseover', () => opt.style.background = 'rgba(255,69,0,.18)');
-                  opt.addEventListener('mouseout',  () => opt.style.background = '');
-                  acDrop.appendChild(opt);
-                });
-                acDrop.style.display = 'block';
-              }
-
-              newName.addEventListener('input', () => showAcDrop(newName.value));
-              newName.addEventListener('focus', () => showAcDrop(newName.value));
-              newName.addEventListener('blur',  () => setTimeout(() => { acDrop.style.display='none'; }, 150));
-              newName.addEventListener('keydown', e => {
-                if (e.key === 'Escape') { acDrop.style.display='none'; return; }
-                if (e.key === 'Enter') { acDrop.style.display='none'; addBtn.click(); return; }
-                if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && acDrop.style.display !== 'none') {
-                  const opts = acDrop.querySelectorAll('div');
-                  if (!opts.length) return;
-                  e.preventDefault();
-                  const cur = acDrop.querySelector('div.ac-active');
-                  let idx = cur ? [...opts].indexOf(cur) : -1;
-                  if (cur) cur.classList.remove('ac-active'), cur.style.background='';
-                  idx = e.key === 'ArrowDown' ? Math.min(idx+1, opts.length-1) : Math.max(idx-1, 0);
-                  opts[idx].classList.add('ac-active');
-                  opts[idx].style.background = 'rgba(255,69,0,.18)';
-                  opts[idx].scrollIntoView({ block:'nearest' });
-                }
-              });
-
-              nameWrap.appendChild(newName);
-              nameWrap.appendChild(acDrop);
-
+              _bindAcToInput(newName, newUnit, function(){ return new Set(tmpl.items.map(function(i){ return i.name.toLowerCase(); })); });
               addBtn.addEventListener('click', () => {
                 const n = newName.value.trim(); if (!n) { newName.focus(); return; }
+                _hideAcDrop();
                 tmpl.items.push({ id: uid(), name: n, qty: parseFloat(newQty.value)||1, unit: newUnit.value.trim()||'ea' });
                 saveTmplData(tmplData);
                 renderMgmtItems();
               });
-
-              addRow.appendChild(nameWrap); addRow.appendChild(newQty); addRow.appendChild(newUnit); addRow.appendChild(addBtn);
+              newName.addEventListener('keydown', e => { if (e.key==='Enter') addBtn.click(); });
+              addRow.appendChild(newName); addRow.appendChild(newQty); addRow.appendChild(newUnit); addRow.appendChild(addBtn);
               body.appendChild(addRow);
             }
             renderMgmtItems();
