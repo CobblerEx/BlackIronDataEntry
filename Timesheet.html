@@ -6414,15 +6414,14 @@
           : `Invoice from Archer's Equipment Repair`;
 
         let body = `Hi ${name},\n\nPlease find your invoice details below.\n\n`;
-        body += `Invoice Total: ${total}\n`;
+        body += `Invoice Total: ${total}`;
         if (deposit > 0) {
-          body += `Deposit Received: -$${deposit.toFixed(2)}\n`;
-          body += `Balance Due: ${balance}\n`;
+          body += `\nDeposit Received: -$${deposit.toFixed(2)}`;
+          body += `\nBalance Due: ${balance}`;
         }
-        body += `\ne-Transfer accepted at Jason@archerser.ca\n\n`;
-        body += `Thank you for choosing Archer's Equipment Repair!\n\nArcher's Equipment Repair Ltd.\nPhone: 519-383-9654`;
+        body += `\n\ne-Transfer accepted at Jason@archerser.ca\n\nThank you for choosing Archer's Equipment Repair!\n\nArcher's Equipment Repair Ltd.\nPhone: 519-383-9654`;
 
-        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.replace(/\n/g, '\r\n'))}`;
         window.location.href = mailto;
       });
 
