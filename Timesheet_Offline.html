@@ -501,8 +501,24 @@
       .profile-list{display:flex;flex-direction:column;gap:.25rem;} 
       .profile-section-title{margin:.25rem 0 .5rem;color:#ffb08a;} 
       .profile-empty{padding:.8rem 0;color:#bbb;} 
+      .profile-field-wrap{display:contents;}
+      .profile-field-label{display:none;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#ff9060;margin-bottom:.15rem;}
       @media (max-width:900px){.profile-grid{grid-template-columns:1fr 1fr;}.profile-grid .full-row{grid-column:1 / -1;}.profile-grid .action-cell{justify-self:start;}} 
-      @media (max-width:560px){.invoice-tools-toggle{padding:.75rem;}.invoice-tools-panel{padding:.75rem;}.profile-grid{grid-template-columns:1fr;}} 
+      @media (max-width:560px){
+        .invoice-tools-toggle{padding:.75rem;}.invoice-tools-panel{padding:.75rem;}
+        .profile-grid{
+          display:flex;flex-direction:column;gap:.4rem;
+          background:rgba(255,69,0,.05);border:1px solid rgba(255,69,0,.2);
+          border-radius:10px;padding:.75rem .85rem;margin-bottom:.25rem;
+        }
+        .profile-field-wrap{display:flex;flex-direction:column;width:100%;}
+        .profile-field-label{display:block;}
+        .profile-grid input{width:100%;box-sizing:border-box;}
+        .profile-grid .action-cell{width:100%;}
+        .profile-grid .profile-save,.profile-grid .profile-delete,
+        .profile-grid .location-save,.profile-grid .location-delete{width:100%;margin:0 0 .15rem 0;}
+        .profile-row{padding:.5rem 0;}
+      } 
       .saved-materials-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:2000;padding:1rem;}
       .saved-materials-modal.show{display:flex;}
       .saved-materials-panel{width:min(720px,100%);max-height:85vh;overflow:hidden;background:#1f1f1f;border:2px solid #ff4500;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;}
@@ -517,6 +533,10 @@
       .saved-material-meta{font-size:.85rem;color:#bbb;margin-top:.2rem;word-break:break-word;}
       .saved-material-empty{color:#bbb;padding:.4rem 0;}
       .saved-material-row.editing { grid-template-columns: 1fr; border-color: rgba(255,69,0,.5); }
+      /* ── Add New Material inline form ── */
+      #addMaterialForm{display:none;background:#242424;border:1px solid rgba(255,69,0,.4);border-radius:10px;padding:.85rem;margin-bottom:.9rem;}
+      #addMaterialForm.show{display:block;}
+      #addMaterialForm .sml-edit-grid select{padding:.45rem .55rem;background:#1e1e1e;border:1px solid rgba(255,69,0,.35);border-radius:6px;color:#e0e0e0;font-size:.9rem;width:100%;box-sizing:border-box;min-height:auto;margin:0;}
 
       /* ── Quick Add modal ── */
       .qa-material-row{display:flex;align-items:center;gap:.75rem;background:#2b2b2b;border:1px solid rgba(255,69,0,.15);border-radius:10px;padding:.6rem .8rem;cursor:pointer;transition:all .15s;}
@@ -1671,7 +1691,10 @@
       <div class="saved-materials-panel">
         <div class="saved-materials-header">
           <h3>Saved Materials</h3>
-          <button type="button" id="closeSavedMaterials" class="mini-btn" style="background:#dc3545;">Close</button>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <button type="button" id="toggleAddMaterialForm" class="mini-btn" style="background:#ff4500;">＋ Add Material</button>
+            <button type="button" id="closeSavedMaterials" class="mini-btn" style="background:#dc3545;">Close</button>
+          </div>
         </div>
         <div class="saved-materials-body">
           <input type="text" id="savedMaterialsSearch" class="saved-materials-search" placeholder="Search saved materials">
@@ -1687,6 +1710,42 @@
                 <option value="updated-oldest">Last Updated (Oldest)</option>
               </select>
             </label>
+          </div>
+          <!-- ── Add New Material form ── -->
+          <div id="addMaterialForm">
+            <div style="font-size:.8rem;font-weight:700;color:#ff9060;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.6rem;">New Material</div>
+            <div class="sml-edit-grid">
+              <label class="sml-edit-full"><span>Description</span>
+                <input type="text" id="newMatDesc" placeholder="e.g. 1/2&quot; Ball Valve">
+              </label>
+              <label><span>Unit</span>
+                <input type="text" id="newMatUnit" placeholder="ea">
+              </label>
+              <label><span>Category</span>
+                <select id="newMatCat" style="padding:.45rem .55rem;background:#1e1e1e;border:1px solid rgba(255,69,0,.35);border-radius:6px;color:#e0e0e0;font-size:.9rem;width:100%;box-sizing:border-box;min-height:auto;margin:0;">
+                  <option value="">— None —</option>
+                  <option value="hvac">❄️ HVAC / Furnace</option>
+                  <option value="gasline">🔧 Gas Line</option>
+                  <option value="waterheater">💧 Water Heater</option>
+                  <option value="poolheater">🏊 Pool Heater</option>
+                  <option value="commercial">🍳 Commercial Kitchen</option>
+                  <option value="general">🔩 General / Hardware</option>
+                </select>
+              </label>
+              <label><span>Dist. Cost ($)</span>
+                <input type="number" id="newMatCost" min="0" step="0.01" placeholder="0.00">
+              </label>
+              <label><span>Markup (%)</span>
+                <input type="number" id="newMatMarkup" min="0" step="0.01" placeholder="0.00">
+              </label>
+              <label><span>Sell Price ($)</span>
+                <input type="number" id="newMatSell" min="0" step="0.01" placeholder="0.00">
+              </label>
+            </div>
+            <div class="sml-edit-actions">
+              <button type="button" id="saveNewMaterial" class="mini-btn" style="background:#ff4500;">Save Material</button>
+              <button type="button" id="cancelNewMaterial" class="mini-btn" style="background:#555;">Cancel</button>
+            </div>
           </div>
           <div id="savedMaterialsList" class="saved-materials-list"></div>
         </div>
@@ -6288,6 +6347,74 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         });
       })();
       document.getElementById('closeSavedMaterials').onclick = () => closeSavedMaterialsModal();
+      // ── Add New Material form ──
+      (function() {
+        const toggleBtn  = document.getElementById('toggleAddMaterialForm');
+        const form       = document.getElementById('addMaterialForm');
+        const cancelBtn  = document.getElementById('cancelNewMaterial');
+        const saveBtn    = document.getElementById('saveNewMaterial');
+        const descIn     = document.getElementById('newMatDesc');
+        const unitIn     = document.getElementById('newMatUnit');
+        const catIn      = document.getElementById('newMatCat');
+        const costIn     = document.getElementById('newMatCost');
+        const markupIn   = document.getElementById('newMatMarkup');
+        const sellIn     = document.getElementById('newMatSell');
+
+        function resetAddForm() {
+          descIn.value = ''; unitIn.value = ''; catIn.value = '';
+          costIn.value = ''; markupIn.value = ''; sellIn.value = '';
+          form.classList.remove('show');
+          toggleBtn.textContent = '＋ Add Material';
+        }
+
+        toggleBtn.addEventListener('click', () => {
+          const opening = !form.classList.contains('show');
+          if (opening) {
+            form.classList.add('show');
+            toggleBtn.textContent = '✕ Cancel Add';
+            setTimeout(() => descIn.focus(), 50);
+          } else {
+            resetAddForm();
+          }
+        });
+
+        cancelBtn.addEventListener('click', resetAddForm);
+
+        // Auto-calc sell price
+        costIn.addEventListener('input', () => {
+          sellIn.value = formatMoney(customerPriceFromCost(costIn.value, markupIn.value));
+        });
+        markupIn.addEventListener('input', () => {
+          sellIn.value = formatMoney(customerPriceFromCost(costIn.value, markupIn.value));
+        });
+        sellIn.addEventListener('input', () => {
+          markupIn.value = formatMoney(markupFromCostAndPrice(costIn.value, sellIn.value));
+        });
+
+        saveBtn.addEventListener('click', () => {
+          const desc   = descIn.value.trim();
+          const unit   = unitIn.value.trim() || 'ea';
+          const cat    = catIn.value || '';
+          const cost   = parseFloat(costIn.value)   || 0;
+          const markup = parseFloat(markupIn.value) || 0;
+          const sell   = parseFloat(sellIn.value)   || 0;
+          if (!desc) { alert('Please enter a description.'); descIn.focus(); return; }
+          const key = normalizeMaterialKey(desc);
+          if (materialCatalog[key]) {
+            if (!confirm('A material with this name already exists. Overwrite it?')) return;
+          }
+          materialCatalog[key] = {
+            desc, unit, category: cat,
+            distributorCost: cost, markup, customerPrice: sell,
+            priceLastUpdated: new Date().toISOString(),
+            priceAlertEnabled: true
+          };
+          saveMaterialCatalog();
+          renderMaterialSuggestions && renderMaterialSuggestions();
+          resetAddForm();
+          renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || '');
+        });
+      })();
       document.getElementById('savedMaterialsSearch').addEventListener('input', (e) => renderSavedMaterialsList(e.target.value));
       document.getElementById('savedMaterialsSort')?.addEventListener('change', () => renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || ''));
       document.getElementById('savedMaterialsModal').addEventListener('click', (e) => { if (e.target.id === 'savedMaterialsModal') closeSavedMaterialsModal(); });
@@ -7044,7 +7171,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       }
 
       function makeProfileInput(value, placeholder, cls, fullRow=false) {
-        return `<input type="text" class="${cls}${fullRow ? ' full-row' : ''}" value="${String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}" placeholder="${placeholder}">`;
+        const safeVal = String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        const wrapCls = 'profile-field-wrap' + (fullRow ? ' full-row' : '');
+        return `<span class="${wrapCls}"><span class="profile-field-label">${placeholder}</span><input type="text" class="${cls}" value="${safeVal}" placeholder="${placeholder}"></span>`;
       }
 
       function renderClientProfilesLists(filterText = '') {
