@@ -6959,7 +6959,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         body += `\ne-Transfer accepted at Jason@archerser.ca\n\n`;
         body += `Thank you for choosing Archer's Equipment Repair!\n\nArcher's Equipment Repair Ltd.\nPhone: 519-383-9654`;
 
-        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        // iOS Mail ignores %0A — must use %0D%0A (CRLF) for line breaks in mailto: links
+        const encodedBody = body
+          .split('\n')
+          .map(line => encodeURIComponent(line))
+          .join('%0D%0A');
+        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodedBody}`;
         window.location.href = mailto;
       });
 
