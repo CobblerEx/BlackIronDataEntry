@@ -1257,6 +1257,12 @@
     </style>
   </head>
   <body>
+  <!-- Cloud storage loading overlay -->
+  <div id="_cloudLoadingOverlay" style="position:fixed;inset:0;background:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:16px;">
+    <div style="width:48px;height:48px;border:4px solid #333;border-top-color:#ff4500;border-radius:50%;animation:_spin 0.8s linear infinite;"></div>
+    <div style="color:#e0e0e0;font-family:sans-serif;font-size:1rem;">Loading your data…</div>
+  </div>
+  <style>@keyframes _spin{to{transform:rotate(360deg)}}</style>
     <div class="nav-buttons">
       <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit.html" class="nav-button" data-tooltip="Black Iron Edit"><i class="fas fa-edit"></i></a>
       <a href="https://cobblerex.github.io/BlackIronDataEntry/Blackironwithedit3.html" class="nav-button" data-tooltip="Black Iron v1"><i class="fas fa-file-alt"></i></a>
@@ -2637,9 +2643,28 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
     <script>
       // Safe _ls wrapper — prevents crashes in Safari private browsing
-      const _ls = (() => {
-        try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
-        catch(e) { const m={}; return { getItem:k=>m[k]??null, setItem:(k,v)=>{m[k]=String(v);}, removeItem:k=>{delete m[k];}, clear:()=>{for(const k in m) delete m[k];} }; }
+      // ── Cloud Storage (window.storage) with synchronous in-memory mirror ──
+      const _LS_KEYS = [
+        'timesheetData','addressHistory','customerNameHistory','savedCustomTasks',
+        'savedInvoices','materialCatalog','timesheetArchive','lastClient',
+        'clientProfiles','locationProfiles','lastBackupDate','defaultServiceCharge',
+        'invoiceSession','savedEmployeeName','blackIronMergedState','blackIronMergedJobHistory'
+      ];
+      const _lsMem = {};
+      function _cloudSet(k, v) { try { if (window.storage) window.storage.set(k, v).catch(() => {}); } catch(e) {} }
+      function _cloudDel(k)    { try { if (window.storage) window.storage.delete(k).catch(() => {}); } catch(e) {} }
+      const _ls = {
+        getItem:    k => Object.prototype.hasOwnProperty.call(_lsMem, k) ? _lsMem[k] : null,
+        setItem:    (k, v) => { _lsMem[k] = String(v); _cloudSet(k, String(v)); },
+        removeItem: k => { delete _lsMem[k]; _cloudDel(k); },
+        clear:      () => { Object.keys(_lsMem).forEach(k => delete _lsMem[k]); _LS_KEYS.forEach(k => _cloudDel(k)); }
+      };
+      // Preload all keys from cloud storage before the app initialises
+      window._storageReady = (async () => {
+        if (!window.storage) return;
+        for (const k of _LS_KEYS) {
+          try { const r = await window.storage.get(k); if (r && r.value != null) _lsMem[k] = r.value; } catch(e) {}
+        }
       })();
 
       const LOGO_URL = "https://cobblerex.github.io/BlackIronDataEntry/archers_logo.jpg";
@@ -4098,11 +4123,30 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             div.onclick = () => {
               custNameInput.value = name;
               custDropdown.style.display = 'none';
+              // Auto-populate the timesheet address field from saved client profiles
+              autofillTimesheetAddressFromClient(name);
             };
             custDropdown.appendChild(div);
           });
         }
         custDropdown.style.display = 'block';
+      }
+
+      // Auto-fill the timesheet address field from a saved client profile
+      function autofillTimesheetAddressFromClient(name) {
+        if (!name) return;
+        try {
+          const profiles = JSON.parse(_ls.getItem('clientProfiles') || '{}');
+          const key = name.trim().toLowerCase().replace(/\s+/g, ' ');
+          const profile = profiles[key] || Object.values(profiles).find(p => p && p.name && p.name.trim().toLowerCase() === key);
+          if (!profile) return;
+          const addr = profile.address || profile.billingAddress || '';
+          if (!addr) return;
+          const addrField = document.getElementById('address');
+          if (addrField && !addrField.value.trim()) {
+            addrField.value = addr;
+          }
+        } catch(e) {}
       }
 
       custNameInput.addEventListener('input', () => {
@@ -4112,6 +4156,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         } else {
           custDropdown.style.display = 'none';
         }
+      });
+
+      custNameInput.addEventListener('change', () => {
+        autofillTimesheetAddressFromClient(custNameInput.value.trim());
       });
 
       document.getElementById('customerNameHistoryBtn').onclick = () => showCustomerNameHistory('');
@@ -10304,5 +10352,26 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       }
     })();
     </script>
+  <script>
+    // ── Cloud storage boot: wait for _storageReady, then re-initialise the app ──
+    (async function () {
+      try { await (window._storageReady || Promise.resolve()); } catch(e) {}
+      // Re-populate derived variables from the now-loaded cloud store
+      try {
+        const savedInv = _ls.getItem('savedInvoices');
+        if (savedInv) invoices = JSON.parse(savedInv);
+        const savedMat = _ls.getItem('materialCatalog');
+        if (savedMat) materialCatalog = JSON.parse(savedMat);
+        const savedAddr = _ls.getItem('addressHistory');
+        if (savedAddr) addressHistory = JSON.parse(savedAddr);
+      } catch(e) {}
+      // Re-run the main data load so entries & UI reflect cloud data
+      if (typeof loadData === 'function') loadData();
+      if (typeof renderTable === 'function') renderTable();
+      // Remove loading overlay
+      const overlay = document.getElementById('_cloudLoadingOverlay');
+      if (overlay) overlay.remove();
+    })();
+  </script>
   </body>
   </html>
