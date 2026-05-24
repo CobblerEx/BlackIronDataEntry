@@ -493,8 +493,24 @@
       .profile-list{display:flex;flex-direction:column;gap:.25rem;} 
       .profile-section-title{margin:.25rem 0 .5rem;color:#ffb08a;} 
       .profile-empty{padding:.8rem 0;color:#bbb;} 
+      .profile-field-wrap{display:contents;}
+      .profile-field-label{display:none;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#ff9060;margin-bottom:.15rem;}
       @media (max-width:900px){.profile-grid{grid-template-columns:1fr 1fr;}.profile-grid .full-row{grid-column:1 / -1;}.profile-grid .action-cell{justify-self:start;}} 
-      @media (max-width:560px){.invoice-tools-toggle{padding:.75rem;}.invoice-tools-panel{padding:.75rem;}.profile-grid{grid-template-columns:1fr;}} 
+      @media (max-width:560px){
+        .invoice-tools-toggle{padding:.75rem;}.invoice-tools-panel{padding:.75rem;}
+        .profile-grid{
+          display:flex;flex-direction:column;gap:.4rem;
+          background:rgba(255,69,0,.05);border:1px solid rgba(255,69,0,.2);
+          border-radius:10px;padding:.75rem .85rem;margin-bottom:.25rem;
+        }
+        .profile-field-wrap{display:flex;flex-direction:column;width:100%;}
+        .profile-field-label{display:block;}
+        .profile-grid input{width:100%;box-sizing:border-box;}
+        .profile-grid .action-cell{width:100%;}
+        .profile-grid .profile-save,.profile-grid .profile-delete,
+        .profile-grid .location-save,.profile-grid .location-delete{width:100%;margin:0 0 .15rem 0;}
+        .profile-row{padding:.5rem 0;}
+      } 
       .saved-materials-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:2000;padding:1rem;}
       .saved-materials-modal.show{display:flex;}
       .saved-materials-panel{width:min(720px,100%);max-height:85vh;overflow:hidden;background:#1f1f1f;border:2px solid #ff4500;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;}
@@ -509,6 +525,9 @@
       .saved-material-meta{font-size:.85rem;color:#bbb;margin-top:.2rem;word-break:break-word;}
       .saved-material-empty{color:#bbb;padding:.4rem 0;}
       .saved-material-row.editing { grid-template-columns: 1fr; border-color: rgba(255,69,0,.5); }
+      /* ── Add New Material inline form ── */
+      #addMaterialForm{display:none;background:#242424;border:1px solid rgba(255,69,0,.4);border-radius:10px;padding:.85rem;margin-bottom:.9rem;}
+      #addMaterialForm.show{display:block;}
 
       /* ── Quick Add modal ── */
       .qa-material-row{display:flex;align-items:center;gap:.75rem;background:#2b2b2b;border:1px solid rgba(255,69,0,.15);border-radius:10px;padding:.6rem .8rem;cursor:pointer;transition:all .15s;}
@@ -555,7 +574,46 @@
     
 
 
-      /* Black Iron calculator */
+      /* ── Qty stepper (+/− buttons) ── */
+      .qty-stepper { display:flex; align-items:stretch; }
+      .qty-stepper .item-qty {
+        text-align:center;
+        border-radius:0 !important;
+        flex:1;
+        min-width:40px;
+        padding:.4rem .25rem !important;
+      }
+      .qty-step-btn {
+        background:#2e2e2e;
+        border:1px solid rgba(255,69,0,.45);
+        color:#ff6030;
+        font-size:1.15rem;
+        width:34px;
+        min-height:38px;
+        padding:0;
+        margin:0;
+        cursor:pointer;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        flex-shrink:0;
+        line-height:1;
+        font-weight:700;
+        transition:background .1s, color .1s;
+        touch-action:manipulation;
+        -webkit-tap-highlight-color:rgba(255,69,0,.25);
+        user-select:none;
+        -webkit-user-select:none;
+      }
+      .qty-step-btn:hover { background:rgba(255,69,0,.18); color:#ff4500; }
+      .qty-step-btn:active { background:rgba(255,69,0,.35); }
+      .qty-minus { border-radius:6px 0 0 6px; border-right:none; }
+      .qty-plus  { border-radius:0 6px 6px 0; border-left:none; }
+      @media (max-width:640px) {
+        .qty-step-btn { width:40px; min-height:44px; font-size:1.3rem; }
+      }
+
+      /* ── Black Iron calculator */
       .bi-calc-toolbar {display:grid;grid-template-columns:1fr;gap:.75rem;align-items:end;}
       .bi-calc-list {list-style:none;padding:0;margin:1rem 0 0 0;display:grid;gap:.65rem;}
       .bi-calc-list li {background:#242424;border:1px solid rgba(255,69,0,.28);border-radius:10px;padding:.85rem;}
@@ -771,6 +829,28 @@
       }
       .settings-storage-meta { font-size: .74rem; color: #777; display: flex; justify-content: space-between; }
       .settings-archive-info { font-size: .78rem; color: #aaa; margin: .4rem 0 .6rem; line-height: 1.4; }
+
+      /* ── Mass Edit mode row styles ── */
+      .saved-material-row.mass-edit-mode {
+        display: flex;
+        align-items: flex-start;
+        gap: .6rem;
+      }
+      .saved-material-row.mass-edit-mode .sml-mass-cb {
+        flex-shrink: 0;
+        margin-top: .35rem;
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        min-height: 22px;
+        cursor: pointer;
+        accent-color: #b07aff;
+      }
+      .saved-material-row.mass-edit-selected {
+        background: rgba(111,66,193,.15) !important;
+        border-color: rgba(111,66,193,.55) !important;
+        box-shadow: inset 0 0 0 1px rgba(111,66,193,.4);
+      }
 
       /* ── Input clear (×) buttons ── */
       .input-clr-btn {
@@ -1663,7 +1743,11 @@
       <div class="saved-materials-panel">
         <div class="saved-materials-header">
           <h3>Saved Materials</h3>
-          <button type="button" id="closeSavedMaterials" class="mini-btn" style="background:#dc3545;">Close</button>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <button type="button" id="toggleAddMaterialForm" class="mini-btn" style="background:#ff4500;">＋ Add Material</button>
+            <button type="button" id="toggleMassEditBtn" class="mini-btn" style="background:#6f42c1;">✏️ Mass Edit</button>
+            <button type="button" id="closeSavedMaterials" class="mini-btn" style="background:#dc3545;">Close</button>
+          </div>
         </div>
         <div class="saved-materials-body">
           <input type="text" id="savedMaterialsSearch" class="saved-materials-search" placeholder="Search saved materials">
@@ -1680,6 +1764,86 @@
               </select>
             </label>
           </div>
+          <!-- ── Add New Material form ── -->
+          <div id="addMaterialForm">
+            <div style="font-size:.8rem;font-weight:700;color:#ff9060;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.6rem;">New Material</div>
+            <div class="sml-edit-grid">
+              <label class="sml-edit-full"><span>Description</span>
+                <input type="text" id="newMatDesc" placeholder="e.g. 1/2&quot; Ball Valve">
+              </label>
+              <label><span>Unit</span>
+                <input type="text" id="newMatUnit" placeholder="ea">
+              </label>
+              <label><span>Category</span>
+                <select id="newMatCat" style="padding:.45rem .55rem;background:#1e1e1e;border:1px solid rgba(255,69,0,.35);border-radius:6px;color:#e0e0e0;font-size:.9rem;width:100%;box-sizing:border-box;min-height:auto;margin:0;">
+                  <option value="">— None —</option>
+                  <option value="hvac">❄️ HVAC / Furnace</option>
+                  <option value="gasline">🔧 Gas Line</option>
+                  <option value="waterheater">💧 Water Heater</option>
+                  <option value="poolheater">🏊 Pool Heater</option>
+                  <option value="commercial">🍳 Commercial Kitchen</option>
+                  <option value="general">🔩 General / Hardware</option>
+                </select>
+              </label>
+              <label><span>Dist. Cost ($)</span>
+                <input type="number" id="newMatCost" min="0" step="0.01" placeholder="0.00">
+              </label>
+              <label><span>Markup (%)</span>
+                <input type="number" id="newMatMarkup" min="0" step="0.01" placeholder="0.00">
+              </label>
+              <label><span>Sell Price ($)</span>
+                <input type="number" id="newMatSell" min="0" step="0.01" placeholder="0.00">
+              </label>
+            </div>
+            <div class="sml-edit-actions">
+              <button type="button" id="saveNewMaterial" class="mini-btn" style="background:#ff4500;">Save Material</button>
+              <button type="button" id="cancelNewMaterial" class="mini-btn" style="background:#555;">Cancel</button>
+            </div>
+          </div>
+          <!-- ── Mass Edit Toolbar ── -->
+          <div id="massEditToolbar" style="display:none;background:rgba(111,66,193,.12);border:1px solid rgba(111,66,193,.4);border-radius:10px;padding:.85rem;margin-bottom:.85rem;">
+            <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;">
+              <span style="font-size:.78rem;font-weight:700;color:#b07aff;text-transform:uppercase;letter-spacing:.08em;">Mass Edit Mode</span>
+              <span id="massEditCount" style="font-size:.82rem;color:#aaa;flex:1;">0 selected</span>
+              <button type="button" id="massSelectAll" class="mini-btn" style="background:#2a2a2a;border:1px solid rgba(111,66,193,.5);color:#b07aff;font-size:.78rem;padding:.25rem .6rem;min-height:auto;">Select All</button>
+              <button type="button" id="massDeselectAll" class="mini-btn" style="background:#2a2a2a;border:1px solid rgba(111,66,193,.5);color:#b07aff;font-size:.78rem;padding:.25rem .6rem;min-height:auto;">Deselect All</button>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin-bottom:.65rem;" id="massEditFields">
+              <label style="font-size:.8rem;color:#bbb;margin:0;">
+                <span style="display:block;margin-bottom:.25rem;">Set Markup %</span>
+                <input type="number" id="meMarkup" min="0" step="0.01" placeholder="e.g. 25" style="width:100%;padding:.4rem .5rem;background:#1e1e1e;border:1px solid rgba(111,66,193,.4);border-radius:6px;color:#e0e0e0;font-size:.9rem;box-sizing:border-box;margin:0;">
+              </label>
+              <label style="font-size:.8rem;color:#bbb;margin:0;">
+                <span style="display:block;margin-bottom:.25rem;">Adjust Cost %</span>
+                <input type="number" id="meCostAdj" step="0.01" placeholder="e.g. +10 or -5" style="width:100%;padding:.4rem .5rem;background:#1e1e1e;border:1px solid rgba(111,66,193,.4);border-radius:6px;color:#e0e0e0;font-size:.9rem;box-sizing:border-box;margin:0;">
+              </label>
+              <label style="font-size:.8rem;color:#bbb;margin:0;">
+                <span style="display:block;margin-bottom:.25rem;">Set Category</span>
+                <select id="meCat" style="width:100%;padding:.4rem .5rem;background:#1e1e1e;border:1px solid rgba(111,66,193,.4);border-radius:6px;color:#e0e0e0;font-size:.9rem;box-sizing:border-box;min-height:auto;margin:0;">
+                  <option value="">— No change —</option>
+                  <option value="hvac">❄️ HVAC / Furnace</option>
+                  <option value="gasline">🔧 Gas Line</option>
+                  <option value="waterheater">💧 Water Heater</option>
+                  <option value="poolheater">🏊 Pool Heater</option>
+                  <option value="commercial">🍳 Commercial Kitchen</option>
+                  <option value="general">🔩 General / Hardware</option>
+                  <option value="__clear__">✕ Clear Category</option>
+                </select>
+              </label>
+              <label style="font-size:.8rem;color:#bbb;margin:0;">
+                <span style="display:block;margin-bottom:.25rem;">Set Unit</span>
+                <input type="text" id="meUnit" placeholder="Leave blank = no change" style="width:100%;padding:.4rem .5rem;background:#1e1e1e;border:1px solid rgba(111,66,193,.4);border-radius:6px;color:#e0e0e0;font-size:.9rem;box-sizing:border-box;margin:0;">
+              </label>
+            </div>
+
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <button type="button" id="massApplyBtn" class="mini-btn" style="background:#6f42c1;font-weight:700;">✔ Apply to Selected</button>
+              <button type="button" id="massMarkUpdatedBtn" class="mini-btn" style="background:#28a745;">✓ Mark Updated</button>
+              <button type="button" id="massDeleteBtn" class="mini-btn" style="background:#dc3545;">🗑 Delete Selected</button>
+            </div>
+          </div>
+
           <div id="savedMaterialsList" class="saved-materials-list"></div>
         </div>
       </div>
@@ -1734,13 +1898,11 @@
       </div>
     </div>
 
-    <div id="clientProfilesModal" class="saved-materials-modal" aria-hidden="true">
-      <div class="saved-materials-panel">
-        <div class="saved-materials-header">
+    <div id="clientProfilesModal" class="saved-materials-modal" aria-hidden="true">        <div class="saved-materials-header">
           <h3>Clients / Addresses</h3>
           <button type="button" id="closeClientProfiles" class="mini-btn" style="background:#dc3545;">Close</button>
         </div>
-        <div class="saved-materials-body" style="max-height:calc(85vh - 70px);overflow-y:auto;">
+        <div class="saved-materials-body">
           <input type="text" id="clientProfilesSearch" class="saved-materials-search" placeholder="Search clients, phone, email, or address">
           <h4 class="profile-section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
             Saved Clients
@@ -2507,9 +2669,144 @@
             }
           });
           row.querySelector('.sml-delete').addEventListener('click', () => deleteSavedMaterial(item.desc));
+
+          // ── Mass edit: prepend checkbox if mode is active ──
+          if (_massEditActive) {
+            row.classList.add('mass-edit-mode');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'sml-mass-cb';
+            cb.dataset.key = key;
+            if (_massEditSelected.has(key)) {
+              cb.checked = true;
+              row.classList.add('mass-edit-selected');
+            }
+            cb.addEventListener('change', () => {
+              if (cb.checked) { _massEditSelected.add(key); row.classList.add('mass-edit-selected'); }
+              else { _massEditSelected.delete(key); row.classList.remove('mass-edit-selected'); }
+              _updateMassEditCount();
+            });
+            row.insertBefore(cb, row.firstChild);
+          }
+
           wrap.appendChild(row);
         });
       }
+
+      // ── Mass Edit state & logic ────────────────────────────────────────────────
+      let _massEditActive = false;
+      let _massEditSelected = new Set(); // set of material keys
+
+      function _updateMassEditCount() {
+        const el = document.getElementById('massEditCount');
+        if (el) el.textContent = `${_massEditSelected.size} selected`;
+      }
+
+      function toggleMassEditMode() {
+        _massEditActive = !_massEditActive;
+        _massEditSelected.clear();
+        const toolbar = document.getElementById('massEditToolbar');
+        const btn = document.getElementById('toggleMassEditBtn');
+        if (toolbar) toolbar.style.display = _massEditActive ? 'block' : 'none';
+        if (btn) {
+          btn.textContent = _massEditActive ? '✕ Exit Mass Edit' : '✏️ Mass Edit';
+          btn.style.background = _massEditActive ? '#555' : '#6f42c1';
+        }
+        _updateMassEditCount();
+        renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || '');
+      }
+
+      document.getElementById('toggleMassEditBtn').addEventListener('click', toggleMassEditMode);
+
+      document.getElementById('massSelectAll').addEventListener('click', () => {
+        const wrap = document.getElementById('savedMaterialsList');
+        if (!wrap) return;
+        wrap.querySelectorAll('.sml-mass-cb').forEach(cb => {
+          cb.checked = true;
+          _massEditSelected.add(cb.dataset.key);
+          cb.closest('.saved-material-row')?.classList.add('mass-edit-selected');
+        });
+        _updateMassEditCount();
+      });
+
+      document.getElementById('massDeselectAll').addEventListener('click', () => {
+        const wrap = document.getElementById('savedMaterialsList');
+        if (!wrap) return;
+        wrap.querySelectorAll('.sml-mass-cb').forEach(cb => {
+          cb.checked = false;
+          cb.closest('.saved-material-row')?.classList.remove('mass-edit-selected');
+        });
+        _massEditSelected.clear();
+        _updateMassEditCount();
+      });
+
+      document.getElementById('massApplyBtn').addEventListener('click', () => {
+        if (!_massEditSelected.size) { alert('No materials selected.'); return; }
+        const newMarkup  = document.getElementById('meMarkup').value.trim();
+        const costAdjPct = document.getElementById('meCostAdj').value.trim();
+        const newCat     = document.getElementById('meCat').value;
+        const newUnit    = document.getElementById('meUnit').value.trim();
+
+        if (!newMarkup && !costAdjPct && !newCat && !newUnit) {
+          alert('Enter at least one field to apply.'); return;
+        }
+
+        let changed = 0;
+        _massEditSelected.forEach(key => {
+          const item = materialCatalog[key];
+          if (!item) return;
+          if (newMarkup !== '') {
+            item.markup = parseFloat(newMarkup) || 0;
+            item.customerPrice = customerPriceFromCost(item.distributorCost, item.markup);
+          }
+          if (costAdjPct !== '') {
+            const pct = parseFloat(costAdjPct) || 0;
+            item.distributorCost = Math.max(0, (item.distributorCost || 0) * (1 + pct / 100));
+            item.distributorCost = Math.round(item.distributorCost * 100) / 100;
+            item.customerPrice   = customerPriceFromCost(item.distributorCost, item.markup || getDefaultMarkupPercent());
+          }
+          if (newCat === '__clear__') item.category = '';
+          else if (newCat) item.category = newCat;
+          if (newUnit) item.unit = newUnit;
+          changed++;
+        });
+
+        saveMaterialCatalog();
+        renderMaterialSuggestions();
+        renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || '');
+        alert(`Updated ${changed} material${changed !== 1 ? 's' : ''}.`);
+
+        // Clear fields after apply
+        document.getElementById('meMarkup').value  = '';
+        document.getElementById('meCostAdj').value = '';
+        document.getElementById('meCat').value     = '';
+        document.getElementById('meUnit').value    = '';
+      });
+
+      document.getElementById('massMarkUpdatedBtn').addEventListener('click', () => {
+        if (!_massEditSelected.size) { alert('No materials selected.'); return; }
+        const now = new Date().toISOString();
+        _massEditSelected.forEach(key => {
+          if (materialCatalog[key]) materialCatalog[key].priceLastUpdated = now;
+        });
+        saveMaterialCatalog();
+        renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || '');
+        alert(`Marked ${_massEditSelected.size} material${_massEditSelected.size !== 1 ? 's' : ''} as updated.`);
+      });
+
+      document.getElementById('massDeleteBtn').addEventListener('click', () => {
+        if (!_massEditSelected.size) { alert('No materials selected.'); return; }
+        const count = _massEditSelected.size;
+        if (!confirm(`Delete ${count} material${count !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+        _massEditSelected.forEach(key => { delete materialCatalog[key]; });
+        _massEditSelected.clear();
+        saveMaterialCatalog();
+        renderMaterialSuggestions();
+        renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || '');
+        _updateMassEditCount();
+        alert(`Deleted ${count} material${count !== 1 ? 's' : ''}.`);
+      });
+      // ─────────────────────────────────────────────────────────────────────────
 
       function openSavedMaterialsModal() {
         const modal = document.getElementById('savedMaterialsModal');
@@ -2527,6 +2824,15 @@
         if (!modal) return;
         modal.classList.remove('show');
         modal.setAttribute('aria-hidden', 'true');
+        // Reset mass edit state
+        if (_massEditActive) {
+          _massEditActive = false;
+          _massEditSelected.clear();
+          const toolbar = document.getElementById('massEditToolbar');
+          const btn = document.getElementById('toggleMassEditBtn');
+          if (toolbar) toolbar.style.display = 'none';
+          if (btn) { btn.textContent = '✏️ Mass Edit'; btn.style.background = '#6f42c1'; }
+        }
       }
 
       function getDefaultMarkupPercent() {
@@ -3142,22 +3448,121 @@
         return true;
       }
 
+      // ── Timesheet Day PDF ─────────────────────────────────────────────────────
+      async function generateTimesheetDayPdf(dateStr, dayEntries, employee) {
+        if (!dayEntries || !dayEntries.length) return;
+        try {
+          const { jsPDF } = window.jspdf;
+          if (!jsPDF) throw new Error('jsPDF not loaded');
+          const doc = new jsPDF();
+
+          // Header
+          doc.setFontSize(16);
+          doc.setFont('helvetica', 'bold');
+          doc.text("ARCHER'S EQUIPMENT REPAIR", 10, 16);
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          doc.text('Archer\'s Equipment Repair Ltd.', 10, 22);
+          doc.setFontSize(10);
+          doc.text('TSSA #: 000394614', 145, 12);
+          doc.text('HST #: 900518869RT0001', 145, 17);
+          doc.text('Phone: 519-383-9654', 145, 22);
+
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text('DAILY TIMESHEET', 105, 32, { align: 'center' });
+
+          doc.setDrawColor(180);
+          doc.line(10, 36, 200, 36);
+
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'normal');
+          doc.text('Date: ' + formatDate(dateStr), 10, 44);
+          if (employee) doc.text('Technician: ' + employee, 10, 52);
+
+          // Compute totals
+          let totalReg = 0, totalOT = 0;
+          dayEntries.forEach(e => {
+            const hrs = timeToDecimal(e.timeOut) - timeToDecimal(e.timeIn);
+            const { regular, overtime } = calcRegularAndOvertime({ ...e, dateStr: e.dateStr || dateStr });
+            totalReg += regular;
+            totalOT  += overtime;
+          });
+
+          const tableRows = dayEntries
+            .slice()
+            .sort((a, b) => (a.timeIn || '').localeCompare(b.timeIn || ''))
+            .map(e => {
+              const { regular, overtime } = calcRegularAndOvertime({ ...e, dateStr: e.dateStr || dateStr });
+              return [
+                to12hr(e.timeIn),
+                to12hr(e.timeOut),
+                regular.toFixed(2),
+                overtime.toFixed(2),
+                e.jobName || '',
+                e.address  || '',
+              ];
+            });
+
+          doc.autoTable({
+            startY: employee ? 58 : 50,
+            head: [['Time In', 'Time Out', 'Reg Hrs', 'OT Hrs', 'Job / Customer', 'Address']],
+            body: tableRows,
+            theme: 'grid',
+            headStyles: { fillColor: [211, 211, 211], textColor: [0, 0, 0], fontSize: 9, fontStyle: 'bold' },
+            styles: { cellPadding: 3, fontSize: 9, overflow: 'linebreak' },
+            columnStyles: {
+              0: { cellWidth: 22 },
+              1: { cellWidth: 22 },
+              2: { cellWidth: 18 },
+              3: { cellWidth: 18 },
+              4: { cellWidth: 55 },
+              5: { cellWidth: 55 },
+            }
+          });
+
+          let finalY = doc.lastAutoTable.finalY + 8;
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text('Total Regular Hours: ' + totalReg.toFixed(2), 10, finalY);
+          if (totalOT > 0) doc.text('Total Overtime Hours: ' + totalOT.toFixed(2), 10, finalY + 7);
+
+          const safeEmployee = (employee || 'Timesheet').replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+          doc.save(safeEmployee + '_' + dateStr + '_Timesheet.pdf');
+        } catch (err) {
+          console.warn('Timesheet PDF generation failed:', err);
+          // Non-blocking — new day still proceeds
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────────
+
       function startNewDay() {
         const currentDate = document.getElementById('sessionDate').value || getTodayDateString();
         const nextDate = getNextDateString(currentDate);
+
+        // Snapshot entries & employee before archive wipes them
+        const employee      = document.getElementById('employee').value || _ls.getItem('savedEmployeeName') || '';
+        const entriesSnap   = entries.length ? JSON.parse(JSON.stringify(entries)) : [];
+
         const archived = archiveCurrentTimesheetDay();
+
+        // Generate PDF of the day being closed (fire-and-forget; non-blocking)
+        if (entriesSnap.length) {
+          generateTimesheetDayPdf(currentDate, entriesSnap, employee);
+        }
 
         entries = [];
         document.getElementById('sessionDate').value = nextDate;
         saveData();
         renderTable();
         clearForm();
-        document.getElementById('timeIn').value = '08:00';
+        document.getElementById('timeIn').value  = '08:00';
         document.getElementById('timeOut').value = '08:30';
 
-        alert(archived
+        alert((archived
           ? `Archived ${currentDate} and started a new day on ${nextDate}.`
-          : `Started a new day on ${nextDate}.`);
+          : `Started a new day on ${nextDate}.`) +
+          (entriesSnap.length ? '\n\nTimesheet PDF saved to Downloads.' : ''));
       }
 
 
@@ -3242,12 +3647,58 @@
             div.onclick = () => {
               custNameInput.value = name;
               custDropdown.style.display = 'none';
+              autofillAddressForCustomer(name);
             };
             custDropdown.appendChild(div);
           });
         }
         custDropdown.style.display = 'block';
       }
+
+      // ── Address auto-fill by customer name ───────────────────────────────
+      function lookupAddressForCustomer(name) {
+        if (!name) return '';
+        const key = name.trim().toLowerCase();
+        // 1. Check clientProfiles (saved via invoice tab)
+        try {
+          const profiles = JSON.parse(_ls.getItem('clientProfiles') || '{}');
+          const profile = profiles[key];
+          if (profile && profile.address) return profile.address;
+        } catch(e) {}
+        // 2. Check past timesheet entries (most recent match)
+        if (Array.isArray(entries)) {
+          for (let i = entries.length - 1; i >= 0; i--) {
+            const e = entries[i];
+            if (e.customerName && e.customerName.trim().toLowerCase() === key && e.address) {
+              return e.address;
+            }
+          }
+        }
+        // 3. Check archived days
+        try {
+          const archive = JSON.parse(_ls.getItem('timesheetArchive') || '[]');
+          for (let d = archive.length - 1; d >= 0; d--) {
+            const day = archive[d];
+            if (!Array.isArray(day.entries)) continue;
+            for (let i = day.entries.length - 1; i >= 0; i--) {
+              const e = day.entries[i];
+              if (e.customerName && e.customerName.trim().toLowerCase() === key && e.address) {
+                return e.address;
+              }
+            }
+          }
+        } catch(e) {}
+        return '';
+      }
+
+      function autofillAddressForCustomer(name) {
+        const addr = lookupAddressForCustomer(name);
+        if (addr && !addrInput.value.trim()) {
+          addrInput.value = addr;
+          addrInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       custNameInput.addEventListener('input', () => {
         const val = custNameInput.value.trim();
@@ -3265,8 +3716,11 @@
             !document.getElementById('customerNameHistoryBtn').contains(e.target) &&
             !custDropdown.contains(e.target)) {
           custDropdown.style.display = 'none';
-          // Save name when clicking away
-          if (custNameInput.value.trim()) addCustomerNameToHistory(custNameInput.value);
+          // Save name when clicking away + auto-fill address
+          if (custNameInput.value.trim()) {
+            addCustomerNameToHistory(custNameInput.value);
+            autofillAddressForCustomer(custNameInput.value.trim());
+          }
         }
       });
       // ─────────────────────────────────────────────────────────────────────
@@ -4020,7 +4474,13 @@
             <input type="text" class="item-desc" list="materialSuggestions" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" value="${(item.desc || '').replace(/"/g, '&quot;')}" placeholder="Material / extra service">
             <div class="material-autocomplete"></div>
           </td>
-          <td class="imt-qty" data-label="Qty"><input type="number" class="item-qty" min="0" step="0.01" value="${item.qty ?? 1}"></td>
+          <td class="imt-qty" data-label="Qty">
+            <div class="qty-stepper">
+              <button type="button" class="qty-step-btn qty-minus" tabindex="-1">−</button>
+              <input type="number" class="item-qty" min="0" step="1" value="${item.qty ?? 1}">
+              <button type="button" class="qty-step-btn qty-plus" tabindex="-1">+</button>
+            </div>
+          </td>
           <td class="imt-unit" data-label="Unit"><input type="text" class="item-unit" value="${(item.unit || savedMaterial?.unit || 'ea').replace(/"/g, '&quot;')}"></td>
           <td class="imt-distcost" data-label="Dist. cost"><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></td>
           <td class="imt-markup" data-label="Markup %"><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></td>
@@ -4161,6 +4621,21 @@
         });
         unit.addEventListener('blur', saveCurrentMaterial);
         qty.addEventListener('input', recalc);
+
+        // ── Qty stepper buttons ──
+        tr.querySelector('.qty-minus').addEventListener('click', () => {
+          const cur = parseFloat(qty.value) || 0;
+          const step = cur <= 1 ? 0.25 : (cur <= 10 ? 0.5 : 1);
+          qty.value = Math.max(0, parseFloat((cur - step).toFixed(4)));
+          recalc();
+        });
+        tr.querySelector('.qty-plus').addEventListener('click', () => {
+          const cur = parseFloat(qty.value) || 0;
+          const step = cur < 1 ? 0.25 : (cur < 10 ? 0.5 : 1);
+          qty.value = parseFloat((cur + step).toFixed(4));
+          recalc();
+        });
+
         distributorCost.addEventListener('input', () => {
           customerPrice.value = formatMoney(customerPriceFromCost(distributorCost.value, markup.value));
           recalc();
@@ -5878,6 +6353,73 @@
         });
       })();
       document.getElementById('closeSavedMaterials').onclick = () => closeSavedMaterialsModal();
+      // ── Add New Material form ──
+      (function() {
+        const toggleBtn  = document.getElementById('toggleAddMaterialForm');
+        const form       = document.getElementById('addMaterialForm');
+        const cancelBtn  = document.getElementById('cancelNewMaterial');
+        const saveBtn    = document.getElementById('saveNewMaterial');
+        const descIn     = document.getElementById('newMatDesc');
+        const unitIn     = document.getElementById('newMatUnit');
+        const catIn      = document.getElementById('newMatCat');
+        const costIn     = document.getElementById('newMatCost');
+        const markupIn   = document.getElementById('newMatMarkup');
+        const sellIn     = document.getElementById('newMatSell');
+
+        function resetAddForm() {
+          descIn.value = ''; unitIn.value = ''; catIn.value = '';
+          costIn.value = ''; markupIn.value = ''; sellIn.value = '';
+          form.classList.remove('show');
+          toggleBtn.textContent = '＋ Add Material';
+        }
+
+        toggleBtn.addEventListener('click', () => {
+          const opening = !form.classList.contains('show');
+          if (opening) {
+            form.classList.add('show');
+            toggleBtn.textContent = '✕ Cancel Add';
+            setTimeout(() => descIn.focus(), 50);
+          } else {
+            resetAddForm();
+          }
+        });
+
+        cancelBtn.addEventListener('click', resetAddForm);
+
+        costIn.addEventListener('input', () => {
+          sellIn.value = formatMoney(customerPriceFromCost(costIn.value, markupIn.value));
+        });
+        markupIn.addEventListener('input', () => {
+          sellIn.value = formatMoney(customerPriceFromCost(costIn.value, markupIn.value));
+        });
+        sellIn.addEventListener('input', () => {
+          markupIn.value = formatMoney(markupFromCostAndPrice(costIn.value, sellIn.value));
+        });
+
+        saveBtn.addEventListener('click', () => {
+          const desc   = descIn.value.trim();
+          const unit   = unitIn.value.trim() || 'ea';
+          const cat    = catIn.value || '';
+          const cost   = parseFloat(costIn.value)   || 0;
+          const markup = parseFloat(markupIn.value) || 0;
+          const sell   = parseFloat(sellIn.value)   || 0;
+          if (!desc) { alert('Please enter a description.'); descIn.focus(); return; }
+          const key = normalizeMaterialKey(desc);
+          if (materialCatalog[key]) {
+            if (!confirm('A material with this name already exists. Overwrite it?')) return;
+          }
+          materialCatalog[key] = {
+            desc, unit, category: cat,
+            distributorCost: cost, markup, customerPrice: sell,
+            priceLastUpdated: new Date().toISOString(),
+            priceAlertEnabled: true
+          };
+          saveMaterialCatalog();
+          renderMaterialSuggestions && renderMaterialSuggestions();
+          resetAddForm();
+          renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || '');
+        });
+      })();
       document.getElementById('savedMaterialsSearch').addEventListener('input', (e) => renderSavedMaterialsList(e.target.value));
       document.getElementById('savedMaterialsSort')?.addEventListener('change', () => renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || ''));
       document.getElementById('savedMaterialsModal').addEventListener('click', (e) => { if (e.target.id === 'savedMaterialsModal') closeSavedMaterialsModal(); });
@@ -6128,7 +6670,7 @@
         return !!document.getElementById('groupMaterialsToggle')?.checked;
       }
 
-      async function generateInvoicePdf(copyType = 'customer') {
+      async function generateInvoicePdf(copyType = 'customer', { returnBlob = false } = {}) {
         const loading = document.getElementById('loading');
         loading.innerHTML = '<div class="spinner"></div><br>' + (copyType === 'boss' ? 'Generating Boss Copy...' : 'Generating Invoice...');
         loading.style.display = 'block';
@@ -6362,7 +6904,15 @@
 
           const serviceDateForFile = (selectedEntries.length ? getServiceDateForEntries(selectedEntries) : null) || invoices[invoiceId]?.serviceDate || new Date().toISOString().split('T')[0];
           const safeClientName = (clientName || 'Client').replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-          doc.save(`${safeClientName || 'Client'}_${serviceDateForFile}_${copyType === 'boss' ? 'Boss_Copy' : 'Invoice'}.pdf`);
+          const pdfFilename = `${safeClientName || 'Client'}_${serviceDateForFile}_${copyType === 'boss' ? 'Boss_Copy' : 'Invoice'}.pdf`;
+
+          if (returnBlob) {
+            const blob = doc.output('blob');
+            loading.style.display = 'none';
+            return { blob, filename: pdfFilename };
+          }
+
+          doc.save(pdfFilename);
 
           _ls.setItem('lastClient', JSON.stringify({
             name: clientName,
@@ -6400,8 +6950,8 @@
       // Deposit field — live update running total
       document.getElementById('depositAmount').addEventListener('input', updateInvoiceRunningTotal);
 
-      // Email Draft button
-      document.getElementById('emailDraftBtn').addEventListener('click', function() {
+      // Email Draft button — generates invoice PDF then opens mailto
+      document.getElementById('emailDraftBtn').addEventListener('click', async function() {
         const to      = (document.getElementById('clientEmail').value || '').trim();
         const name    = (document.getElementById('clientName').value  || 'there').trim();
         const invId   = (document.getElementById('invoiceId').value   || '').trim();
@@ -6413,15 +6963,40 @@
           ? `Invoice ${invId} — Archer's Equipment Repair`
           : `Invoice from Archer's Equipment Repair`;
 
-        let body = `Hi ${name},\n\nPlease find your invoice details below.\n\n`;
-        body += `Invoice Total: ${total}`;
+        let body = `Hi ${name},\n\nPlease find your invoice attached to this email.\n\n`;
+        body += `Invoice Total: ${total}\n`;
         if (deposit > 0) {
-          body += `\nDeposit Received: -$${deposit.toFixed(2)}`;
-          body += `\nBalance Due: ${balance}`;
+          body += `Deposit Received: -$${deposit.toFixed(2)}\n`;
+          body += `Balance Due: ${balance}\n`;
         }
-        body += `\n\ne-Transfer accepted at Jason@archerser.ca\n\nThank you for choosing Archer's Equipment Repair!\n\nArcher's Equipment Repair Ltd.\nPhone: 519-383-9654`;
+        body += `\ne-Transfer accepted at Jason@archerser.ca\n\n`;
+        body += `Thank you for choosing Archer's Equipment Repair!\n\nArcher's Equipment Repair Ltd.\nPhone: 519-383-9654`;
 
-        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.replace(/\n/g, '\r\n'))}`;
+        // Generate PDF and auto-download it so the user can attach it
+        let pdfNote = '';
+        try {
+          const result = await generateInvoicePdf('customer', { returnBlob: true });
+          if (result?.blob) {
+            const url = URL.createObjectURL(result.blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+            pdfNote = `\n\n📎 Invoice PDF saved to Downloads — please attach "${result.filename}" to the email before sending.`;
+          }
+        } catch (err) {
+          console.warn('PDF generation skipped for email draft:', err);
+        }
+
+        if (pdfNote) alert(pdfNote.trim());
+
+        const encodedBody = (body + (pdfNote ? '\n\n[PDF invoice attached]' : ''))
+          .split('\n')
+          .map(line => encodeURIComponent(line))
+          .join('%0D%0A');
+        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodedBody}`;
         window.location.href = mailto;
       });
 
@@ -6633,7 +7208,9 @@
       }
 
       function makeProfileInput(value, placeholder, cls, fullRow=false) {
-        return `<input type="text" class="${cls}${fullRow ? ' full-row' : ''}" value="${String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}" placeholder="${placeholder}">`;
+        const safeVal = String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        const wrapCls = 'profile-field-wrap' + (fullRow ? ' full-row' : '');
+        return `<span class="${wrapCls}"><span class="profile-field-label">${placeholder}</span><input type="text" class="${cls}" value="${safeVal}" placeholder="${placeholder}"></span>`;
       }
 
       function renderClientProfilesLists(filterText = '') {
@@ -6877,7 +7454,25 @@
       setupClientAutoFill();
 
       // ── Quick Add Materials ──────────────────────────────────────────────────
+      // ── Quick Add — Recents ────────────────────────────────────────────────
+      const QA_RECENTS_KEY = 'qaRecentMaterials_v1';
+      const QA_RECENTS_MAX = 10;
+
+      function _qaLoadRecents() {
+        try { return JSON.parse(localStorage.getItem(QA_RECENTS_KEY) || '[]'); } catch { return []; }
+      }
+      function _qaAddToRecents(desc) {
+        const list = _qaLoadRecents().filter(d => d !== desc);
+        list.unshift(desc);
+        try { localStorage.setItem(QA_RECENTS_KEY, JSON.stringify(list.slice(0, QA_RECENTS_MAX))); } catch {}
+      }
+      function _qaClearRecents() {
+        try { localStorage.removeItem(QA_RECENTS_KEY); } catch {}
+      }
+      // ──────────────────────────────────────────────────────────────────────────
+
       const QA_CATEGORIES = [
+        { id: 'recent',      label: '🕐 Recent' },
         { id: 'all',         label: '🔎 All' },
         { id: 'install',     label: '🔨 Install' },
         { id: 'hvac',        label: '❄️ HVAC' },
@@ -7231,7 +7826,7 @@
         if (!modal) return;
         search.value = '';
         _qaSelections = {}; // clear selections each time the modal opens fresh
-        _qaActiveCat = guessCurrentCategory();
+        _qaActiveCat = _qaLoadRecents().length ? 'recent' : guessCurrentCategory();
         _qaSuggestions = getSuggestionsFromDescription(); // keyword-matched suggestions
         buildCategoryTabs();
         renderQuickAddList('');
@@ -7276,6 +7871,39 @@
             wrap.appendChild(div);
           }
         }
+
+        // ── Recents tab ──────────────────────────────────────────────────────
+        if (_qaActiveCat === 'recent') {
+          const recentDescs = _qaLoadRecents();
+          const recentItems = recentDescs
+            .map(d => allItems.find(i => i.desc === d))
+            .filter(Boolean)
+            .filter(item => !filter || normalizeMaterialKey(item.desc).includes(filter));
+
+          if (!recentItems.length) {
+            const msg = document.createElement('div');
+            msg.className = 'saved-material-empty';
+            msg.style.cssText = 'grid-column:1/-1;padding:.6rem;';
+            msg.textContent = recentDescs.length
+              ? 'No recent items match this search.'
+              : 'Items you add to the invoice will appear here.';
+            wrap.appendChild(msg);
+          } else {
+            const hdr = document.createElement('div');
+            hdr.className = 'qa-suggestion-header';
+            hdr.style.cssText = 'grid-column:1/-1;';
+            hdr.innerHTML = '🕐 Recently Added &nbsp;<button type="button" id="qaClearRecentsBtn" style="font-size:.7rem;background:none;border:none;color:#aaa;cursor:pointer;padding:0;min-height:auto;text-decoration:underline;">Clear</button>';
+            wrap.appendChild(hdr);
+            hdr.querySelector('#qaClearRecentsBtn').addEventListener('click', e => {
+              e.stopPropagation();
+              if (confirm('Clear your recents list?')) { _qaClearRecents(); renderQuickAddList(document.getElementById('quickAddSearch').value || ''); }
+            });
+            recentItems.forEach(item => appendQARow(item, wrap, false));
+          }
+          updateQuickAddCount();
+          return;
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         const items = allItems
           .filter(item => {
@@ -7365,6 +7993,7 @@
           const saved = getSavedMaterial(desc);
           createItemRow({ desc, qty, unit: saved?.unit || 'ea', distributorCost: saved?.distributorCost || 0,
             markup: saved?.markup !== undefined ? saved.markup : getDefaultMarkupPercent(), customerPrice: saved?.customerPrice || 0 });
+          _qaAddToRecents(desc);
         });
         closeQuickAddModal();
         saveInvoiceSession();
@@ -8161,28 +8790,41 @@
       }
       function buildInvoiceDescription(item){
         const f = item.fittingType;
-        if (f === 'Pipe')                           return `${item.odSize}" Black Iron Gas Pipe - ${item.sizeDetail}`;
-        if (f === 'Tee' && item.sizeDetail?.includes(' x ')) return `${item.sizeDetail} Black Iron Tee - Supply & Install`;
-        if (f === 'Reducer')                        return `${item.odSize}" Black Iron Reducing Fitting - ${item.sizeDetail}`;
-        if (f === 'Nipple')                         return `${item.odSize}" Black Iron Pipe Nipple - ${item.sizeDetail}`;
-        if (f === 'Close Nipple')                   return `${item.odSize}" Black Iron Close Nipple - Supply & Install`;
-        if (f === 'Street 90° Elbow')               return `${item.odSize}" Black Iron Street 90° Elbow - Supply & Install`;
-        if (f === 'Street 45° Elbow')               return `${item.odSize}" Black Iron Street 45° Elbow - Supply & Install`;
-        if (f === 'Wye')                            return `${item.odSize}" Black Iron Wye - Supply & Install`;
-        if (f === 'Drip Leg / Sediment Trap')       return `${item.odSize}" Drip Leg / Sediment Trap - Supply & Install`;
-        if (f === 'Gastite Straight')               return `${item.odSize}" Gastite Straight Connector - Supply & Install`;
-        if (f === 'Gastite Pipe')                   return `${item.odSize}" Gastite CSST Gas Pipe, ${item.sizeDetail} - Supply & Install`;
-        if (f === 'Gastite Flange')                 return `${item.odSize}" Gastite Flange Connector - Supply & Install`;
-        if (f === 'Gastite Wall')                   return `${item.odSize}" Gastite Wall Connector - Supply & Install`;
-        if (f === 'Gastite Bonding Clamp')          return `Gastite / CSST Bonding Clamp - Supply & Install`;
-        if (f.startsWith('Flex Connector '))        return `${item.odSize}" Flexible Gas Connector ${item.sizeDetail} - Supply & Install`;
-        if (f === 'Commercial Flex 3/4 48"')        return `3/4" Commercial Flexible Gas Connector 48" - Supply & Install`;
-        if (f === 'Gas Copper')                     return `${item.sizeDetail} Gas Copper Tube - Supply & Install`;
-        if (f === '½ Length Black Iron')             return `${item.odSize}" Black Iron Gas Pipe - ½ Length (10.5 ft)`;
-        if (f === 'Shut-off Indoor')                return `${item.odSize}" Indoor Gas Shut-off Valve - Supply & Install`;
-        if (f === 'Shut-off Outdoor')               return `${item.odSize}" Outdoor Gas Shut-off Valve - Supply & Install`;
-        if (item.sizeDetail)                        return `${item.odSize}" Black Iron ${f} - ${item.sizeDetail}`;
-        return `${item.odSize}" Black Iron ${f} - Supply & Install`;
+        const sz = item.odSize ? `${item.odSize}"` : '';
+        const sd = item.sizeDetail || '';
+        if (f === 'Pipe')                           return `${sz} Black Iron Pipe${sd ? ' ' + sd : ''}`;
+        if (f === 'Nipple')                         return `${sz} Black Iron Nipple${sd ? ' ' + sd : ''}`;
+        if (f === 'Close Nipple')                   return `${sz} Black Iron Close Nipple`;
+        if (f === 'Tee' && sd.includes(' x '))      return `${sd} Black Iron Tee`;
+        if (f === 'Tee')                            return `${sz} Black Iron Tee`;
+        if (f === 'Reducer')                        return `${sz} Black Iron Reducer${sd ? ' ' + sd : ''}`;
+        if (f === '90° Elbow')                      return `${sz} Black Iron 90 Elbow`;
+        if (f === '45° Elbow')                      return `${sz} Black Iron 45 Elbow`;
+        if (f === 'Street 90° Elbow')               return `${sz} Black Iron Street 90 Elbow`;
+        if (f === 'Street 45° Elbow')               return `${sz} Black Iron Street 45 Elbow`;
+        if (f === 'Union')                          return `${sz} Black Iron Union`;
+        if (f === 'Coupling')                       return `${sz} Black Iron Coupling`;
+        if (f === 'Bushing')                        return `${sz} Black Iron Bushing${sd ? ' ' + sd : ''}`;
+        if (f === 'Cap')                            return `${sz} Black Iron Cap`;
+        if (f === 'Plug')                           return `${sz} Black Iron Plug`;
+        if (f === 'Wye')                            return `${sz} Black Iron Wye`;
+        if (f === 'Drip Leg / Sediment Trap')       return `${sz} Drip Leg`;
+        if (f === 'Shut-off Indoor')                return `${sz} Indoor Gas Shut-off`;
+        if (f === 'Shut-off Outdoor')               return `${sz} Outdoor Gas Shut-off`;
+        if (f === 'Stand Off (Long)')               return `${sz} Long Stand Off`;
+        if (f === 'Stand Off (Short)')              return `${sz} Short Stand Off`;
+        if (f === 'Paint')                          return `Black Iron Paint`;
+        if (f === 'Gastite Straight')               return `${sz} Gastite Straight`;
+        if (f === 'Gastite Pipe')                   return `${sz} Gastite CSST Pipe${sd ? ' ' + sd : ''}`;
+        if (f === 'Gastite Flange')                 return `${sz} Gastite Flange`;
+        if (f === 'Gastite Wall')                   return `${sz} Gastite Wall Connector`;
+        if (f === 'Gastite Bonding Clamp')          return `Gastite Bonding Clamp`;
+        if (f.startsWith('Flex Connector '))        return `${sz} Flex Gas Connector${sd ? ' ' + sd : ''}`;
+        if (f === 'Commercial Flex 3/4 48"')        return `3/4" Commercial Flex Connector 48"`;
+        if (f === 'Gas Copper')                     return `${sd} Gas Copper Tube`;
+        if (f === '½ Length Black Iron')            return `${sz} Black Iron Pipe ½ Length`;
+        if (sd)                                     return `${sz} Black Iron ${f} ${sd}`.trim();
+        return `${sz} Black Iron ${f}`.trim();
       }
       function getGroupKey(item){
         return JSON.stringify([item.fittingType, item.odSize, item.sizeDetail || '']);
@@ -9019,12 +9661,22 @@
         return document.getElementById(id)?.classList.contains('active');
       }
 
+      let _btnRowVisible = true;
+      const btnRowEl = document.querySelector('#invoiceBuilder .inline-group');
+      if (btnRowEl && invoiceBar) {
+        const obs = new IntersectionObserver(entries => {
+          _btnRowVisible = entries[0].isIntersecting;
+          if (isTabActive('invoiceTab')) {
+            invoiceBar.classList.toggle('hidden', _btnRowVisible);
+          }
+        }, { threshold: 0 });
+        obs.observe(btnRowEl);
+      }
+
       function updateInvoiceBar() {
         if (!invoiceBar) return;
         if (!isTabActive('invoiceTab')) { invoiceBar.classList.add('hidden'); return; }
-        const btnRow = document.querySelector('#invoiceBuilder .inline-group');
-        if (!btnRow) { invoiceBar.classList.add('hidden'); return; }
-        invoiceBar.classList.toggle('hidden', btnRow.getBoundingClientRect().bottom >= 0);
+        invoiceBar.classList.toggle('hidden', _btnRowVisible);
       }
 
       function updateBiBar() {
