@@ -1245,8 +1245,8 @@
       #quickTextImport .qti-hint code { background:rgba(255,69,0,.1); border:1px solid rgba(255,69,0,.25); border-radius:4px; padding:.05rem .35rem; color:#ffb08a; font-size:.75rem; }
       #qtiInput { width:100%; height:130px; resize:vertical; font-family:monospace; font-size:.82rem; }
       #qtiParseBtn { background:#17a2b8; }
-      #qtiImportBtn { background:#28a745; display:none; }
-      #qtiClearBtn  { background:#555; display:none; }
+      #qtiImportBtn { background:#28a745; }
+      #qtiClearBtn  { background:#555; }
       #qtiStatus { font-size:.8rem; margin:.5rem 0 0; min-height:1.2em; }
       #qtiStatus.ok  { color:#7CFF9B; }
       #qtiStatus.err { color:#ff6b7a; }
@@ -1256,10 +1256,13 @@
       #qtiPreviewWrap td { padding:.4rem .6rem; }
       .qti-edit-input { background:#1e1e1e; border:1px solid rgba(255,69,0,.3); color:#e0e0e0; border-radius:5px; padding:.25rem .45rem; font-size:.76rem; width:100%; min-width:90px; font-family:monospace; }
       .qti-edit-input:focus { outline:none; border-color:#ff4500; background:rgba(255,69,0,.06); }
+      .qti-time-input { min-width:60px; max-width:72px; text-align:center; }
+      .qti-date-input { min-width:100px; max-width:115px; color-scheme:dark; }
       .qti-date-cell { color:#888; font-size:.72rem; white-space:nowrap; }
       .qti-time-cell { color:#ffd166; white-space:nowrap; font-family:monospace; font-size:.75rem; }
       .qti-dur-cell  { color:#3ddc84; font-size:.72rem; white-space:nowrap; }
       .qti-day-divider td { background:rgba(255,69,0,.07); color:#ff7a45; font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:.3rem .6rem; border-top:1px solid rgba(255,69,0,.18); }
+      #qtiBtnRow { margin-top:.75rem; gap:.5rem; flex-wrap:wrap; align-items:center; }
 
     </style>
   </head>
@@ -1571,20 +1574,27 @@
           </label>
           <div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
             <button type="button" id="qtiParseBtn">🔍 Parse</button>
-            <button type="button" id="qtiImportBtn">✅ Add to Timesheet</button>
-            <button type="button" id="qtiClearBtn">✕ Clear</button>
             <div id="qtiStatus"></div>
           </div>
           <div id="qtiPreviewWrap">
             <table id="qtiPreviewTable">
               <thead>
                 <tr>
-                  <th>Date</th><th>Time In → Out</th><th>Hrs</th>
-                  <th>Job Name</th><th>Address</th>
+                  <th>Date</th>
+                  <th>Time In</th>
+                  <th>Time Out</th>
+                  <th>Hrs</th>
+                  <th>Job Name</th>
+                  <th>Address</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody id="qtiPreviewBody"></tbody>
             </table>
+            <div id="qtiBtnRow" style="display:none;margin-top:.75rem;gap:.5rem;flex-wrap:wrap;align-items:center;">
+              <button type="button" id="qtiImportBtn">✅ Add to Timesheet</button>
+              <button type="button" id="qtiClearBtn">✕ Clear</button>
+            </div>
           </div>
         </div>
       </div>
@@ -8707,38 +8717,7 @@
         // ── State ─────────────────────────────────────────────────────────────
         let _parsed = []; // current preview rows (editable copies)
 
-        // ── Render preview table ──────────────────────────────────────────────
-        function renderPreview() {
-          const tbody = document.getElementById('qtiPreviewBody');
-          tbody.innerHTML = '';
-          let lastDate = null;
-
-          _parsed.forEach((e, i) => {
-            if (e.dateStr !== lastDate) {
-              lastDate = e.dateStr;
-              const div = document.createElement('tr');
-              div.className = 'qti-day-divider';
-              div.innerHTML = `<td colspan="5">── ${fmtDay(e.dateStr)}, ${fmtDate(e.dateStr)} ──</td>`;
-              tbody.appendChild(div);
-            }
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td class="qti-date-cell">${fmtDate(e.dateStr)}<br><span style="color:#ff7a45;font-size:.65rem">${fmtDay(e.dateStr)}</span></td>
-              <td class="qti-time-cell">${e.timeIn} → ${e.timeOut}</td>
-              <td class="qti-dur-cell">${hrsLabel(e.timeIn, e.timeOut)}</td>
-              <td><input class="qti-edit-input" data-i="${i}" data-f="jobName"  value="${esc(e.jobName)}"  placeholder="Job name"/></td>
-              <td><input class="qti-edit-input" data-i="${i}" data-f="address"  value="${esc(e.address)}"  placeholder="Address (optional)"/></td>
-            `;
-            tbody.appendChild(tr);
-          });
-
-          tbody.querySelectorAll('.qti-edit-input').forEach(inp => {
-            inp.addEventListener('input', function () {
-              _parsed[+this.dataset.i][this.dataset.f] = this.value;
-            });
-          });
-        }
-
+        // ── Helpers ───────────────────────────────────────────────────────────
         function esc(s) {
           return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
         }
@@ -8749,6 +8728,102 @@
           el.className = cls || '';
         }
 
+        function showBtnRow(visible) {
+          const row = document.getElementById('qtiBtnRow');
+          row.style.display = visible ? 'flex' : 'none';
+        }
+
+        // ── Render preview table ──────────────────────────────────────────────
+        function renderPreview() {
+          const tbody = document.getElementById('qtiPreviewBody');
+          tbody.innerHTML = '';
+          let lastDate = null;
+
+          _parsed.forEach((e, i) => {
+            // Day-group divider (purely cosmetic, updates on date change)
+            if (e.dateStr !== lastDate) {
+              lastDate = e.dateStr;
+              const div = document.createElement('tr');
+              div.className = 'qti-day-divider';
+              div.setAttribute('data-divider', e.dateStr);
+              div.innerHTML = `<td colspan="7">── ${fmtDay(e.dateStr)}, ${fmtDate(e.dateStr)} ──</td>`;
+              tbody.appendChild(div);
+            }
+
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-row', i);
+            tr.innerHTML = `
+              <td>
+                <input class="qti-edit-input qti-date-input" type="date"
+                  data-i="${i}" data-f="dateStr" value="${esc(e.dateStr)}"/>
+              </td>
+              <td>
+                <input class="qti-edit-input qti-time-input" type="time"
+                  data-i="${i}" data-f="timeIn" value="${esc(e.timeIn)}"/>
+              </td>
+              <td>
+                <input class="qti-edit-input qti-time-input" type="time"
+                  data-i="${i}" data-f="timeOut" value="${esc(e.timeOut)}"/>
+              </td>
+              <td class="qti-dur-cell" data-dur="${i}">${hrsLabel(e.timeIn, e.timeOut)}</td>
+              <td>
+                <input class="qti-edit-input" style="min-width:110px"
+                  data-i="${i}" data-f="jobName" value="${esc(e.jobName)}" placeholder="Job name"/>
+              </td>
+              <td>
+                <input class="qti-edit-input" style="min-width:110px"
+                  data-i="${i}" data-f="address" value="${esc(e.address)}" placeholder="Address"/>
+              </td>
+              <td>
+                <button type="button" data-del="${i}"
+                  style="background:#dc3545;padding:.2rem .5rem;font-size:.72rem;min-height:unset;line-height:1;">✕</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          // Wire all inputs
+          tbody.querySelectorAll('.qti-edit-input').forEach(inp => {
+            inp.addEventListener('change', function () {
+              const idx = +this.dataset.i;
+              const field = this.dataset.f;
+              _parsed[idx][field] = this.value;
+
+              // Live-update duration cell when times change
+              if (field === 'timeIn' || field === 'timeOut') {
+                const durCell = tbody.querySelector(`[data-dur="${idx}"]`);
+                if (durCell) durCell.textContent = hrsLabel(_parsed[idx].timeIn, _parsed[idx].timeOut);
+              }
+
+              // Rebuild dividers if date changed
+              if (field === 'dateStr') renderPreview();
+            });
+          });
+
+          // Wire delete buttons
+          tbody.querySelectorAll('[data-del]').forEach(btn => {
+            btn.addEventListener('click', function () {
+              const idx = +this.dataset.del;
+              _parsed.splice(idx, 1);
+              if (_parsed.length === 0) {
+                resetQti();
+              } else {
+                renderPreview();
+                setStatus(`${_parsed.length} entr${_parsed.length===1?'y':'ies'} remaining.`, 'ok');
+              }
+            });
+          });
+        }
+
+        function resetQti() {
+          _parsed = [];
+          document.getElementById('qtiInput').value = '';
+          document.getElementById('qtiPreviewBody').innerHTML = '';
+          document.getElementById('qtiPreviewWrap').style.display = 'none';
+          showBtnRow(false);
+          setStatus('');
+        }
+
         // ── Parse button ──────────────────────────────────────────────────────
         document.getElementById('qtiParseBtn').addEventListener('click', function () {
           const raw = document.getElementById('qtiInput').value;
@@ -8757,36 +8832,33 @@
           if (!_parsed.length) {
             setStatus('No entries could be parsed — check time formats (e.g. 8:30-12).', 'err');
             document.getElementById('qtiPreviewWrap').style.display = 'none';
-            document.getElementById('qtiImportBtn').style.display = 'none';
-            document.getElementById('qtiClearBtn').style.display = 'none';
+            showBtnRow(false);
             return;
           }
           renderPreview();
           document.getElementById('qtiPreviewWrap').style.display = 'block';
-          document.getElementById('qtiImportBtn').style.display = '';
-          document.getElementById('qtiClearBtn').style.display  = '';
-          setStatus(`✓ ${_parsed.length} entr${_parsed.length===1?'y':'ies'} parsed — review & edit below, then click "Add to Timesheet".`, 'ok');
+          showBtnRow(true);
+          setStatus(`✓ ${_parsed.length} entr${_parsed.length===1?'y':'ies'} parsed — edit any cell, then click "Add to Timesheet".`, 'ok');
         });
 
         // ── Import button ─────────────────────────────────────────────────────
         document.getElementById('qtiImportBtn').addEventListener('click', function () {
           if (!_parsed.length) return;
 
-          // Deduplicate against existing entries
           const existingKeys = new Set(
             entries.map(e => `${e.dateStr}|${e.timeIn}|${(e.jobName||'').toLowerCase()}`)
           );
 
-          let added = 0;
+          let added = 0, skipped = 0;
           _parsed.forEach(p => {
             const key = `${p.dateStr}|${p.timeIn}|${(p.jobName||'').toLowerCase()}`;
-            if (existingKeys.has(key)) return;
+            if (existingKeys.has(key)) { skipped++; return; }
             existingKeys.add(key);
             entries.push({
               id:            generateEntryId(),
               dateStr:       p.dateStr,
-              jobName:       p.jobName.trim(),
-              address:       p.address.trim(),
+              jobName:       (p.jobName || '').trim(),
+              address:       (p.address || '').trim(),
               customerName:  '',
               timeIn:        p.timeIn,
               timeOut:       p.timeOut,
@@ -8801,24 +8873,20 @@
           renderTable();
 
           if (added > 0) {
-            setStatus(`✅ ${added} entr${added===1?'y':'ies'} added to your timesheet!`, 'ok');
-            // Switch to the Timesheet tab so user can see entries
+            const skipMsg = skipped > 0 ? ` (${skipped} duplicate${skipped>1?'s':''} skipped)` : '';
+            setStatus(`✅ ${added} entr${added===1?'y':'ies'} added to your timesheet!${skipMsg}`, 'ok');
+            // Jump to Timesheet tab
             const tsTab = document.querySelector('.tab-btn[data-tab="timesheetTab"]');
             if (tsTab) tsTab.click();
+            // Keep preview visible so user can see what was imported
           } else {
-            setStatus('All entries already exist in the timesheet (no duplicates added).', '');
+            setStatus('All entries already exist — no duplicates added.', '');
           }
         });
 
         // ── Clear button ──────────────────────────────────────────────────────
         document.getElementById('qtiClearBtn').addEventListener('click', function () {
-          document.getElementById('qtiInput').value = '';
-          document.getElementById('qtiPreviewBody').innerHTML = '';
-          document.getElementById('qtiPreviewWrap').style.display = 'none';
-          document.getElementById('qtiImportBtn').style.display = 'none';
-          document.getElementById('qtiClearBtn').style.display  = 'none';
-          setStatus('');
-          _parsed = [];
+          resetQti();
         });
 
       })(); // end Quick Text Import IIFE
