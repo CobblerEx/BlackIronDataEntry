@@ -6519,7 +6519,16 @@
           renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || '');
         });
       })();
-      document.getElementById('savedMaterialsSearch').addEventListener('input', (e) => renderSavedMaterialsList(e.target.value));
+      // ── Debounce utility ──────────────────────────────────────────────────
+      function debounce(fn, delay) {
+        let timer;
+        return function(...args) {
+          clearTimeout(timer);
+          timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+      }
+
+      document.getElementById('savedMaterialsSearch').addEventListener('input', debounce((e) => renderSavedMaterialsList(e.target.value), 200));
       document.getElementById('savedMaterialsSort')?.addEventListener('change', () => renderSavedMaterialsList(document.getElementById('savedMaterialsSearch')?.value || ''));
       document.getElementById('savedMaterialsModal').addEventListener('click', (e) => { if (e.target.id === 'savedMaterialsModal') closeSavedMaterialsModal(); });
       document.getElementById('populateInvoice').onclick = () => populateInvoiceFromEntries();
@@ -6527,9 +6536,9 @@
       document.getElementById('saveInvoiceDraft').onclick = () => saveCurrentInvoiceDraft();
       document.getElementById('appendInvoiceDraft').onclick = () => appendWorkToLoadedDraft();
 
-      document.getElementById('entrySelectorFilter')?.addEventListener('input', () => {
+      document.getElementById('entrySelectorFilter')?.addEventListener('input', debounce(() => {
         renderInvoiceEntrySelector();
-      });
+      }, 200));
 
       document.getElementById('showArchivedInvoices').addEventListener('change', () => {
         refreshInvoiceDraftList(document.getElementById('invoiceId').value.trim());
@@ -7545,7 +7554,7 @@
       document.getElementById('showInvoiceTools')?.addEventListener('change', e => setInvoiceToolsVisibility(e.target.checked));
       document.getElementById('manageClientProfiles')?.addEventListener('click', openClientProfilesModal);
       document.getElementById('closeClientProfiles')?.addEventListener('click', closeClientProfilesModal);
-      document.getElementById('clientProfilesSearch')?.addEventListener('input', e => renderClientProfilesLists(e.target.value));
+      document.getElementById('clientProfilesSearch')?.addEventListener('input', debounce(e => renderClientProfilesLists(e.target.value), 200));
       document.getElementById('clientProfilesSort')?.addEventListener('change', () => renderClientProfilesLists(document.getElementById('clientProfilesSearch')?.value || ''));
       document.getElementById('locationProfilesSort')?.addEventListener('change', () => renderClientProfilesLists(document.getElementById('clientProfilesSearch')?.value || ''));
       document.getElementById('clientProfilesModal')?.addEventListener('click', e => { if (e.target.id === 'clientProfilesModal') closeClientProfilesModal(); });
@@ -7914,7 +7923,7 @@
 
       document.getElementById('quickAddMaterials').addEventListener('click', openQuickAddModal);
       document.getElementById('closeQuickAdd').addEventListener('click', closeQuickAddModal);
-      document.getElementById('quickAddSearch').addEventListener('input', e => renderQuickAddList(e.target.value));
+      document.getElementById('quickAddSearch').addEventListener('input', debounce(e => renderQuickAddList(e.target.value), 200));
       document.getElementById('quickAddMaterialsModal').addEventListener('click', e => { if (e.target.id === 'quickAddMaterialsModal') closeQuickAddModal(); });
       document.getElementById('quickAddConfirmBtn').addEventListener('click', addSelectedQuickMaterials);
       document.getElementById('loadStarterMatsBtn')?.addEventListener('click', () => { loadStarterMaterials(); renderQuickAddList(''); });
