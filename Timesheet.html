@@ -1238,6 +1238,32 @@
       .mtm-add-item-row { display:flex;gap:.45rem;margin-top:.6rem;flex-wrap:wrap;align-items:center; }
       .mtm-add-item-row input { margin:0; }
 
+      /* ── Quick Text Import ── */
+      #quickTextImport { margin-top:1.5rem; border-top:1px solid rgba(255,69,0,.25); padding-top:1.25rem; }
+      #quickTextImport h3 { color:#ff4500; margin:0 0 .3rem; font-size:1rem; display:flex; align-items:center; gap:.5rem; }
+      #quickTextImport .qti-hint { font-size:.78rem; color:#888; margin-bottom:.85rem; line-height:1.55; }
+      #quickTextImport .qti-hint code { background:rgba(255,69,0,.1); border:1px solid rgba(255,69,0,.25); border-radius:4px; padding:.05rem .35rem; color:#ffb08a; font-size:.75rem; }
+      #qtiInput { width:100%; height:130px; resize:vertical; font-family:monospace; font-size:.82rem; }
+      #qtiParseBtn { background:#17a2b8; }
+      #qtiImportBtn { background:#28a745; }
+      #qtiClearBtn  { background:#555; }
+      #qtiStatus { font-size:.8rem; margin:.5rem 0 0; min-height:1.2em; }
+      #qtiStatus.ok  { color:#7CFF9B; }
+      #qtiStatus.err { color:#ff6b7a; }
+      #qtiPreviewWrap { display:none; margin-top:1rem; overflow-x:auto; }
+      #qtiPreviewWrap table { font-size:.78rem; }
+      #qtiPreviewWrap th { font-size:.68rem; }
+      #qtiPreviewWrap td { padding:.4rem .6rem; }
+      .qti-edit-input { background:#1e1e1e; border:1px solid rgba(255,69,0,.3); color:#e0e0e0; border-radius:5px; padding:.25rem .45rem; font-size:.76rem; width:100%; min-width:90px; font-family:monospace; }
+      .qti-edit-input:focus { outline:none; border-color:#ff4500; background:rgba(255,69,0,.06); }
+      .qti-time-input { min-width:60px; max-width:72px; text-align:center; }
+      .qti-date-input { min-width:100px; max-width:115px; color-scheme:dark; }
+      .qti-date-cell { color:#888; font-size:.72rem; white-space:nowrap; }
+      .qti-time-cell { color:#ffd166; white-space:nowrap; font-family:monospace; font-size:.75rem; }
+      .qti-dur-cell  { color:#3ddc84; font-size:.72rem; white-space:nowrap; }
+      .qti-day-divider td { background:rgba(255,69,0,.07); color:#ff7a45; font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:.3rem .6rem; border-top:1px solid rgba(255,69,0,.18); }
+      #qtiBtnRow { margin-top:.75rem; gap:.5rem; flex-wrap:wrap; align-items:center; }
+
     </style>
   </head>
   <body>
@@ -1533,6 +1559,44 @@
         <small style="display:block;opacity:.85;margin-top:.6rem;">
           Backup Data saves your timesheets, archive, invoices, clients, materials, and black iron data to a JSON file. Restore Data loads that backup back into the app.
         </small>
+
+        <!-- ── Quick Text Import ── -->
+        <div id="quickTextImport">
+          <h3>📋 Quick Text Import</h3>
+          <p class="qti-hint">
+            Paste freeform job notes and they'll be parsed into timesheet entries.<br>
+            Supported formats: <code>8:30-12 Job Name Address - May 11</code> &nbsp;·&nbsp;
+            <code>All May 20</code> to date a group &nbsp;·&nbsp;
+            <code>May 22 Friday 9-11 Job</code> for date-then-entries blocks.
+          </p>
+          <label>Paste notes:
+            <textarea id="qtiInput" placeholder="e.g.&#10;8:30-12 Julie Ductless 1940 London Rd Unit 23 - May 11&#10;9-3 4082 Petrolia Line AC - May 12&#10;8:30-9 Pool Heater Esser&#10;9:30-10:30 Corunna Willow&#10;11-2 Chudleigh&#10;All May 20"></textarea>
+          </label>
+          <div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+            <button type="button" id="qtiParseBtn">🔍 Parse</button>
+            <div id="qtiStatus"></div>
+          </div>
+          <div id="qtiPreviewWrap">
+            <table id="qtiPreviewTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Time In</th>
+                  <th>Time Out</th>
+                  <th>Hrs</th>
+                  <th>Job Name</th>
+                  <th>Address</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="qtiPreviewBody"></tbody>
+            </table>
+            <div id="qtiBtnRow" style="display:none;margin-top:.75rem;gap:.5rem;flex-wrap:wrap;align-items:center;">
+              <button type="button" id="qtiImportBtn">✅ Add to Timesheet</button>
+              <button type="button" id="qtiClearBtn">✕ Clear</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2331,6 +2395,11 @@
         return 'entry-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
       }
 
+      /* Central HTML-escape helper — prevents XSS when inserting user data via innerHTML */
+      function esc(s) {
+        return String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+      }
+
       // ── Undo buffer for deleted entries ──────────────────────────────────
       let _deletedEntryBuffer = null; // { entry, index, invoiceSnapshot }
       let _undoTimer = null;
@@ -2432,6 +2501,7 @@
         const key = normalizeMaterialKey(desc);
         const existing = materialCatalog[key] || {};
         materialCatalog[key] = {
+          uuid: existing.uuid || generateEntryId(),
           desc,
           unit: String(values.unit || 'ea').trim() || 'ea',
           distributorCost: +values.distributorCost || 0,
@@ -2552,10 +2622,10 @@
           row.style.cssText = overdue ? 'border-color:rgba(255,80,80,.45);' : '';
           row.innerHTML = `
             <div class="saved-material-main">
-              <div class="saved-material-name">${item.desc}</div>
-              <div class="saved-material-meta">Unit: ${item.unit || 'ea'} &nbsp;·&nbsp; Cost: $${formatMoney(item.distributorCost || 0)} &nbsp;·&nbsp; Sell: $${formatMoney(item.customerPrice || 0)}</div>
+              <div class="saved-material-name">${esc(item.desc)}</div>
+              <div class="saved-material-meta">Unit: ${esc(item.unit || 'ea')} &nbsp;·&nbsp; Cost: $${formatMoney(item.distributorCost || 0)} &nbsp;·&nbsp; Sell: $${formatMoney(item.customerPrice || 0)}</div>
               <div style="display:flex;align-items:center;gap:.5rem;margin-top:.4rem;flex-wrap:wrap;" class="sml-view-actions">
-                <span style="font-size:.76rem;color:${daysColor};">${daysLabel}</span>
+                <span style="font-size:.76rem;color:${daysColor};">${esc(daysLabel)}</span>
                 <button type="button" class="mini-btn sml-edit-btn" style="padding:.25rem .6rem;font-size:.75rem;min-height:auto;background:#ff4500;">✏️ Edit</button>
                 <button type="button" class="mini-btn sml-mark-updated" style="padding:.25rem .55rem;font-size:.75rem;min-height:auto;background:#28a745;">✓ Mark Updated</button>
                 <label style="display:flex;align-items:center;gap:.3rem;font-size:.76rem;cursor:pointer;margin:0;">
@@ -2569,10 +2639,10 @@
               <div class="sml-edit-form">
                 <div class="sml-edit-grid">
                   <label class="sml-edit-full"><span>Description</span>
-                    <input type="text" class="sml-in-desc" value="${(item.desc || '').replace(/"/g,'&quot;')}">
+                    <input type="text" class="sml-in-desc" value="${esc(item.desc || '')}">
                   </label>
                   <label><span>Unit</span>
-                    <input type="text" class="sml-in-unit" value="${(item.unit || 'ea').replace(/"/g,'&quot;')}">
+                    <input type="text" class="sml-in-unit" value="${esc(item.unit || 'ea')}">
                   </label>
                   <label><span>Category</span>
                     <select class="sml-in-cat" style="background:#1e1e1e;border:1px solid rgba(255,69,0,.35);border-radius:6px;color:#e0e0e0;font-size:.9rem;padding:.45rem .55rem;min-height:auto;margin:0;width:100%;">
@@ -2643,6 +2713,7 @@
             const newKey = normalizeMaterialKey(newDesc);
             materialCatalog[newKey] = {
               ...(materialCatalog[newKey] || {}),
+              uuid: (materialCatalog[key] || materialCatalog[newKey] || {}).uuid || generateEntryId(),
               desc: newDesc,
               unit: newUnit,
               category: newCat,
@@ -3029,6 +3100,20 @@
           }
         }
 
+        // Backfill missing UUIDs on existing invoice drafts
+        let invoicesDirty = false;
+        Object.values(invoices).forEach(inv => {
+          if (!inv.uuid) { inv.uuid = generateEntryId(); invoicesDirty = true; }
+        });
+        if (invoicesDirty) saveInvoicesToStorage();
+
+        // Backfill missing UUIDs on existing catalog items
+        let catalogDirty = false;
+        Object.values(materialCatalog).forEach(item => {
+          if (!item.uuid) { item.uuid = generateEntryId(); catalogDirty = true; }
+        });
+        if (catalogDirty) saveMaterialCatalog();
+
         renderTable();
         refreshArchiveList();
         loadInvoiceSession();
@@ -3326,19 +3411,12 @@
           const duration = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${formatDate(entry.dateStr || day.date || '')}</td>
-            <td><strong>${entry.jobName || ''}</strong><br><small>${entry.address || ''}</small></td>
-            <td>${entry.timeIn ? to12hr(entry.timeIn) : ''}</td>
-            <td>${entry.timeOut ? to12hr(entry.timeOut) : ''}</td>
-            <td>${Number.isFinite(duration) ? formatHours(duration) : ''}</td>
-            <td>${(() => {
-              const d = (entry.description || '').trim();
-              if (!d) return '';
-              const needsToggle = d.length > 80 || d.split('\n').length > 2;
-              return needsToggle
-                ? `<span class="desc-text">${d}</span><button type="button" class="desc-toggle">See more</button>`
-                : `<span class="desc-text expanded">${d}</span>`;
-            })()}</td>
+            <td>${esc(formatDate(entry.dateStr || day.date || ''))}</td>
+            <td><strong>${esc(entry.jobName || '')}</strong><br><small>${esc(entry.address || '')}</small></td>
+            <td>${esc(entry.timeIn ? to12hr(entry.timeIn) : '')}</td>
+            <td>${esc(entry.timeOut ? to12hr(entry.timeOut) : '')}</td>
+            <td>${esc(Number.isFinite(duration) ? formatHours(duration) : '')}</td>
+            <td>${buildDescCell(entry.description)}</td>
             <td>${getStatusMarkup(entry)}</td>`;
           tbody.appendChild(tr);
         });
@@ -4473,7 +4551,7 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="desc-cell imt-desc">
-            <input type="text" class="item-desc" list="materialSuggestions" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" value="${(item.desc || '').replace(/"/g, '&quot;')}" placeholder="Material / extra service">
+            <input type="text" class="item-desc" list="materialSuggestions" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" value="${esc(item.desc || '')}" placeholder="Material / extra service">
             <div class="material-autocomplete"></div>
           </td>
           <td class="imt-qty" data-label="Qty">
@@ -4483,7 +4561,7 @@
               <button type="button" class="qty-step-btn qty-plus" tabindex="-1">+</button>
             </div>
           </td>
-          <td class="imt-unit" data-label="Unit"><input type="text" class="item-unit" value="${(item.unit || savedMaterial?.unit || 'ea').replace(/"/g, '&quot;')}"></td>
+          <td class="imt-unit" data-label="Unit"><input type="text" class="item-unit" value="${esc(item.unit || savedMaterial?.unit || 'ea')}"></td>
           <td class="imt-distcost" data-label="Dist. cost"><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></td>
           <td class="imt-markup" data-label="Markup %"><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></td>
           <td class="imt-price" data-label="Sell price"><input type="number" class="item-customer-price select-on-focus" min="0" step="0.01" value="${formatMoney(fallbackCustomerPrice)}"></td>
@@ -5241,9 +5319,9 @@
           const statusNote = addressMismatch
             ? 'Address mismatch with loaded draft'
             : isInvoiced
-              ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
+              ? `Invoiced${e.invoiceId ? ` (${esc(e.invoiceId)})` : ''}${isSameInvoice ? ' — editable' : ''}`
               : e.billingStatus === 'draft-linked'
-                ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
+                ? `Draft Linked${e.invoiceId ? ` (${esc(e.invoiceId)})` : ''}`
                 : 'Unbilled';
           return { isLocked, isChecked, statusNote };
         }
@@ -5298,9 +5376,9 @@
 
             const labelSpan = document.createElement('span');
             labelSpan.style.cssText = 'flex:1;font-weight:700;color:#ffb08a;font-size:.88rem;line-height:1.3;';
-            const customerPart = customerName ? `${customerName} — ` : '';
-            const jobPart = jobName || '(no job name)';
-            const addrPart = address ? ` <span style="font-weight:400;opacity:.72;">(${address})</span>` : '';
+            const customerPart = customerName ? `${esc(customerName)} — ` : '';
+            const jobPart = esc(jobName || '(no job name)');
+            const addrPart = address ? ` <span style="font-weight:400;opacity:.72;">(${esc(address)})</span>` : '';
             labelSpan.innerHTML = `${customerPart}${jobPart}${addrPart}`;
 
             const badge = document.createElement('span');
@@ -5323,13 +5401,26 @@
               row.className = 'selector-row';
               row.dataset.groupMember = groupId;
               row.style.paddingLeft = '2.2rem';
-              row.innerHTML = `
-                <input type="checkbox" class="invoice-entry-check" value="${e.id}"
-                  ${isChecked ? 'checked' : ''} ${isLocked ? 'disabled' : ''}>
-                <strong>${formatDate(e.dateStr)}</strong>
-                <br>
-                <small>${to12hr(e.timeIn)} - ${to12hr(e.timeOut)} | ${statusNote}</small>
-              `;
+
+              const cb = document.createElement('input');
+              cb.type = 'checkbox';
+              cb.className = 'invoice-entry-check';
+              cb.value = e.id;
+              if (isChecked) cb.checked = true;
+              if (isLocked) cb.disabled = true;
+
+              const strong = document.createElement('strong');
+              strong.textContent = formatDate(e.dateStr);
+
+              const br = document.createElement('br');
+
+              const small = document.createElement('small');
+              small.textContent = `${to12hr(e.timeIn)} - ${to12hr(e.timeOut)} | ${statusNote}`;
+
+              row.appendChild(cb);
+              row.appendChild(strong);
+              row.appendChild(br);
+              row.appendChild(small);
               rowsContainer.appendChild(row);
             });
             container.appendChild(rowsContainer);
@@ -5724,6 +5815,7 @@
               : currentLaborDesc);
 
         invoices[invoiceId] = {
+          uuid: invoices[invoiceId]?.uuid || generateEntryId(),
           id: invoiceId,
           clientName: document.getElementById('clientName').value.trim(),
           clientPhone: document.getElementById('clientPhone').value.trim(),
@@ -5863,13 +5955,13 @@
 
       function getStatusMarkup(entry) {
         if (entry.billingStatus === 'invoiced') {
-          const id = entry.invoiceId || '';
+          const id = esc(entry.invoiceId || '');
           return id
             ? `<div class="status-pill-wrap"><span class="status-pill status-invoiced">Invoiced</span><span class="status-pill-id" title="${id}">${id}</span></div>`
             : `<span class="status-pill status-invoiced">Invoiced</span>`;
         }
         if (entry.billingStatus === 'draft-linked') {
-          const id = entry.invoiceId || '';
+          const id = esc(entry.invoiceId || '');
           return id
             ? `<div class="status-pill-wrap"><span class="status-pill status-draft">Draft Linked</span><span class="status-pill-id" title="${id}">${id}</span></div>`
             : `<span class="status-pill status-draft">Draft Linked</span>`;
@@ -5990,6 +6082,17 @@
         document.getElementById('form').scrollIntoView({ behavior: ('scrollBehavior' in document.documentElement.style) ? 'smooth' : 'auto' });
       }
 
+      /* Builds the safe HTML for description cells in both the live and archive tables. */
+      function buildDescCell(description) {
+        const d = (description || '').trim();
+        if (!d) return '';
+        const needsToggle = d.length > 80 || d.split('\n').length > 2;
+        const escapedD = esc(d);
+        return needsToggle
+          ? `<span class="desc-text">${escapedD}</span><button type="button" class="desc-toggle">See more</button>`
+          : `<span class="desc-text expanded">${escapedD}</span>`;
+      }
+
       function renderTable() {
         const tbody = document.querySelector('#entriesTable tbody');
         tbody.innerHTML = '';
@@ -6030,19 +6133,12 @@
           }
 
           tr.innerHTML = `
-            <td>${formatDate(e.dateStr)}</td>
-            <td><strong>${e.jobName}</strong><br><small>${e.address || ''}</small></td>
-            <td>${to12hr(e.timeIn)}</td>
-            <td>${to12hr(e.timeOut)}</td>
-            <td>${formatHours(duration)}</td>
-            <td class="desc-cell-entry">${(() => {
-              const d = (e.description || '').trim();
-              if (!d) return '';
-              const needsToggle = d.length > 80 || d.split('\n').length > 2;
-              return needsToggle
-                ? `<span class="desc-text">${d}</span><button type="button" class="desc-toggle">See more</button>`
-                : `<span class="desc-text expanded">${d}</span>`;
-            })()}</td>
+            <td>${esc(formatDate(e.dateStr))}</td>
+            <td><strong>${esc(e.jobName)}</strong><br><small>${esc(e.address || '')}</small></td>
+            <td>${esc(to12hr(e.timeIn))}</td>
+            <td>${esc(to12hr(e.timeOut))}</td>
+            <td>${esc(formatHours(duration))}</td>
+            <td class="desc-cell-entry">${buildDescCell(e.description)}</td>
             <td>${getStatusMarkup(e)}</td>
             <td>
               <i class="fas fa-grip-lines drag-handle"></i>
@@ -6411,6 +6507,7 @@
             if (!confirm('A material with this name already exists. Overwrite it?')) return;
           }
           materialCatalog[key] = {
+            uuid: (materialCatalog[key] || {}).uuid || generateEntryId(),
             desc, unit, category: cat,
             distributorCost: cost, markup, customerPrice: sell,
             priceLastUpdated: new Date().toISOString(),
@@ -6687,6 +6784,7 @@
             const pdfLinkedEntries = getAllEntriesForInvoicing().filter(e => selectedIds.includes(e.id));
             invoices[invoiceIdForSave] = {
               ...(invoices[invoiceIdForSave] || {}),
+              uuid: invoices[invoiceIdForSave]?.uuid || generateEntryId(),
               id: invoiceIdForSave,
               clientName: document.getElementById('clientName').value.trim(),
               clientPhone: document.getElementById('clientPhone').value.trim(),
@@ -7782,7 +7880,7 @@
         STARTER_MATERIALS.forEach(mat => {
           const key = normalizeMaterialKey(mat.desc);
           if (!materialCatalog[key]) {
-            materialCatalog[key] = { ...mat, priceAlertEnabled: true, priceLastUpdated: now };
+            materialCatalog[key] = { uuid: generateEntryId(), ...mat, priceAlertEnabled: true, priceLastUpdated: now };
             added++;
           }
         });
@@ -8474,6 +8572,360 @@
       refreshInvoiceDraftList();
       // Check for overdue price alerts after a brief delay
       setTimeout(checkPriceAlerts, 1200);
+
+      // ── Quick Text Import ────────────────────────────────────────────────────
+      (function () {
+
+        const MONTHS = {
+          jan:1,january:1,feb:2,february:2,mar:3,march:3,apr:4,april:4,
+          may:5,jun:6,june:6,jul:7,july:7,aug:8,august:8,
+          sep:9,sept:9,september:9,oct:10,october:10,nov:11,november:11,
+          dec:12,december:12
+        };
+        const DAY_ABBR = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        const MON_ABBR = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+        function toDateStr(mon, day) {
+          const key = mon.toLowerCase().replace(/[^a-z]/g,'').slice(0,9);
+          const mm = MONTHS[key];
+          if (!mm) return null;
+          const yr = new Date().getFullYear();
+          return `${yr}-${String(mm).padStart(2,'0')}-${String(+day).padStart(2,'0')}`;
+        }
+
+        function fmtDate(ds) {
+          const d = new Date(ds + 'T00:00:00');
+          return `${MON_ABBR[d.getMonth()+1]} ${d.getDate()}`;
+        }
+        function fmtDay(ds) {
+          return DAY_ABBR[new Date(ds + 'T00:00:00').getDay()];
+        }
+
+        function timeToHHMM(t) {
+          const p = t.trim().split(':');
+          return `${String(parseInt(p[0])).padStart(2,'0')}:${p[1] ? String(parseInt(p[1])).padStart(2,'0') : '00'}`;
+        }
+
+        function resolveEnd(startStr, endStr) {
+          const sp = startStr.split(':'), ep = endStr.split(':');
+          const sv = parseInt(sp[0]) + (sp[1] ? parseInt(sp[1])/60 : 0);
+          let eh = parseInt(ep[0]), em = ep[1] ? parseInt(ep[1]) : 0;
+          const ev = eh + em/60;
+          if (ev < sv && ev < 12) eh += 12;
+          return `${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}`;
+        }
+
+        function hrsLabel(tIn, tOut) {
+          const toMin = t => { const p=t.split(':'); return parseInt(p[0])*60+(p[1]?parseInt(p[1]):0); };
+          const m = toMin(tOut) - toMin(tIn);
+          if (m <= 0) return '—';
+          const h = Math.floor(m/60), mn = m%60;
+          return h > 0 ? (mn > 0 ? `${h}h ${mn}m` : `${h}h`) : `${mn}m`;
+        }
+
+        function titleCase(s) {
+          return s.replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        // ── Parser ────────────────────────────────────────────────────────────
+        function parseText(raw) {
+          if (!raw || !raw.trim()) return [];
+
+          // Normalise
+          let text = raw
+            .replace(/–|—/g, '-')
+            .replace(/\r\n|\r/g, '\n')
+            // "may21" → "may 21"
+            .replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*(\d{1,2})\b/gi,
+              (_, mon, d) => `${mon} ${d}`);
+
+          // Patterns
+          const TIME_RE   = /\b(\d{1,2}(?::\d{2})?)\s*-\s*(\d{1,2}(?::\d{2})?)/g;
+          // Matches "may 11", "- may 11", "tuesday may 12", "May 22 Friday"
+          const DATE_RE   = /(?:^|[\s\-,])(?:(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})\b/gi;
+          // Matches "all may 20", "all may20"
+          const ALLDAY_RE = /\ball\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?)\s*(\d{1,2})\b/gi;
+
+          function firstDate(str) {
+            DATE_RE.lastIndex = 0;
+            const m = DATE_RE.exec(str);
+            return m ? toDateStr(m[1], m[2]) : null;
+          }
+          function firstAllDay(str) {
+            ALLDAY_RE.lastIndex = 0;
+            const m = ALLDAY_RE.exec(str);
+            return m ? toDateStr(m[1], m[2]) : null;
+          }
+          function stripDates(str) {
+            return str
+              .replace(/\ball\s+\w+\s+\d+\b/gi, '')
+              .replace(/(?:[-,]\s*)?(?:(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d+\b/gi, '')
+              .replace(/\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '')
+              .replace(/[.]+/g, ' ')
+              .replace(/\s{2,}/g, ' ')
+              .replace(/[-\s]+$/, '')
+              .trim();
+          }
+
+          // Step 1 — collect all time-range positions across whole text
+          const flat = text.replace(/\n/g, ' \n ');
+          TIME_RE.lastIndex = 0;
+          const tMatches = [];
+          let m;
+          while ((m = TIME_RE.exec(flat)) !== null) {
+            tMatches.push({ idx: m.index, endIdx: m.index + m[0].length, tIn: m[1], tOut: m[2] });
+          }
+          if (!tMatches.length) return [];
+
+          // Step 2 — for each time range, content = text between this end and next start
+          const chunks = tMatches.map((tm, i) => {
+            const nextStart = i + 1 < tMatches.length ? tMatches[i+1].idx : flat.length;
+            const before    = i === 0 ? flat.slice(0, tm.idx) : flat.slice(tMatches[i-1].endIdx, tm.idx);
+            return {
+              tIn: tm.tIn, tOut: tm.tOut,
+              after:  flat.slice(tm.endIdx, nextStart),
+              before: before
+            };
+          });
+
+          // Step 3 — build raw entries
+          const raw2 = chunks.map(c => {
+            const alldayDate = firstAllDay(c.after);
+            const inlineDate = firstDate(c.after);
+            const prefDate   = firstDate(c.before);
+            const desc       = stripDates(c.after);
+            return { tIn: c.tIn, tOut: c.tOut, desc, inlineDate, alldayDate, prefDate };
+          });
+
+          // Step 4 — assign dates
+          const built = raw2.map(e => ({
+            timeIn:   timeToHHMM(e.tIn),
+            timeOut:  resolveEnd(e.tIn, e.tOut),
+            desc:     e.desc,
+            dateStr:  e.inlineDate || e.prefDate || null,
+            alldayDate: e.alldayDate
+          }));
+
+          // "All may X" inside an entry's content applies retroactively
+          for (let i = 0; i < built.length; i++) {
+            if (built[i].alldayDate) {
+              const ad = built[i].alldayDate;
+              // Apply to preceding undated entries back to last dated one
+              for (let j = i - 1; j >= 0; j--) {
+                if (!built[j].dateStr) built[j].dateStr = ad;
+                else break;
+              }
+              // Also apply to this entry if it has no date yet
+              if (!built[i].dateStr) built[i].dateStr = ad;
+            }
+          }
+
+          // Forward-fill: carry last known date to undated entries that follow
+          let lastDate = null;
+          for (const e of built) {
+            if (e.dateStr) lastDate = e.dateStr;
+            else if (lastDate) e.dateStr = lastDate;
+          }
+
+          // Step 5 — split desc into jobName / address
+          return built
+            .filter(e => e.dateStr)
+            .map(e => {
+              let desc = e.desc;
+              let jobName = '', address = '';
+              // If starts with a number → likely address first, then job type
+              const streetRE = /^(\d+\s+[\w\s]+?(?:\b(?:rd|st|ave|dr|line|blvd|cres|ct|way|ln|pl|unit\s*\d+|unit\s*#\d+)\b[,\s]*\d*))\s+(.+)$/i;
+              const sm = desc.match(streetRE);
+              if (sm) {
+                address = titleCase(sm[1].trim().replace(/[,\s]+$/, ''));
+                jobName = titleCase(sm[2].trim());
+              } else {
+                jobName = titleCase(desc);
+              }
+              jobName = jobName.replace(/^[-\s]+|[-\s]+$/g, '').trim() || 'Service';
+              address = address.replace(/^[-\s]+|[-\s]+$/g, '').trim();
+              return { dateStr: e.dateStr, timeIn: e.timeIn, timeOut: e.timeOut, jobName, address };
+            });
+        }
+
+        // ── State ─────────────────────────────────────────────────────────────
+        let _parsed = []; // current preview rows (editable copies)
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        function esc(s) {
+          return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+        }
+
+        function setStatus(msg, cls) {
+          const el = document.getElementById('qtiStatus');
+          el.textContent = msg;
+          el.className = cls || '';
+        }
+
+        function showBtnRow(visible) {
+          const row = document.getElementById('qtiBtnRow');
+          row.style.display = visible ? 'flex' : 'none';
+        }
+
+        // ── Render preview table ──────────────────────────────────────────────
+        function renderPreview() {
+          const tbody = document.getElementById('qtiPreviewBody');
+          tbody.innerHTML = '';
+          let lastDate = null;
+
+          _parsed.forEach((e, i) => {
+            // Day-group divider (purely cosmetic, updates on date change)
+            if (e.dateStr !== lastDate) {
+              lastDate = e.dateStr;
+              const div = document.createElement('tr');
+              div.className = 'qti-day-divider';
+              div.setAttribute('data-divider', e.dateStr);
+              div.innerHTML = `<td colspan="7">── ${fmtDay(e.dateStr)}, ${fmtDate(e.dateStr)} ──</td>`;
+              tbody.appendChild(div);
+            }
+
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-row', i);
+            tr.innerHTML = `
+              <td>
+                <input class="qti-edit-input qti-date-input" type="date"
+                  data-i="${i}" data-f="dateStr" value="${esc(e.dateStr)}"/>
+              </td>
+              <td>
+                <input class="qti-edit-input qti-time-input" type="time"
+                  data-i="${i}" data-f="timeIn" value="${esc(e.timeIn)}"/>
+              </td>
+              <td>
+                <input class="qti-edit-input qti-time-input" type="time"
+                  data-i="${i}" data-f="timeOut" value="${esc(e.timeOut)}"/>
+              </td>
+              <td class="qti-dur-cell" data-dur="${i}">${hrsLabel(e.timeIn, e.timeOut)}</td>
+              <td>
+                <input class="qti-edit-input" style="min-width:110px"
+                  data-i="${i}" data-f="jobName" value="${esc(e.jobName)}" placeholder="Job name"/>
+              </td>
+              <td>
+                <input class="qti-edit-input" style="min-width:110px"
+                  data-i="${i}" data-f="address" value="${esc(e.address)}" placeholder="Address"/>
+              </td>
+              <td>
+                <button type="button" data-del="${i}"
+                  style="background:#dc3545;padding:.2rem .5rem;font-size:.72rem;min-height:unset;line-height:1;">✕</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          // Wire all inputs
+          tbody.querySelectorAll('.qti-edit-input').forEach(inp => {
+            inp.addEventListener('change', function () {
+              const idx = +this.dataset.i;
+              const field = this.dataset.f;
+              _parsed[idx][field] = this.value;
+
+              // Live-update duration cell when times change
+              if (field === 'timeIn' || field === 'timeOut') {
+                const durCell = tbody.querySelector(`[data-dur="${idx}"]`);
+                if (durCell) durCell.textContent = hrsLabel(_parsed[idx].timeIn, _parsed[idx].timeOut);
+              }
+
+              // Rebuild dividers if date changed
+              if (field === 'dateStr') renderPreview();
+            });
+          });
+
+          // Wire delete buttons
+          tbody.querySelectorAll('[data-del]').forEach(btn => {
+            btn.addEventListener('click', function () {
+              const idx = +this.dataset.del;
+              _parsed.splice(idx, 1);
+              if (_parsed.length === 0) {
+                resetQti();
+              } else {
+                renderPreview();
+                setStatus(`${_parsed.length} entr${_parsed.length===1?'y':'ies'} remaining.`, 'ok');
+              }
+            });
+          });
+        }
+
+        function resetQti() {
+          _parsed = [];
+          document.getElementById('qtiInput').value = '';
+          document.getElementById('qtiPreviewBody').innerHTML = '';
+          document.getElementById('qtiPreviewWrap').style.display = 'none';
+          showBtnRow(false);
+          setStatus('');
+        }
+
+        // ── Parse button ──────────────────────────────────────────────────────
+        document.getElementById('qtiParseBtn').addEventListener('click', function () {
+          const raw = document.getElementById('qtiInput').value;
+          if (!raw.trim()) { setStatus('Paste some notes first.', 'err'); return; }
+          _parsed = parseText(raw);
+          if (!_parsed.length) {
+            setStatus('No entries could be parsed — check time formats (e.g. 8:30-12).', 'err');
+            document.getElementById('qtiPreviewWrap').style.display = 'none';
+            showBtnRow(false);
+            return;
+          }
+          renderPreview();
+          document.getElementById('qtiPreviewWrap').style.display = 'block';
+          showBtnRow(true);
+          setStatus(`✓ ${_parsed.length} entr${_parsed.length===1?'y':'ies'} parsed — edit any cell, then click "Add to Timesheet".`, 'ok');
+        });
+
+        // ── Import button ─────────────────────────────────────────────────────
+        document.getElementById('qtiImportBtn').addEventListener('click', function () {
+          if (!_parsed.length) return;
+
+          const existingKeys = new Set(
+            entries.map(e => `${e.dateStr}|${e.timeIn}|${(e.jobName||'').toLowerCase()}`)
+          );
+
+          let added = 0, skipped = 0;
+          _parsed.forEach(p => {
+            const key = `${p.dateStr}|${p.timeIn}|${(p.jobName||'').toLowerCase()}`;
+            if (existingKeys.has(key)) { skipped++; return; }
+            existingKeys.add(key);
+            entries.push({
+              id:            generateEntryId(),
+              dateStr:       p.dateStr,
+              jobName:       (p.jobName || '').trim(),
+              address:       (p.address || '').trim(),
+              customerName:  '',
+              timeIn:        p.timeIn,
+              timeOut:       p.timeOut,
+              description:   '',
+              billingStatus: 'unbilled',
+              invoiceId:     ''
+            });
+            added++;
+          });
+
+          saveData();
+          renderTable();
+
+          if (added > 0) {
+            const skipMsg = skipped > 0 ? ` (${skipped} duplicate${skipped>1?'s':''} skipped)` : '';
+            setStatus(`✅ ${added} entr${added===1?'y':'ies'} added to your timesheet!${skipMsg}`, 'ok');
+            // Jump to Timesheet tab
+            const tsTab = document.querySelector('.tab-btn[data-tab="timesheetTab"]');
+            if (tsTab) tsTab.click();
+            // Keep preview visible so user can see what was imported
+          } else {
+            setStatus('All entries already exist — no duplicates added.', '');
+          }
+        });
+
+        // ── Clear button ──────────────────────────────────────────────────────
+        document.getElementById('qtiClearBtn').addEventListener('click', function () {
+          resetQti();
+        });
+
+      })(); // end Quick Text Import IIFE
+      // ─────────────────────────────────────────────────────────────────────────
+
     </script>
 
     <script>
