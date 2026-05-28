@@ -2395,6 +2395,11 @@
         return 'entry-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
       }
 
+      /* Central HTML-escape helper — prevents XSS when inserting user data via innerHTML */
+      function esc(s) {
+        return String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+      }
+
       // ── Undo buffer for deleted entries ──────────────────────────────────
       let _deletedEntryBuffer = null; // { entry, index, invoiceSnapshot }
       let _undoTimer = null;
@@ -2496,6 +2501,7 @@
         const key = normalizeMaterialKey(desc);
         const existing = materialCatalog[key] || {};
         materialCatalog[key] = {
+          uuid: existing.uuid || generateEntryId(),
           desc,
           unit: String(values.unit || 'ea').trim() || 'ea',
           distributorCost: +values.distributorCost || 0,
@@ -2616,10 +2622,10 @@
           row.style.cssText = overdue ? 'border-color:rgba(255,80,80,.45);' : '';
           row.innerHTML = `
             <div class="saved-material-main">
-              <div class="saved-material-name">${item.desc}</div>
-              <div class="saved-material-meta">Unit: ${item.unit || 'ea'} &nbsp;·&nbsp; Cost: $${formatMoney(item.distributorCost || 0)} &nbsp;·&nbsp; Sell: $${formatMoney(item.customerPrice || 0)}</div>
+              <div class="saved-material-name">${esc(item.desc)}</div>
+              <div class="saved-material-meta">Unit: ${esc(item.unit || 'ea')} &nbsp;·&nbsp; Cost: $${formatMoney(item.distributorCost || 0)} &nbsp;·&nbsp; Sell: $${formatMoney(item.customerPrice || 0)}</div>
               <div style="display:flex;align-items:center;gap:.5rem;margin-top:.4rem;flex-wrap:wrap;" class="sml-view-actions">
-                <span style="font-size:.76rem;color:${daysColor};">${daysLabel}</span>
+                <span style="font-size:.76rem;color:${daysColor};">${esc(daysLabel)}</span>
                 <button type="button" class="mini-btn sml-edit-btn" style="padding:.25rem .6rem;font-size:.75rem;min-height:auto;background:#ff4500;">✏️ Edit</button>
                 <button type="button" class="mini-btn sml-mark-updated" style="padding:.25rem .55rem;font-size:.75rem;min-height:auto;background:#28a745;">✓ Mark Updated</button>
                 <label style="display:flex;align-items:center;gap:.3rem;font-size:.76rem;cursor:pointer;margin:0;">
@@ -2633,10 +2639,10 @@
               <div class="sml-edit-form">
                 <div class="sml-edit-grid">
                   <label class="sml-edit-full"><span>Description</span>
-                    <input type="text" class="sml-in-desc" value="${(item.desc || '').replace(/"/g,'&quot;')}">
+                    <input type="text" class="sml-in-desc" value="${esc(item.desc || '')}">
                   </label>
                   <label><span>Unit</span>
-                    <input type="text" class="sml-in-unit" value="${(item.unit || 'ea').replace(/"/g,'&quot;')}">
+                    <input type="text" class="sml-in-unit" value="${esc(item.unit || 'ea')}">
                   </label>
                   <label><span>Category</span>
                     <select class="sml-in-cat" style="background:#1e1e1e;border:1px solid rgba(255,69,0,.35);border-radius:6px;color:#e0e0e0;font-size:.9rem;padding:.45rem .55rem;min-height:auto;margin:0;width:100%;">
@@ -2707,6 +2713,7 @@
             const newKey = normalizeMaterialKey(newDesc);
             materialCatalog[newKey] = {
               ...(materialCatalog[newKey] || {}),
+              uuid: (materialCatalog[key] || materialCatalog[newKey] || {}).uuid || generateEntryId(),
               desc: newDesc,
               unit: newUnit,
               category: newCat,
@@ -3093,6 +3100,20 @@
           }
         }
 
+        // Backfill missing UUIDs on existing invoice drafts
+        let invoicesDirty = false;
+        Object.values(invoices).forEach(inv => {
+          if (!inv.uuid) { inv.uuid = generateEntryId(); invoicesDirty = true; }
+        });
+        if (invoicesDirty) saveInvoicesToStorage();
+
+        // Backfill missing UUIDs on existing catalog items
+        let catalogDirty = false;
+        Object.values(materialCatalog).forEach(item => {
+          if (!item.uuid) { item.uuid = generateEntryId(); catalogDirty = true; }
+        });
+        if (catalogDirty) saveMaterialCatalog();
+
         renderTable();
         refreshArchiveList();
         loadInvoiceSession();
@@ -3390,19 +3411,12 @@
           const duration = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${formatDate(entry.dateStr || day.date || '')}</td>
-            <td><strong>${entry.jobName || ''}</strong><br><small>${entry.address || ''}</small></td>
-            <td>${entry.timeIn ? to12hr(entry.timeIn) : ''}</td>
-            <td>${entry.timeOut ? to12hr(entry.timeOut) : ''}</td>
-            <td>${Number.isFinite(duration) ? formatHours(duration) : ''}</td>
-            <td>${(() => {
-              const d = (entry.description || '').trim();
-              if (!d) return '';
-              const needsToggle = d.length > 80 || d.split('\n').length > 2;
-              return needsToggle
-                ? `<span class="desc-text">${d}</span><button type="button" class="desc-toggle">See more</button>`
-                : `<span class="desc-text expanded">${d}</span>`;
-            })()}</td>
+            <td>${esc(formatDate(entry.dateStr || day.date || ''))}</td>
+            <td><strong>${esc(entry.jobName || '')}</strong><br><small>${esc(entry.address || '')}</small></td>
+            <td>${esc(entry.timeIn ? to12hr(entry.timeIn) : '')}</td>
+            <td>${esc(entry.timeOut ? to12hr(entry.timeOut) : '')}</td>
+            <td>${esc(Number.isFinite(duration) ? formatHours(duration) : '')}</td>
+            <td>${buildDescCell(entry.description)}</td>
             <td>${getStatusMarkup(entry)}</td>`;
           tbody.appendChild(tr);
         });
@@ -4537,7 +4551,7 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="desc-cell imt-desc">
-            <input type="text" class="item-desc" list="materialSuggestions" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" value="${(item.desc || '').replace(/"/g, '&quot;')}" placeholder="Material / extra service">
+            <input type="text" class="item-desc" list="materialSuggestions" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" value="${esc(item.desc || '')}" placeholder="Material / extra service">
             <div class="material-autocomplete"></div>
           </td>
           <td class="imt-qty" data-label="Qty">
@@ -4547,7 +4561,7 @@
               <button type="button" class="qty-step-btn qty-plus" tabindex="-1">+</button>
             </div>
           </td>
-          <td class="imt-unit" data-label="Unit"><input type="text" class="item-unit" value="${(item.unit || savedMaterial?.unit || 'ea').replace(/"/g, '&quot;')}"></td>
+          <td class="imt-unit" data-label="Unit"><input type="text" class="item-unit" value="${esc(item.unit || savedMaterial?.unit || 'ea')}"></td>
           <td class="imt-distcost" data-label="Dist. cost"><input type="number" class="item-distributor-cost select-on-focus" min="0" step="0.01" value="${formatMoney(defaultDistributorCost)}"></td>
           <td class="imt-markup" data-label="Markup %"><input type="number" class="item-markup select-on-focus" min="0" step="0.01" value="${formatMoney(defaultMarkup)}"></td>
           <td class="imt-price" data-label="Sell price"><input type="number" class="item-customer-price select-on-focus" min="0" step="0.01" value="${formatMoney(fallbackCustomerPrice)}"></td>
@@ -5305,9 +5319,9 @@
           const statusNote = addressMismatch
             ? 'Address mismatch with loaded draft'
             : isInvoiced
-              ? `Invoiced${e.invoiceId ? ` (${e.invoiceId})` : ''}${isSameInvoice ? ' — editable' : ''}`
+              ? `Invoiced${e.invoiceId ? ` (${esc(e.invoiceId)})` : ''}${isSameInvoice ? ' — editable' : ''}`
               : e.billingStatus === 'draft-linked'
-                ? `Draft Linked${e.invoiceId ? ` (${e.invoiceId})` : ''}`
+                ? `Draft Linked${e.invoiceId ? ` (${esc(e.invoiceId)})` : ''}`
                 : 'Unbilled';
           return { isLocked, isChecked, statusNote };
         }
@@ -5362,9 +5376,9 @@
 
             const labelSpan = document.createElement('span');
             labelSpan.style.cssText = 'flex:1;font-weight:700;color:#ffb08a;font-size:.88rem;line-height:1.3;';
-            const customerPart = customerName ? `${customerName} — ` : '';
-            const jobPart = jobName || '(no job name)';
-            const addrPart = address ? ` <span style="font-weight:400;opacity:.72;">(${address})</span>` : '';
+            const customerPart = customerName ? `${esc(customerName)} — ` : '';
+            const jobPart = esc(jobName || '(no job name)');
+            const addrPart = address ? ` <span style="font-weight:400;opacity:.72;">(${esc(address)})</span>` : '';
             labelSpan.innerHTML = `${customerPart}${jobPart}${addrPart}`;
 
             const badge = document.createElement('span');
@@ -5387,13 +5401,26 @@
               row.className = 'selector-row';
               row.dataset.groupMember = groupId;
               row.style.paddingLeft = '2.2rem';
-              row.innerHTML = `
-                <input type="checkbox" class="invoice-entry-check" value="${e.id}"
-                  ${isChecked ? 'checked' : ''} ${isLocked ? 'disabled' : ''}>
-                <strong>${formatDate(e.dateStr)}</strong>
-                <br>
-                <small>${to12hr(e.timeIn)} - ${to12hr(e.timeOut)} | ${statusNote}</small>
-              `;
+
+              const cb = document.createElement('input');
+              cb.type = 'checkbox';
+              cb.className = 'invoice-entry-check';
+              cb.value = e.id;
+              if (isChecked) cb.checked = true;
+              if (isLocked) cb.disabled = true;
+
+              const strong = document.createElement('strong');
+              strong.textContent = formatDate(e.dateStr);
+
+              const br = document.createElement('br');
+
+              const small = document.createElement('small');
+              small.textContent = `${to12hr(e.timeIn)} - ${to12hr(e.timeOut)} | ${statusNote}`;
+
+              row.appendChild(cb);
+              row.appendChild(strong);
+              row.appendChild(br);
+              row.appendChild(small);
               rowsContainer.appendChild(row);
             });
             container.appendChild(rowsContainer);
@@ -5788,6 +5815,7 @@
               : currentLaborDesc);
 
         invoices[invoiceId] = {
+          uuid: invoices[invoiceId]?.uuid || generateEntryId(),
           id: invoiceId,
           clientName: document.getElementById('clientName').value.trim(),
           clientPhone: document.getElementById('clientPhone').value.trim(),
@@ -5927,13 +5955,13 @@
 
       function getStatusMarkup(entry) {
         if (entry.billingStatus === 'invoiced') {
-          const id = entry.invoiceId || '';
+          const id = esc(entry.invoiceId || '');
           return id
             ? `<div class="status-pill-wrap"><span class="status-pill status-invoiced">Invoiced</span><span class="status-pill-id" title="${id}">${id}</span></div>`
             : `<span class="status-pill status-invoiced">Invoiced</span>`;
         }
         if (entry.billingStatus === 'draft-linked') {
-          const id = entry.invoiceId || '';
+          const id = esc(entry.invoiceId || '');
           return id
             ? `<div class="status-pill-wrap"><span class="status-pill status-draft">Draft Linked</span><span class="status-pill-id" title="${id}">${id}</span></div>`
             : `<span class="status-pill status-draft">Draft Linked</span>`;
@@ -6054,6 +6082,17 @@
         document.getElementById('form').scrollIntoView({ behavior: ('scrollBehavior' in document.documentElement.style) ? 'smooth' : 'auto' });
       }
 
+      /* Builds the safe HTML for description cells in both the live and archive tables. */
+      function buildDescCell(description) {
+        const d = (description || '').trim();
+        if (!d) return '';
+        const needsToggle = d.length > 80 || d.split('\n').length > 2;
+        const escapedD = esc(d);
+        return needsToggle
+          ? `<span class="desc-text">${escapedD}</span><button type="button" class="desc-toggle">See more</button>`
+          : `<span class="desc-text expanded">${escapedD}</span>`;
+      }
+
       function renderTable() {
         const tbody = document.querySelector('#entriesTable tbody');
         tbody.innerHTML = '';
@@ -6094,19 +6133,12 @@
           }
 
           tr.innerHTML = `
-            <td>${formatDate(e.dateStr)}</td>
-            <td><strong>${e.jobName}</strong><br><small>${e.address || ''}</small></td>
-            <td>${to12hr(e.timeIn)}</td>
-            <td>${to12hr(e.timeOut)}</td>
-            <td>${formatHours(duration)}</td>
-            <td class="desc-cell-entry">${(() => {
-              const d = (e.description || '').trim();
-              if (!d) return '';
-              const needsToggle = d.length > 80 || d.split('\n').length > 2;
-              return needsToggle
-                ? `<span class="desc-text">${d}</span><button type="button" class="desc-toggle">See more</button>`
-                : `<span class="desc-text expanded">${d}</span>`;
-            })()}</td>
+            <td>${esc(formatDate(e.dateStr))}</td>
+            <td><strong>${esc(e.jobName)}</strong><br><small>${esc(e.address || '')}</small></td>
+            <td>${esc(to12hr(e.timeIn))}</td>
+            <td>${esc(to12hr(e.timeOut))}</td>
+            <td>${esc(formatHours(duration))}</td>
+            <td class="desc-cell-entry">${buildDescCell(e.description)}</td>
             <td>${getStatusMarkup(e)}</td>
             <td>
               <i class="fas fa-grip-lines drag-handle"></i>
@@ -6475,6 +6507,7 @@
             if (!confirm('A material with this name already exists. Overwrite it?')) return;
           }
           materialCatalog[key] = {
+            uuid: (materialCatalog[key] || {}).uuid || generateEntryId(),
             desc, unit, category: cat,
             distributorCost: cost, markup, customerPrice: sell,
             priceLastUpdated: new Date().toISOString(),
@@ -6751,6 +6784,7 @@
             const pdfLinkedEntries = getAllEntriesForInvoicing().filter(e => selectedIds.includes(e.id));
             invoices[invoiceIdForSave] = {
               ...(invoices[invoiceIdForSave] || {}),
+              uuid: invoices[invoiceIdForSave]?.uuid || generateEntryId(),
               id: invoiceIdForSave,
               clientName: document.getElementById('clientName').value.trim(),
               clientPhone: document.getElementById('clientPhone').value.trim(),
@@ -7846,7 +7880,7 @@
         STARTER_MATERIALS.forEach(mat => {
           const key = normalizeMaterialKey(mat.desc);
           if (!materialCatalog[key]) {
-            materialCatalog[key] = { ...mat, priceAlertEnabled: true, priceLastUpdated: now };
+            materialCatalog[key] = { uuid: generateEntryId(), ...mat, priceAlertEnabled: true, priceLastUpdated: now };
             added++;
           }
         });
