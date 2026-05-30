@@ -1240,7 +1240,28 @@
 
       /* ── Quick Text Import ── */
       #quickTextImport { margin-top:1.5rem; border-top:1px solid rgba(255,69,0,.25); padding-top:1.25rem; }
-      #quickTextImport h3 { color:#ff4500; margin:0 0 .3rem; font-size:1rem; display:flex; align-items:center; gap:.5rem; }
+      #quickTextImport h3 { color:#ff4500; margin:0 0 .3rem; font-size:1rem; display:flex; align-items:center; gap:.5rem; justify-content:space-between; }
+      #qtiMinimizeBtn {
+        display:inline-flex; align-items:center; justify-content:center;
+        background:rgba(255,69,0,.12); border:1px solid rgba(255,69,0,.35);
+        color:#ff9060; border-radius:6px; cursor:pointer; font-size:.75rem;
+        padding:.2rem .55rem; min-height:auto; margin:0; gap:.3rem;
+        transition:all .2s; white-space:nowrap; font-weight:600; letter-spacing:.03em;
+      }
+      #qtiMinimizeBtn:hover { background:rgba(255,69,0,.25); color:#fff; box-shadow:0 0 8px rgba(255,69,0,.4); transform:none; }
+      #qtiMinimizeBtn:active { transform:scale(.96); }
+      #qtiMinimizeBtn .qti-chevron { display:inline-block; transition:transform .25s ease; font-style:normal; }
+      #qtiBody {
+        overflow:hidden;
+        max-height:600px;
+        opacity:1;
+        transition:max-height .35s ease, opacity .25s ease;
+      }
+      #qtiBody.qti-collapsed {
+        max-height:0;
+        opacity:0;
+        pointer-events:none;
+      }
       #quickTextImport .qti-hint { font-size:.78rem; color:#888; margin-bottom:.85rem; line-height:1.55; }
       #quickTextImport .qti-hint code { background:rgba(255,69,0,.1); border:1px solid rgba(255,69,0,.25); border-radius:4px; padding:.05rem .35rem; color:#ffb08a; font-size:.75rem; }
       #qtiInput { width:100%; height:130px; resize:vertical; font-family:monospace; font-size:.82rem; }
@@ -1562,38 +1583,45 @@
 
         <!-- ── Quick Text Import ── -->
         <div id="quickTextImport">
-          <h3>📋 Quick Text Import</h3>
-          <p class="qti-hint">
-            Paste freeform job notes and they'll be parsed into timesheet entries.<br>
-            Supported formats: <code>8:30-12 Job Name Address - May 11</code> &nbsp;·&nbsp;
-            <code>All May 20</code> to date a group &nbsp;·&nbsp;
-            <code>May 22 Friday 9-11 Job</code> for date-then-entries blocks.
-          </p>
-          <label>Paste notes:
-            <textarea id="qtiInput" placeholder="e.g.&#10;8:30-12 Julie Ductless 1940 London Rd Unit 23 - May 11&#10;9-3 4082 Petrolia Line AC - May 12&#10;8:30-9 Pool Heater Esser&#10;9:30-10:30 Corunna Willow&#10;11-2 Chudleigh&#10;All May 20"></textarea>
-          </label>
-          <div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
-            <button type="button" id="qtiParseBtn">🔍 Parse</button>
-            <div id="qtiStatus"></div>
-          </div>
-          <div id="qtiPreviewWrap">
-            <table id="qtiPreviewTable">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Time In</th>
-                  <th>Time Out</th>
-                  <th>Hrs</th>
-                  <th>Job Name</th>
-                  <th>Address</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="qtiPreviewBody"></tbody>
-            </table>
-            <div id="qtiBtnRow" style="display:none;margin-top:.75rem;gap:.5rem;flex-wrap:wrap;align-items:center;">
-              <button type="button" id="qtiImportBtn">✅ Add to Timesheet</button>
-              <button type="button" id="qtiClearBtn">✕ Clear</button>
+          <h3>
+            <span>📋 Quick Text Import</span>
+            <button type="button" id="qtiMinimizeBtn" aria-expanded="true" aria-controls="qtiBody">
+              <i class="qti-chevron">▲</i> <span class="qti-btn-label">Minimize</span>
+            </button>
+          </h3>
+          <div id="qtiBody">
+            <p class="qti-hint">
+              Paste freeform job notes and they'll be parsed into timesheet entries.<br>
+              Supported formats: <code>8:30-12 Job Name Address - May 11</code> &nbsp;·&nbsp;
+              <code>All May 20</code> to date a group &nbsp;·&nbsp;
+              <code>May 22 Friday 9-11 Job</code> for date-then-entries blocks.
+            </p>
+            <label>Paste notes:
+              <textarea id="qtiInput" placeholder="e.g.&#10;8:30-12 Julie Ductless 1940 London Rd Unit 23 - May 11&#10;9-3 4082 Petrolia Line AC - May 12&#10;8:30-9 Pool Heater Esser&#10;9:30-10:30 Corunna Willow&#10;11-2 Chudleigh&#10;All May 20"></textarea>
+            </label>
+            <div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+              <button type="button" id="qtiParseBtn">🔍 Parse</button>
+              <div id="qtiStatus"></div>
+            </div>
+            <div id="qtiPreviewWrap">
+              <table id="qtiPreviewTable">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Hrs</th>
+                    <th>Job Name</th>
+                    <th>Address</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="qtiPreviewBody"></tbody>
+              </table>
+              <div id="qtiBtnRow" style="display:none;margin-top:.75rem;gap:.5rem;flex-wrap:wrap;align-items:center;">
+                <button type="button" id="qtiImportBtn">✅ Add to Timesheet</button>
+                <button type="button" id="qtiClearBtn">✕ Clear</button>
+              </div>
             </div>
           </div>
         </div>
@@ -3114,6 +3142,14 @@
         });
         if (catalogDirty) saveMaterialCatalog();
 
+        // Backfill missing ids on existing archive entries
+        const archiveDays = getArchivedDays();
+        let archiveDirty = false;
+        archiveDays.forEach(day => {
+          if (!day.id) { day.id = generateEntryId(); archiveDirty = true; }
+        });
+        if (archiveDirty) saveArchivedDays(archiveDays);
+
         renderTable();
         refreshArchiveList();
         loadInvoiceSession();
@@ -3372,15 +3408,15 @@
         const previous = selectedKey || select.value || '';
         select.innerHTML = '<option value="">Select an archived day...</option>';
 
-        archive.forEach((day, index) => {
+        archive.forEach((day) => {
           const option = document.createElement('option');
-          option.value = String(index);
+          option.value = day.id;
           option.textContent = getArchiveLabel(day);
           select.appendChild(option);
         });
 
-        if (previous !== '' && archive[+previous]) {
-          select.value = String(previous);
+        if (previous && archive.some(d => d.id === previous)) {
+          select.value = previous;
         }
       }
 
@@ -3435,8 +3471,10 @@
       function getSelectedArchiveDay() {
         const select = document.getElementById('archiveDates');
         const archive = getArchivedDays();
-        const index = select ? Number(select.value) : -1;
-        if (!Number.isInteger(index) || index < 0 || index >= archive.length) return null;
+        const id = select ? select.value : '';
+        if (!id) return null;
+        const index = archive.findIndex(d => d.id === id);
+        if (index < 0) return null;
         return { day: archive[index], index, archive };
       }
 
@@ -3505,16 +3543,18 @@
 
         const archive = getArchivedDays();
         const snapshot = {
+          id: generateEntryId(),
           archivedAt: new Date().toISOString(),
           employee,
           date: sessionDate,
           entries: JSON.parse(JSON.stringify(entries))
         };
 
-        // Replace existing archive entry for the same date rather than stacking duplicates
+        // Replace existing archive entry for the same date rather than stacking duplicates;
+        // preserve the original id so any UI reference holding it stays valid
         const existingIndex = archive.findIndex(d => d.date === sessionDate && d.employee === employee);
         if (existingIndex !== -1) {
-          archive[existingIndex] = snapshot;
+          archive[existingIndex] = { ...snapshot, id: archive[existingIndex].id };
         } else {
           archive.unshift(snapshot);
         }
@@ -8931,6 +8971,38 @@
         document.getElementById('qtiClearBtn').addEventListener('click', function () {
           resetQti();
         });
+
+        // ── Minimize / expand toggle ──
+        (function () {
+          const btn  = document.getElementById('qtiMinimizeBtn');
+          const body = document.getElementById('qtiBody');
+          const STORAGE_KEY = 'qtiMinimized';
+
+          function applyState(minimized, animate) {
+            if (!body) return;
+            if (!animate) body.style.transition = 'none';
+            body.classList.toggle('qti-collapsed', minimized);
+            if (!animate) requestAnimationFrame(function(){ body.style.transition = ''; });
+            if (btn) btn.setAttribute('aria-expanded', String(!minimized));
+            const chevron = btn ? btn.querySelector('.qti-chevron') : null;
+            if (chevron) chevron.textContent = minimized ? '▼' : '▲';
+            const label = btn ? btn.querySelector('.qti-btn-label') : null;
+            if (label) label.textContent = minimized ? 'Expand' : 'Minimize';
+          }
+
+          // Restore saved state on load
+          var saved = false;
+          try { saved = localStorage.getItem(STORAGE_KEY) === '1'; } catch(e){}
+          applyState(saved, false);
+
+          if (btn) {
+            btn.addEventListener('click', function () {
+              var nowMinimized = !body.classList.contains('qti-collapsed');
+              applyState(nowMinimized, true);
+              try { localStorage.setItem(STORAGE_KEY, nowMinimized ? '1' : '0'); } catch(e){}
+            });
+          }
+        })();
 
       })(); // end Quick Text Import IIFE
       // ─────────────────────────────────────────────────────────────────────────
