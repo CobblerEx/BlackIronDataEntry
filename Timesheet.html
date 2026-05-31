@@ -8,6 +8,7 @@
     <title>Timesheet Creator</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
       * {
         -webkit-tap-highlight-color: rgba(255, 69, 0, 0.3);
@@ -1644,6 +1645,8 @@
             <button type="button" id="loadArchiveButton" class="mini-btn">Load</button>
             <button type="button" id="deleteArchiveButton" class="mini-btn" style="background:#dc3545;">Delete</button>
             <button type="button" id="restoreArchiveButton" class="mini-btn" style="background:#17a2b8;">Restore to Timesheet</button>
+            <button type="button" id="downloadArchiveCSVButton" class="mini-btn" style="background:#28a745;" title="Download the selected archive day as a CSV file"><i class="fas fa-download"></i> Download Selected</button>
+            <button type="button" id="downloadAllArchivesButton" class="mini-btn" style="background:#6f42c1;" title="Download all archived timesheets as a ZIP of CSV files"><i class="fas fa-file-archive"></i> Download All (ZIP)</button>
           </div>
           <div id="archiveMeta" class="muted-note" style="margin-bottom:1rem;">No archived day selected.</div>
           <table id="archiveTable">
@@ -3535,6 +3538,92 @@
         toggleArchiveDrawer(true);
         alert(`Restored ${selected.day.date || 'archived timesheet'} to the Timesheet tab.`);
       }
+
+      // ── Archive CSV / ZIP download helpers ──────────────────────────────────
+
+      function archiveDayToCSV(day) {
+        const header = ['Date','Job Name','Address','Time In','Time Out','Hours','Description','Status']
+          .map(h => '"' + h + '"').join(',');
+        const rows = (day.entries || []).map(entry => {
+          let duration = '';
+          try {
+            const inDec  = timeToDecimal(entry.timeIn  || '0:00');
+            const outDec = timeToDecimal(entry.timeOut || '0:00');
+            const diff = outDec >= inDec ? outDec - inDec : outDec - inDec + 24;
+            if (Number.isFinite(diff)) duration = formatHours(diff);
+          } catch(e) {}
+          return [
+            entry.dateStr || day.date || '',
+            entry.jobName || '',
+            entry.address || '',
+            entry.timeIn  ? to12hr(entry.timeIn)  : '',
+            entry.timeOut ? to12hr(entry.timeOut) : '',
+            duration,
+            entry.description || '',
+            entry.billingStatus || 'unbilled'
+          ].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',');
+        });
+        return [header, ...rows].join('\r\n');
+      }
+
+      function archiveSafeFilename(day) {
+        const date     = (day.date     || 'unknown').replace(/[^a-z0-9-]/gi, '-');
+        const employee = (day.employee || 'employee').replace(/\s+/g, '_').replace(/[^a-z0-9_-]/gi, '');
+        return 'timesheet_' + date + '_' + employee + '.csv';
+      }
+
+      function downloadSelectedArchiveCSV() {
+        const selected = getSelectedArchiveDay();
+        if (!selected) { alert('Select an archived day first, then click Download Selected.'); return; }
+        const csv  = archiveDayToCSV(selected.day);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = archiveSafeFilename(selected.day);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      async function downloadAllArchivesZip() {
+        const archive = getArchivedDays();
+        if (!archive.length) { alert('No archived timesheets found.'); return; }
+
+        if (typeof JSZip === 'undefined') {
+          alert('ZIP library not loaded yet — please try again in a moment.');
+          return;
+        }
+
+        const zip   = new JSZip();
+        const seen  = {};
+        archive.forEach(day => {
+          let name = archiveSafeFilename(day);
+          // Deduplicate filenames in case two days share the same date+employee
+          if (seen[name]) { seen[name]++; name = name.replace('.csv', '_' + seen[name] + '.csv'); }
+          else { seen[name] = 1; }
+          zip.file(name, archiveDayToCSV(day));
+        });
+
+        try {
+          const blob  = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+          const stamp = new Date().toISOString().slice(0, 10);
+          const url   = URL.createObjectURL(blob);
+          const a     = document.createElement('a');
+          a.href = url;
+          a.download = 'timesheets_archive_' + stamp + '.zip';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+        } catch (err) {
+          console.error(err);
+          alert('ZIP creation failed: ' + err.message);
+        }
+      }
+
+      // ── End archive download helpers ─────────────────────────────────────────
 
       function archiveCurrentTimesheetDay() {
         const employee = document.getElementById('employee').value || _ls.getItem('savedEmployeeName') || '';
@@ -6106,6 +6195,8 @@
       document.getElementById('loadArchiveButton').addEventListener('click', loadArchiveDay);
       document.getElementById('deleteArchiveButton').addEventListener('click', deleteArchiveDay);
       document.getElementById('restoreArchiveButton').addEventListener('click', restoreArchiveDay);
+      document.getElementById('downloadArchiveCSVButton').addEventListener('click', downloadSelectedArchiveCSV);
+      document.getElementById('downloadAllArchivesButton').addEventListener('click', downloadAllArchivesZip);
 
       function editEntry(i) {
         const e = entries[i];
